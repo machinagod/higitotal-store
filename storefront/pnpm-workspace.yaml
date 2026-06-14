@@ -1,0 +1,5 @@
+# sharp is a native dep used by Next.js image optimization. Allowing its build
+# script keeps `pnpm install` from exiting non-zero on ERR_PNPM_IGNORED_BUILDS,
+# which otherwise breaks the launch-storefront dev launcher.
+allowBuilds:
+  sharp: true
