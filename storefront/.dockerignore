@@ -1,0 +1,18 @@
+# Build context hygiene — keep host artifacts out of the image build.
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.local.template
+*.log
+.DS_Store
+.vscode
+.idea
+coverage
+playwright-report
+test-results
+e2e
+Dockerfile
+.dockerignore

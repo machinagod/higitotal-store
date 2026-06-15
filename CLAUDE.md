@@ -86,13 +86,23 @@ Before committing, from each app you changed:
 Fix failures before committing — including pre-existing ones in files you touch.
 
 ## Deploy & CI
-- **Deploy**: Railway's GitHub integration auto-deploys on push to `master`
-  (Backend & Storefront services are connected to this repo). On deploy,
-  `init-backend` runs DB migrations before the app starts.
-- **CI gate**: `.github/workflows/ci.yml` runs a full-stack Playwright e2e on an
-  ephemeral CI Postgres (never prod; no secrets). Railway "Wait for CI" (set in
-  the dashboard per service) blocks the deploy if CI is red. See
-  `.github/workflows/README.md`.
+- **Build & deploy**: GitHub Actions (`.github/workflows/ci.yml`) builds Docker
+  images from `backend/Dockerfile` and `storefront/Dockerfile`, pushes them to
+  **GHCR** (private: `ghcr.io/machinagod/medusajs-2.0-for-railway-boilerplate/{backend,storefront}`,
+  tags `:latest` + `:sha-<commit>`), then triggers `railway redeploy` on both
+  services. Railway deploys the **prebuilt image** — it no longer builds from the
+  repo. `init-backend` still runs DB migrations on boot (backend image `CMD`).
+- **Pipeline order**: `e2e` → `backend-image` + `storefront-image` → `deploy`.
+  The full-stack Playwright `e2e` job runs on an ephemeral CI Postgres (never
+  prod; no secrets) and gates the image builds and deploy. Image jobs + deploy
+  run only on push to `master`.
+- **Storefront images are env-specific**: `NEXT_PUBLIC_*` (incl. the publishable
+  key) are inlined at build time from GitHub Actions **Variables**. The backend
+  image needs no build secrets.
+- **Required config** (one-time): GitHub secret `RAILWAY_TOKEN` (project token),
+  the `NEXT_PUBLIC_*` + `RAILWAY_*_SERVICE` Actions Variables, and a GHCR pull
+  credential on each Railway service (dashboard — not settable via API). Full
+  list in `.github/workflows/README.md`.
 - The `storefront/e2e` suite **drops/recreates its DB** — only ever point it at a
   `test_`-prefixed DB, never the production `DATABASE_URL`.
 
