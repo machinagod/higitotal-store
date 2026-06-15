@@ -133,14 +133,15 @@ jobs:
         working-directory: storefront
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run e2e tests
+      - name: Run e2e smoke tests
         working-directory: storefront
         # Playwright's webServer starts the storefront (pnpm start) and waits for
         # it — do NOT pre-start it here, or the port collides. Production so
-        # `next start` serves the production build.
+        # `next start` serves the production build. Uses the v2-correct smoke
+        # suite (the bundled legacy e2e suite targets Medusa v1).
         env:
           NODE_ENV: production
-        run: pnpm test-e2e
+        run: pnpm test-e2e:smoke
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

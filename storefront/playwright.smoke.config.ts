@@ -1,0 +1,30 @@
+import { defineConfig, devices } from "@playwright/test"
+import "dotenv/config.js"
+
+/**
+ * Smoke config — a self-contained, v2-correct sanity gate used by CI.
+ *
+ * Unlike the legacy `playwright.config.ts` suite (Medusa v1 seeder/teardown that
+ * drops the DB), this has NO global setup/teardown and never mutates data. It
+ * just boots the storefront and asserts the full stack is sane: the storefront
+ * renders and serves the backend's catalog, and the admin loads.
+ */
+export default defineConfig({
+  testDir: "./e2e/smoke",
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: 1,
+  reporter: [["html", { open: "never" }], ["list"]],
+  use: {
+    baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+    trace: "retain-on-failure",
+  },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: {
+    command: "pnpm start",
+    url: process.env.NEXT_PUBLIC_BASE_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
+  },
+})
