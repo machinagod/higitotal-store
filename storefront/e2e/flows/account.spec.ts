@@ -53,6 +53,21 @@ async function register(page: Page, email: string) {
     throw new Error(`signup error: ${await reg.registerError.textContent()}`)
   }
 
+  // --- DIAGNOSTIC (temporary) ---
+  await page.waitForTimeout(4_000)
+  const cookies = await page.context().cookies()
+  console.log(
+    `[e2e-diag] cookies after register: ${cookies
+      .map((c) => `${c.name}(secure=${c.secure})`)
+      .join(", ") || "<none>"}`
+  )
+  await page.goto(`/${REGION}/account`)
+  const bodyText = (await page.locator("body").innerText())
+    .replace(/\s+/g, " ")
+    .slice(0, 300)
+  console.log(`[e2e-diag] /account body: ${bodyText}`)
+  // --- end diagnostic ---
+
   await expectLoggedIn(page)
 }
 
