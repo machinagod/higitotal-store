@@ -1,6 +1,13 @@
 import "server-only"
 import { cookies } from "next/headers"
 
+// Cookies are Secure in production. The MEDUSA_INSECURE_COOKIES escape hatch is
+// ONLY for e2e CI, where the storefront is served over http://localhost and a
+// Secure cookie would not be retained. Never set it in production.
+const useSecureCookies =
+  process.env.NODE_ENV === "production" &&
+  process.env.MEDUSA_INSECURE_COOKIES !== "true"
+
 export const getAuthHeaders = async (): Promise<{ authorization: string } | {}> => {
   const cookiesStore = await cookies()
   const token = cookiesStore.get("_medusa_jwt")?.value
@@ -18,7 +25,7 @@ export const setAuthToken = async (token: string) => {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies,
   })
 }
 
@@ -40,7 +47,7 @@ export const setCartId = async (cartId: string) => {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies,
   })
 }
 

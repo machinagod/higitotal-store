@@ -141,6 +141,9 @@ jobs:
         # suite (the bundled legacy e2e suite targets Medusa v1).
         env:
           NODE_ENV: production
+          # Storefront is served over http://localhost in CI, so auth/cart
+          # cookies must not be Secure (test-only; never set in production).
+          MEDUSA_INSECURE_COOKIES: "true"
         run: pnpm test-e2e:smoke
 
       - name: Upload Playwright report
