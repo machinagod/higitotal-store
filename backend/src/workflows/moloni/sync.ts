@@ -31,16 +31,18 @@ import {
 import { MOLONI_MODULE } from "../../modules/moloni"
 import type MoloniModuleService from "../../modules/moloni/service"
 import { EPOCH_CURSOR } from "../../modules/moloni/service"
-import type { MoloniProduct } from "../../modules/moloni"
+import type { MoloniCustomer, MoloniProduct } from "../../modules/moloni"
 import {
   EUR,
   categoryHandle,
   collectPriceClasses,
   defaultEurPrice,
+  placeholderCustomerEmail,
+  realCustomerEmail,
   supplierCost,
-  toCreateCustomerInput,
   toCreateProductInput,
   toCustomerAddress,
+  toCustomerInput,
   totalStock,
 } from "./mappers"
 
@@ -72,7 +74,12 @@ export interface MoloniSyncReport {
   products: { created: number; updated: number }
   priceListPrices: { created: number; updated: number; priceLists: number }
   stock: { created: number; updated: number }
-  customers: { created: number; updated: number; skipped: number }
+  customers: {
+    created: number
+    updated: number
+    skipped: number
+    emailConflicts: number
+  }
 }
 
 const CHUNK = 50
@@ -129,7 +136,7 @@ export async function runMoloniSync(
     products: { created: 0, updated: 0 },
     priceListPrices: { created: 0, updated: 0, priceLists: 0 },
     stock: { created: 0, updated: 0 },
-    customers: { created: 0, updated: 0, skipped: 0 },
+    customers: { created: 0, updated: 0, skipped: 0, emailConflicts: 0 },
   }
 
   logger.info(
@@ -646,38 +653,72 @@ async function syncCustomers(
     return
   }
 
-  // Email is a deterministic unique key for every Moloni customer (real email,
-  // or the synthesized moloni-<number>@no-email.invalid placeholder), so we key
-  // idempotency on email — reliable, and avoids JSONB metadata filtering.
-  const desired = moloniCustomers.map((c) => ({
-    moloni: c,
-    input: toCreateCustomerInput(c),
-  }))
-  const emails = [...new Set(desired.map((d) => d.input.email))]
-  const existing: any[] = []
-  for (const batch of chunk(emails, 200)) {
-    existing.push(
-      ...(await graphAll(query, "customer", ["id", "email"], { email: batch }))
-    )
-  }
-  const idByEmail = new Map<string, string>()
-  for (const c of existing) {
-    if (c.email) idByEmail.set(c.email.toLowerCase(), c.id)
+  // Existence is keyed on the authoritative moloni_customer_id (order-independent)
+  // rather than email — email-based matching is fragile when collision-resolution
+  // order differs between runs. Load existing customers once, mapping both by
+  // Moloni id (update/create decision) and by email (collision detection when
+  // minting an email for a NEW customer).
+  const existingAll = await graphAll(query, "customer", [
+    "id",
+    "email",
+    "metadata",
+  ])
+  const byMoloniId = new Map<number, { id: string; metadata: any }>()
+  const emailOwner = new Map<string, number | null>() // email -> moloni id | null
+  for (const r of existingAll) {
+    const mid = r.metadata?.moloni_customer_id
+    if (r.email) {
+      emailOwner.set(r.email.toLowerCase(), mid != null ? Number(mid) : null)
+    }
+    if (mid != null) {
+      byMoloniId.set(Number(mid), { id: r.id, metadata: r.metadata ?? {} })
+    }
   }
 
-  const seenInBatch = new Set<string>()
-  const creates: { input: any; moloni: any }[] = []
-  for (const { input, moloni: c } of desired) {
-    const existingId = idByEmail.get(input.email)
-    if (existingId) {
+  // Reserve a unique email for a NEW customer: its real email if free, else the
+  // deterministic placeholder (falling back to the always-unique customer_id if
+  // two Moloni customers ever share a number).
+  const claimed = new Map<string, number>() // email -> moloni id that claimed it
+  const reserveEmail = (c: MoloniCustomer) => {
+    const real = realCustomerEmail(c)
+    if (real) {
+      const owner = emailOwner.get(real)
+      const claimer = claimed.get(real)
+      const free =
+        (owner === undefined || owner === c.customer_id) &&
+        (claimer === undefined || claimer === c.customer_id)
+      if (free) {
+        claimed.set(real, c.customer_id)
+        return { finalEmail: real, noEmail: false, conflict: false, real }
+      }
+    }
+    let ph = placeholderCustomerEmail(c)
+    if (claimed.has(ph) && claimed.get(ph) !== c.customer_id) {
+      ph = `moloni-${c.customer_id}@no-email.invalid`
+    }
+    claimed.set(ph, c.customer_id)
+    return { finalEmail: ph, noEmail: !real, conflict: !!real, real }
+  }
+
+  const creates: { input: any; moloni: MoloniCustomer }[] = []
+  for (const c of moloniCustomers) {
+    const existing = byMoloniId.get(c.customer_id)
+    if (existing) {
+      // Keep the existing email (changing it risks collisions) and preserve its
+      // email-related flags; refresh the mutable fields.
       if (!dryRun) {
         await updateCustomersWorkflow(container).run({
           input: {
-            selector: { id: existingId },
+            selector: { id: existing.id },
             update: {
-              company_name: input.company_name,
-              phone: input.phone,
-              metadata: input.metadata,
+              company_name: c.name || undefined,
+              phone: c.phone || c.contact_phone || undefined,
+              metadata: {
+                ...existing.metadata,
+                moloni_customer_id: c.customer_id,
+                moloni_number: c.number,
+                moloni_vat: c.vat || null,
+              },
             },
           },
         })
@@ -685,12 +726,13 @@ async function syncCustomers(
       report.customers.updated++
       continue
     }
-    if (seenInBatch.has(input.email)) {
-      // Two Moloni customers share the same email — create only the first.
-      report.customers.skipped++
-      continue
-    }
-    seenInBatch.add(input.email)
+    const r = reserveEmail(c)
+    if (r.conflict) report.customers.emailConflicts++
+    const input = toCustomerInput(c, r.finalEmail, {
+      noEmail: r.noEmail,
+      emailConflict: r.conflict,
+      realEmail: r.conflict ? r.real : undefined,
+    })
     creates.push({ input, moloni: c })
   }
 
@@ -714,6 +756,6 @@ async function syncCustomers(
     report.customers.created += batch.length
   }
   logger.info(
-    `[moloni-sync] customers created=${report.customers.created} updated=${report.customers.updated} skipped=${report.customers.skipped}`
+    `[moloni-sync] customers created=${report.customers.created} updated=${report.customers.updated} skipped=${report.customers.skipped} emailConflicts=${report.customers.emailConflicts} (conflicts imported under placeholder emails)`
   )
 }

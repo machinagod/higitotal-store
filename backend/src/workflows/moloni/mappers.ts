@@ -134,30 +134,37 @@ export function toCreateProductInput(args: {
   }
 }
 
-/** Synthesized placeholder email for customers Moloni has no email for. */
-export function customerEmail(c: MoloniCustomer): {
-  email: string
-  synthesized: boolean
-} {
-  const real = (c.email || c.contact_email || "").trim()
-  if (real) return { email: real.toLowerCase(), synthesized: false }
-  return {
-    email: `moloni-${c.number || c.customer_id}@no-email.invalid`,
-    synthesized: true,
-  }
+/** The customer's real email (lowercased), or undefined if Moloni has none. */
+export function realCustomerEmail(c: MoloniCustomer): string | undefined {
+  const real = (c.email || c.contact_email || "").trim().toLowerCase()
+  return real || undefined
 }
 
-export function toCreateCustomerInput(c: MoloniCustomer) {
-  const { email, synthesized } = customerEmail(c)
+/**
+ * Deterministic placeholder email, unique per Moloni customer (number is
+ * unique in Moloni). Used when the customer has no email OR its real email
+ * collides with another customer's.
+ */
+export function placeholderCustomerEmail(c: MoloniCustomer): string {
+  return `moloni-${c.number || c.customer_id}@no-email.invalid`
+}
+
+export function toCustomerInput(
+  c: MoloniCustomer,
+  finalEmail: string,
+  opts: { noEmail?: boolean; emailConflict?: boolean; realEmail?: string } = {}
+) {
   return {
-    email,
+    email: finalEmail,
     company_name: c.name || undefined,
     phone: c.phone || c.contact_phone || undefined,
     metadata: {
       moloni_customer_id: c.customer_id,
       moloni_number: c.number,
       moloni_vat: c.vat || null,
-      moloni_no_email: synthesized,
+      moloni_no_email: opts.noEmail ?? false,
+      moloni_email_conflict: opts.emailConflict ?? false,
+      ...(opts.realEmail ? { moloni_real_email: opts.realEmail } : {}),
     },
   }
 }
