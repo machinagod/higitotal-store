@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, Page, test } from "@playwright/test"
 import { LoginPage } from "../fixtures/account/login-page"
 import { RegisterPage } from "../fixtures/account/register-page"
 import { OverviewPage } from "../fixtures/account/overview-page"
@@ -15,33 +15,45 @@ function uniqueEmail(): string {
 }
 const PASSWORD = "supersecret123"
 
-async function register(page: import("@playwright/test").Page, email: string) {
+// Registers a customer and asserts the account overview is reached. If signup
+// fails server-side, surfaces the register-error text instead of a vague timeout.
+async function register(page: Page, email: string) {
   const login = new LoginPage(page)
-  const register = new RegisterPage(page)
+  const reg = new RegisterPage(page)
+  const overview = new OverviewPage(page)
+
   await login.goto()
   await login.registerButton.click()
-  await register.container.waitFor({ state: "visible" })
-  await register.firstNameInput.fill("Test")
-  await register.lastNameInput.fill("User")
-  await register.emailInput.fill(email)
-  await register.passwordInput.fill(PASSWORD)
-  await register.registerButton.click()
+  await reg.container.waitFor({ state: "visible" })
+  await reg.firstNameInput.fill("Test")
+  await reg.lastNameInput.fill("User")
+  await reg.emailInput.fill(email)
+  await reg.phoneInput.fill("+351912345678")
+  await reg.passwordInput.fill(PASSWORD)
+  await reg.registerButton.click()
+
+  const outcome = await Promise.race([
+    overview.welcomeMessage
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(() => "ok"),
+    reg.registerError
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(async () => `signup error: ${await reg.registerError.textContent()}`),
+  ])
+  if (outcome !== "ok") throw new Error(outcome)
 }
 
 test("register a new customer lands on the account overview", async ({
   page,
 }) => {
-  const overview = new OverviewPage(page)
   await register(page, uniqueEmail())
-  await expect(overview.welcomeMessage).toBeVisible({ timeout: 30_000 })
+  await expect(new OverviewPage(page).welcomeMessage).toBeVisible()
 })
 
 test("a registered customer can log out and log back in", async ({ page }) => {
   const email = uniqueEmail()
   const overview = new OverviewPage(page)
-
   await register(page, email)
-  await expect(overview.welcomeMessage).toBeVisible({ timeout: 30_000 })
 
   // Drop the session and sign back in with the same credentials.
   await page.context().clearCookies()
@@ -50,7 +62,16 @@ test("a registered customer can log out and log back in", async ({ page }) => {
   await login.emailInput.fill(email)
   await login.passwordInput.fill(PASSWORD)
   await login.signInButton.click()
-  await expect(overview.welcomeMessage).toBeVisible({ timeout: 30_000 })
+
+  const outcome = await Promise.race([
+    overview.welcomeMessage
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(() => "ok"),
+    login.errorMessage
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(async () => `login error: ${await login.errorMessage.textContent()}`),
+  ])
+  expect(outcome).toBe("ok")
 })
 
 test("invalid credentials show an error", async ({ page }) => {
