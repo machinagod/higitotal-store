@@ -6,8 +6,14 @@ import { OverviewPage } from "../fixtures/account/overview-page"
 /**
  * Auth flows (v2). Self-contained: each test registers its own customer through
  * the storefront UI (no admin seeder), so they run against the ephemeral CI DB.
- * Reuses the existing data-testid page objects.
+ *
+ * Note: the storefront's signup/login are server actions that set the auth
+ * cookie + revalidate but do NOT switch the view in place — so after submitting
+ * we navigate to /account (retrying to absorb the async action) where the
+ * authenticated session renders the overview.
  */
+
+const REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "dk"
 
 // Unique per attempt so retries / reruns never collide in the shared CI DB.
 function uniqueEmail(): string {
@@ -15,12 +21,18 @@ function uniqueEmail(): string {
 }
 const PASSWORD = "supersecret123"
 
-// Registers a customer and asserts the account overview is reached. If signup
-// fails server-side, surfaces the register-error text instead of a vague timeout.
+// Loads the account page until the authenticated overview renders.
+async function expectLoggedIn(page: Page) {
+  const overview = new OverviewPage(page)
+  await expect(async () => {
+    await page.goto(`/${REGION}/account`)
+    await expect(overview.welcomeMessage).toBeVisible({ timeout: 5_000 })
+  }).toPass({ timeout: 45_000 })
+}
+
 async function register(page: Page, email: string) {
   const login = new LoginPage(page)
   const reg = new RegisterPage(page)
-  const overview = new OverviewPage(page)
 
   await login.goto()
   await login.registerButton.click()
@@ -32,27 +44,26 @@ async function register(page: Page, email: string) {
   await reg.passwordInput.fill(PASSWORD)
   await reg.registerButton.click()
 
-  const outcome = await Promise.race([
-    overview.welcomeMessage
-      .waitFor({ state: "visible", timeout: 30_000 })
-      .then(() => "ok"),
-    reg.registerError
-      .waitFor({ state: "visible", timeout: 30_000 })
-      .then(async () => `signup error: ${await reg.registerError.textContent()}`),
-  ])
-  if (outcome !== "ok") throw new Error(outcome)
+  // Surface an explicit signup error if one appears, instead of a vague timeout.
+  const errored = await reg.registerError
+    .waitFor({ state: "visible", timeout: 8_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (errored) {
+    throw new Error(`signup error: ${await reg.registerError.textContent()}`)
+  }
+
+  await expectLoggedIn(page)
 }
 
-test("register a new customer lands on the account overview", async ({
+test("register a new customer can reach the account overview", async ({
   page,
 }) => {
   await register(page, uniqueEmail())
-  await expect(new OverviewPage(page).welcomeMessage).toBeVisible()
 })
 
 test("a registered customer can log out and log back in", async ({ page }) => {
   const email = uniqueEmail()
-  const overview = new OverviewPage(page)
   await register(page, email)
 
   // Drop the session and sign back in with the same credentials.
@@ -63,15 +74,15 @@ test("a registered customer can log out and log back in", async ({ page }) => {
   await login.passwordInput.fill(PASSWORD)
   await login.signInButton.click()
 
-  const outcome = await Promise.race([
-    overview.welcomeMessage
-      .waitFor({ state: "visible", timeout: 30_000 })
-      .then(() => "ok"),
-    login.errorMessage
-      .waitFor({ state: "visible", timeout: 30_000 })
-      .then(async () => `login error: ${await login.errorMessage.textContent()}`),
-  ])
-  expect(outcome).toBe("ok")
+  const errored = await login.errorMessage
+    .waitFor({ state: "visible", timeout: 8_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (errored) {
+    throw new Error(`login error: ${await login.errorMessage.textContent()}`)
+  }
+
+  await expectLoggedIn(page)
 })
 
 test("invalid credentials show an error", async ({ page }) => {
