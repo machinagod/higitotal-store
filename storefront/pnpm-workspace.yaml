@@ -1,3 +1,9 @@
+# This is a single package, not a monorepo — but pnpm 10+ reads the native-build
+# allowlist from here (no longer from package.json). pnpm 9 treats this file as a
+# workspace root and requires a `packages` field, so declare an empty one to stay
+# valid across pnpm 9/10/11 (CI/Railway may use 9.x).
+packages: []
+
 # sharp is a native dep used by Next.js image optimization. Allowing its build
 # script keeps `pnpm install` from exiting non-zero on ERR_PNPM_IGNORED_BUILDS,
 # which otherwise breaks the launch-storefront dev launcher.

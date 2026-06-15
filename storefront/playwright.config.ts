@@ -68,10 +68,14 @@ export default defineConfig({
     */
   ],
 
-  /* Run your local dev server before starting the tests */
+  /* Run the storefront before starting the tests. Playwright owns its
+   * lifecycle: it starts `pnpm start` (this repo uses pnpm, not yarn) and waits
+   * for the URL. Locally it reuses an already-running server; on CI it starts
+   * its own (so CI must NOT pre-start the storefront). */
   webServer: {
-     command: 'yarn start',
-     url: process.env.NEXT_PUBLIC_BASE_URL,
-  //   reuseExistingServer: !process.env.CI,
+    command: "pnpm start",
+    url: process.env.NEXT_PUBLIC_BASE_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
   },
 })

@@ -39,6 +39,9 @@ jobs:
 
     env:
       # ── Backend ──────────────────────────────────────────────────────────
+      # development here so pnpm installs devDependencies (build tooling) and the
+      # backend behaves like local dev. The storefront *build/start* override to
+      # production per-step (next build breaks under NODE_ENV=development).
       NODE_ENV: development
       DATABASE_URL: postgres://test_medusa_user:test_pw@localhost:5432/test_medusa_db
       JWT_SECRET: supersecret
@@ -121,22 +124,27 @@ jobs:
       - name: Build storefront
         working-directory: storefront
         # launch-storefront waits for the backend and resolves the publishable key.
+        # Must be production — next build breaks the /500 prerender under development.
+        env:
+          NODE_ENV: production
         run: pnpm build
-
-      - name: Start storefront
-        working-directory: storefront
-        run: |
-          nohup pnpm start > /tmp/storefront.log 2>&1 &
-          npx --yes wait-on -t 180000 http://localhost:8000
-          echo "Storefront up."
 
       - name: Install Playwright browser
         working-directory: storefront
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run e2e tests
+      - name: Run e2e smoke tests
         working-directory: storefront
-        run: pnpm test-e2e
+        # Playwright's webServer starts the storefront (pnpm start) and waits for
+        # it — do NOT pre-start it here, or the port collides. Production so
+        # `next start` serves the production build. Uses the v2-correct smoke
+        # suite (the bundled legacy e2e suite targets Medusa v1).
+        env:
+          NODE_ENV: production
+          # Storefront is served over http://localhost in CI, so auth/cart
+          # cookies must not be Secure (test-only; never set in production).
+          MEDUSA_INSECURE_COOKIES: "true"
+        run: pnpm test-e2e:smoke
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
