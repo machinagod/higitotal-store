@@ -21,7 +21,14 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY
+  MEILISEARCH_ADMIN_KEY,
+  IS_MOLONI_ENABLED,
+  MOLONI_CLIENT_ID,
+  MOLONI_CLIENT_SECRET,
+  MOLONI_USER,
+  MOLONI_PASSWORD,
+  MOLONI_COMPANY_ID,
+  MOLONI_SANDBOX
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
@@ -132,6 +139,17 @@ const medusaConfig = {
           },
         ],
       },
+    }] : []),
+    ...(IS_MOLONI_ENABLED ? [{
+      resolve: './src/modules/moloni',
+      options: {
+        clientId: MOLONI_CLIENT_ID,
+        clientSecret: MOLONI_CLIENT_SECRET,
+        username: MOLONI_USER,
+        password: MOLONI_PASSWORD,
+        companyId: MOLONI_COMPANY_ID,
+        sandbox: MOLONI_SANDBOX,
+      }
     }] : [])
   ],
   plugins: [

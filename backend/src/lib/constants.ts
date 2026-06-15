@@ -100,3 +100,24 @@ export const WORKER_MODE =
  * Disable Admin
  */
 export const SHOULD_DISABLE_ADMIN = process.env.MEDUSA_DISABLE_ADMIN === 'true'
+
+/**
+ * (optional) Moloni ERP integration. When all credentials are present, the
+ * Moloni module is registered and the catalog/stock/customer sync becomes
+ * available (scheduled job + admin trigger).
+ */
+export const MOLONI_CLIENT_ID = process.env.MOLONI_CLIENT_ID
+export const MOLONI_CLIENT_SECRET = process.env.MOLONI_CLIENT_SECRET
+export const MOLONI_USER = process.env.MOLONI_USER
+export const MOLONI_PASSWORD = process.env.MOLONI_PASSWORD
+export const MOLONI_COMPANY_ID = process.env.MOLONI_COMPANY_ID
+  ? Number(process.env.MOLONI_COMPANY_ID)
+  : undefined
+export const MOLONI_SANDBOX = process.env.MOLONI_SANDBOX === 'true'
+export const IS_MOLONI_ENABLED = Boolean(
+  MOLONI_CLIENT_ID &&
+    MOLONI_CLIENT_SECRET &&
+    MOLONI_USER &&
+    MOLONI_PASSWORD &&
+    MOLONI_COMPANY_ID
+)
