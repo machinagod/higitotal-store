@@ -79,22 +79,42 @@ export default class MoloniModuleService extends MedusaService({
 
   // ── Sync cursors ─────────────────────────────────────────────────────────
 
-  /** Returns the stored cursor for an entity, or the epoch on first run. */
+  /**
+   * Returns the stored cursor for an entity, or the epoch on first run.
+   * Degrades to a full sync (epoch) with a warning if the cursor table is
+   * missing — e.g. the migration hasn't been applied yet.
+   */
   async getSyncCursor(entity: string): Promise<string> {
-    const [row] = await this.listMoloniSyncCursors({ entity })
-    return row?.last_modified || EPOCH_CURSOR
+    try {
+      const [row] = await this.listMoloniSyncCursors({ entity })
+      return row?.last_modified || EPOCH_CURSOR
+    } catch (e: any) {
+      this.logger_.warn(
+        `[moloni] sync-cursor table unavailable (${e.message}); falling back to a FULL sync. Apply the moloni migration (medusa db:migrate).`
+      )
+      return EPOCH_CURSOR
+    }
   }
 
-  /** Upserts the cursor for an entity. */
+  /** Upserts the cursor for an entity. No-ops (with a warning) if unavailable. */
   async setSyncCursor(entity: string, lastModified: string): Promise<void> {
-    const [row] = await this.listMoloniSyncCursors({ entity })
-    if (row) {
-      await this.updateMoloniSyncCursors({
-        id: row.id,
-        last_modified: lastModified,
-      })
-    } else {
-      await this.createMoloniSyncCursors({ entity, last_modified: lastModified })
+    try {
+      const [row] = await this.listMoloniSyncCursors({ entity })
+      if (row) {
+        await this.updateMoloniSyncCursors({
+          id: row.id,
+          last_modified: lastModified,
+        })
+      } else {
+        await this.createMoloniSyncCursors({
+          entity,
+          last_modified: lastModified,
+        })
+      }
+    } catch (e: any) {
+      this.logger_.warn(
+        `[moloni] could not persist sync cursor for ${entity} (${e.message}); next run will be full until the moloni migration is applied.`
+      )
     }
   }
 
