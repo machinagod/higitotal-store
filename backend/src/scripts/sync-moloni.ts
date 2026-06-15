@@ -1,6 +1,7 @@
 import { ExecArgs } from "@medusajs/framework/types"
 import {
   MoloniSyncEntity,
+  pruneInvisibleProducts,
   runMoloniSync,
 } from "../workflows/moloni/sync"
 
@@ -44,6 +45,14 @@ export default async function syncMoloni({ container, args }: ExecArgs) {
   logger.info(
     `[sync-moloni] ${dryRun ? "DRY RUN (pass 'commit' to write)" : "COMMIT — writing to the connected DB"}`
   )
+
+  // `prune`: delete Medusa products no longer visible in Moloni (archived/
+  // hidden/deleted). Manual only. Honors the dry-run default.
+  if (has("prune")) {
+    const result = await pruneInvisibleProducts(container, { dryRun })
+    logger.info(`[sync-moloni] prune result:\n${JSON.stringify(result, null, 2)}`)
+    return
+  }
 
   const report = await runMoloniSync(container, {
     dryRun,

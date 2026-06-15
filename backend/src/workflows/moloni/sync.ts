@@ -22,6 +22,7 @@ import {
   createPriceListsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
+  deleteProductsWorkflow,
   updateCustomersWorkflow,
   updateInventoryLevelsWorkflow,
   updatePriceListPricesWorkflow,
@@ -406,6 +407,67 @@ export async function runMoloniSync(
 
   logger.info(`[moloni-sync] done: ${JSON.stringify(report)}`)
   return report
+}
+
+/**
+ * Prune Medusa products that were imported from Moloni but are no longer in
+ * Moloni's *visible* set (archived/hidden or deleted in Moloni). Manual only —
+ * never wired into the scheduled job, since auto-deletion on a cron is risky.
+ *
+ * Safety: aborts if Moloni returns an implausibly small visible set, or if the
+ * prune would remove more than 70% of the imported products (guards against a
+ * partial/empty API response wiping the catalog).
+ */
+export async function pruneInvisibleProducts(
+  container: MedusaContainer,
+  opts: { dryRun?: boolean } = {}
+): Promise<{ visible: number; imported: number; toDelete: number; deleted: number }> {
+  const dryRun = opts.dryRun ?? false
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const moloni = container.resolve(MOLONI_MODULE) as MoloniModuleService
+
+  const visible = await moloni.listProducts({}) // getModifiedSince(epoch) = visible only
+  const visibleIds = new Set(visible.map((p) => String(p.product_id)))
+  if (visibleIds.size < 100) {
+    throw new Error(
+      `[moloni-prune] aborting: Moloni returned only ${visibleIds.size} visible products — refusing to prune`
+    )
+  }
+
+  const existing = await graphAll(query, "product", ["id", "external_id"])
+  const imported = existing.filter(
+    (p) => p.external_id && /^\d+$/.test(p.external_id)
+  )
+  const toDelete = imported
+    .filter((p) => !visibleIds.has(p.external_id))
+    .map((p) => p.id)
+
+  const ratio = imported.length ? toDelete.length / imported.length : 0
+  if (ratio > 0.7) {
+    throw new Error(
+      `[moloni-prune] aborting: would delete ${toDelete.length}/${imported.length} (${Math.round(
+        ratio * 100
+      )}%) imported products — exceeds 70% safety threshold`
+    )
+  }
+
+  logger.info(
+    `[moloni-prune] visible=${visibleIds.size} imported=${imported.length} toDelete=${toDelete.length} dryRun=${dryRun}`
+  )
+
+  if (!dryRun) {
+    for (const batch of chunk(toDelete, 100)) {
+      await deleteProductsWorkflow(container).run({ input: { ids: batch } })
+    }
+  }
+
+  return {
+    visible: visibleIds.size,
+    imported: imported.length,
+    toDelete: toDelete.length,
+    deleted: dryRun ? 0 : toDelete.length,
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
