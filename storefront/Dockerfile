@@ -4,9 +4,10 @@
 # deployed by Railway.
 #
 # NEXT_PUBLIC_* values are inlined by `next build`, so they are passed as build
-# args (NOT fetched from a live backend). This lets the image build fully offline
-# — the only reason the Nixpacks/launch-storefront path needs a running backend
-# is to fetch the publishable key, which we provide directly here.
+# args (NOT fetched from a live backend). The build is hermetic: the publishable
+# key is provided directly here, and generateStaticParams degrades to no
+# prerendered paths when the backend is unreachable (those routes render on
+# demand at runtime instead). So no running backend is required to build.
 
 ARG NODE_IMAGE=node:22.11.0-bookworm-slim
 

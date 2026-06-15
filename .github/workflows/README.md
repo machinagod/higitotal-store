@@ -37,6 +37,12 @@ carries the production backend URL, publishable key, region, etc. The backend
 image needs no build-time secrets (`medusa build` only bundles; optional modules
 stay disabled when their env is absent).
 
+The storefront image builds **hermetically** — it does not need a running
+backend. `generateStaticParams` (product/collection/category routes) degrades to
+no prerendered paths when the backend is unreachable at build time, so those
+routes simply render on demand instead. When the backend *is* reachable at build
+time, they are still statically prerendered.
+
 ## One-time setup
 
 ### 1. GitHub → Settings → Secrets and variables → Actions
