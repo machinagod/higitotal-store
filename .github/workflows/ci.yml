@@ -129,21 +129,17 @@ jobs:
           NODE_ENV: production
         run: pnpm build
 
-      - name: Start storefront
-        working-directory: storefront
-        env:
-          NODE_ENV: production
-        run: |
-          nohup pnpm start > /tmp/storefront.log 2>&1 &
-          npx --yes wait-on -t 180000 http://localhost:8000
-          echo "Storefront up."
-
       - name: Install Playwright browser
         working-directory: storefront
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run e2e tests
         working-directory: storefront
+        # Playwright's webServer starts the storefront (pnpm start) and waits for
+        # it — do NOT pre-start it here, or the port collides. Production so
+        # `next start` serves the production build.
+        env:
+          NODE_ENV: production
         run: pnpm test-e2e
 
       - name: Upload Playwright report
