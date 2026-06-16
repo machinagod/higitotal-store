@@ -10,7 +10,7 @@ import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 
 export const getCustomer = cache(async function () {
   return await sdk.store.customer
-    .retrieve({}, { next: { tags: ["customer"] }, ...getAuthHeaders() })
+    .retrieve({}, { next: { tags: ["customer"] }, ...(await getAuthHeaders()) })
     .then(({ customer }) => customer)
     .catch(() => null)
 })
