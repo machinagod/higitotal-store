@@ -1,9 +1,17 @@
 name: CI
 
-# Pre-deploy gate. Railway is configured to "Wait for CI" on master, so a red
-# run here blocks the production deploy. Spins a self-contained full stack
-# (Postgres + backend + storefront) and runs the Playwright e2e suite against
-# an ephemeral CI database — never against production.
+# Build + deploy pipeline for master:
+#
+#   push ──► e2e (full-stack Playwright gate, ephemeral CI Postgres)
+#             └─► backend-image  ┐  build Docker images, push to GHCR
+#             └─► storefront-image┘  (private packages, tags :latest + :sha-<commit>)
+#                   └─► deploy ──► railway redeploy (pulls the new images)
+#
+# Railway no longer builds from the repo — each service deploys the prebuilt
+# GHCR image, and the deploy job below triggers the redeploy. e2e still gates
+# everything: a red run blocks image build and deploy. The e2e stack is
+# self-contained (CI Postgres, no external services/secrets) and never touches
+# production. See .github/workflows/README.md.
 
 on:
   push:
@@ -15,6 +23,10 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+# Least privilege by default; image jobs opt into packages:write.
+permissions:
+  contents: read
 
 jobs:
   e2e:
@@ -159,3 +171,119 @@ jobs:
         run: |
           echo "===== backend.log ====="; tail -n 200 /tmp/backend.log || true
           echo "===== storefront.log ====="; tail -n 200 /tmp/storefront.log || true
+
+  # ── Backend image ──────────────────────────────────────────────────────────
+  backend-image:
+    name: Build + push backend image
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+  # ── Storefront image ─────────────────────────────────────────────────────
+  storefront-image:
+    name: Build + push storefront image
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/storefront
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: storefront
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=storefront
+          cache-to: type=gha,mode=max,scope=storefront
+          # NEXT_PUBLIC_* are inlined at build time → must match production. Set
+          # these as repo-level Actions *Variables* (Settings → Secrets and
+          # variables → Actions → Variables); they are public values, not secrets.
+          # Missing NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY fails the build by design.
+          build-args: |
+            NEXT_PUBLIC_MEDUSA_BACKEND_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
+            NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_BASE_URL=${{ vars.NEXT_PUBLIC_BASE_URL }}
+            NEXT_PUBLIC_DEFAULT_REGION=${{ vars.NEXT_PUBLIC_DEFAULT_REGION }}
+            NEXT_PUBLIC_MINIO_ENDPOINT=${{ vars.NEXT_PUBLIC_MINIO_ENDPOINT }}
+            NEXT_PUBLIC_SEARCH_ENDPOINT=${{ vars.NEXT_PUBLIC_SEARCH_ENDPOINT }}
+            NEXT_PUBLIC_SEARCH_API_KEY=${{ vars.NEXT_PUBLIC_SEARCH_API_KEY }}
+            NEXT_PUBLIC_INDEX_NAME=${{ vars.NEXT_PUBLIC_INDEX_NAME }}
+
+  # ── Deploy ───────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Railway
+    needs: [backend-image, storefront-image]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Redeploy Railway services
+        env:
+          # Railway *project* token scoped to the production environment.
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BACKEND_SERVICE: ${{ vars.RAILWAY_BACKEND_SERVICE }}
+          STOREFRONT_SERVICE: ${{ vars.RAILWAY_STOREFRONT_SERVICE }}
+        run: |
+          npm install -g @railway/cli@latest
+          # Each service is configured (in the Railway dashboard) to deploy the
+          # GHCR :latest image; redeploy re-pulls the freshly pushed tag.
+          railway redeploy --service "$BACKEND_SERVICE" --yes
+          railway redeploy --service "$STOREFRONT_SERVICE" --yes
