@@ -40,6 +40,8 @@
     "medusajs-launch-utils": "0.0.18",
     "minio": "^8.0.6",
     "@machinagod/moloni-client-ts": "npm:@jsr/machinagod__moloni-client-ts@0.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router-dom": "6.30.3",
     "resend": "4.0.1",
     "ulid": "^2.4.0"
@@ -55,8 +57,6 @@
     "@types/react-dom": "^18.3.7",
     "jest": "^29.7.0",
     "prop-types": "^15.8.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "react-email": "^5.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
