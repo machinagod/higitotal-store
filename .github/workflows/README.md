@@ -62,11 +62,14 @@ time, they are still statically prerendered.
 **Secrets:**
 - `GITHUB_TOKEN` — provided automatically; has `packages: write` for pushing to GHCR.
 - `RAILWAY_TOKEN` — **optional but recommended.** A Railway *project* token scoped
-  to the **production** environment (Railway → project → Settings → Tokens). The
-  `deploy` job uses it to force an immediate `railway redeploy --from-source` of
-  both services so they pull the new `:latest` without waiting on Railway's
-  auto-update poll (which can lag 10+ min). If unset, the `deploy` job no-ops with
-  a warning and image auto-updates (step 2) remain the fallback.
+  to the **production** environment (Railway → project → Settings → Tokens). Stored
+  as a secret on the **`scintillating-adaptation / production` GitHub Environment**
+  (not a plain repo secret), which is why the `deploy` job declares
+  `environment: "scintillating-adaptation / production"`. The job uses it to force
+  an immediate `railway redeploy --from-source` of both services so they pull the
+  new `:latest` without waiting on Railway's auto-update poll (which can lag 10+
+  min). If unset, the `deploy` job no-ops with a warning and image auto-updates
+  (step 2) remain the fallback.
 
 **Variables** (these are `NEXT_PUBLIC_*` — public values, not secrets — inlined
 into the storefront image at build time):
