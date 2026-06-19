@@ -65,6 +65,10 @@ const medusaConfig = {
   },
   modules: [
     {
+      // Amazon-style product characteristics (highlight bullets + spec table).
+      resolve: './src/modules/product-attributes'
+    },
+    {
       key: Modules.FILE,
       resolve: '@medusajs/file',
       options: {
