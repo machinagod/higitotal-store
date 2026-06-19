@@ -23,6 +23,13 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 # `pnpm build` = `medusa build` + postBuild.js. postBuild installs prod deps
 # inside .medusa/server (its own package.json), so that tree is self-contained.
 COPY . .
+# The admin dashboard's API base URL (admin.backendUrl) is baked into the bundle
+# at BUILD time by `medusa build` from BACKEND_PUBLIC_URL. It MUST be the public
+# backend URL — the RAILWAY_PUBLIC_DOMAIN_VALUE fallback only exists at runtime on
+# Railway, not here in CI, so without this arg the admin hardwires the
+# `http://localhost:9000` dev fallback and every admin API call (incl. login)
+# fails in production. Supplied by CI from the NEXT_PUBLIC_MEDUSA_BACKEND_URL var.
+ARG BACKEND_PUBLIC_URL
 # `medusa build` loads medusa-config.js → constants.ts, which assertValue()s
 # DATABASE_URL/JWT_SECRET/COOKIE_SECRET. The build only compiles (no DB
 # connection), so satisfy the asserts with throwaway values scoped to this RUN
@@ -30,6 +37,7 @@ COPY . .
 RUN DATABASE_URL="postgres://build:build@localhost:5432/build" \
     JWT_SECRET="build" \
     COOKIE_SECRET="build" \
+    BACKEND_PUBLIC_URL="${BACKEND_PUBLIC_URL}" \
     pnpm build
 
 # Root install still has devDependencies; runtime only needs init-backend's deps

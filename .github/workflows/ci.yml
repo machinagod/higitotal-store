@@ -218,6 +218,11 @@ jobs:
           tags: backend:smoke
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+          # Same build-arg as the push job so this job's cached `pnpm build` layer
+          # is reused there (the arg is part of the layer cache key). Value matches
+          # the push job; smoke only asserts /health, so the baked URL is moot here.
+          build-args: |
+            BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
 
       - name: Create smoke database
         run: |
@@ -337,6 +342,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+          # Bakes the admin dashboard's API base URL. Without it the admin calls
+          # http://localhost:9000 and login fails in production. = the backend's
+          # public URL (https://storeadmin.higitotal.pt).
+          build-args: |
+            BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
 
   # ── Storefront image ─────────────────────────────────────────────────────
   storefront-image:
