@@ -232,8 +232,8 @@ export default function ProductActions({
         {/* Assurance strip — NOTE: placeholder claims, confirm before launch */}
         <div className="grid grid-cols-3 gap-2 mt-5 text-center">
           {[
-            ["Entrega 48h", "Portugal Continental"],
-            ["Devolução", "14 dias"],
+            ["Entrega 72h", "Portugal Continental"],
+            ["Devolução", "30 dias"],
             ["Em stock", "Envio imediato"],
           ].map(([t, s]) => (
             <div key={t} className="rounded-large border border-hairline py-3 px-1">
