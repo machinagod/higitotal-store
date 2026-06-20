@@ -8,9 +8,23 @@ import { Text } from "@medusajs/ui"
  * when the product has no spec sheet.
  */
 const ProductSpecSheet = ({ product }: { product: HttpTypes.StoreProduct }) => {
-  const url = (product.metadata as Record<string, unknown> | null)?.[
+  const raw = (product.metadata as Record<string, unknown> | null)?.[
     "spec_pdf_url"
-  ] as string | undefined
+  ]
+
+  // metadata is admin-settable, so only render an href for an http(s) URL —
+  // rejects javascript:/data:/vbscript: etc.
+  let url: string | undefined
+  if (typeof raw === "string") {
+    try {
+      const parsed = new URL(raw)
+      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+        url = parsed.toString()
+      }
+    } catch {
+      // not a valid absolute URL — leave undefined
+    }
+  }
 
   if (!url) {
     return null
