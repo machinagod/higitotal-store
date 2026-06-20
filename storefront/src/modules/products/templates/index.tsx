@@ -7,6 +7,7 @@ import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import ProductHighlights from "@modules/products/components/product-highlights"
+import ProductSpecSheet from "@modules/products/components/product-spec-sheet"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
@@ -38,6 +39,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <Suspense fallback={null}>
             <ProductHighlights productId={product.id} />
           </Suspense>
+          <ProductSpecSheet product={product} />
           <ProductTabs product={product} />
         </div>
         <div className="block w-full relative">
