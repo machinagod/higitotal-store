@@ -7,24 +7,24 @@ const AtFeature = () => {
     <section className="relative overflow-hidden rounded-hero bg-svc-ground">
       <div className="grid grid-cols-1 small:grid-cols-[1.05fr_0.95fr]">
         {/* Copy */}
-        <div className="relative z-[2] px-7 py-12 text-svc-fg small:px-14 small:py-16">
+        <div className="relative z-[2] px-[22px] py-8 text-svc-fg small:px-14 small:py-16">
           <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-svc-signal">
             <span className="ind amber" />
             Assistência Técnica
           </span>
 
-          <h2 className="mt-4 max-w-[16ch] text-3xl font-extrabold leading-[1.06] tracking-tight text-white small:text-[42px]">
+          <h2 className="mt-4 max-w-[16ch] text-[26px] font-extrabold leading-[1.06] tracking-tight text-white small:text-[42px]">
             A sua equipa de manutenção, em todo o país.
           </h2>
 
-          <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-svc-fg-muted">
+          <p className="mt-4 max-w-[46ch] text-sm leading-relaxed text-svc-fg-muted small:mt-5 small:text-base">
             Instalamos, reparamos e mantemos o seu equipamento profissional —
             cozinhas Fagor, preparação Sammic, máquinas Nilfisk e muito mais.
             Contratos de manutenção que garantem o funcionamento do seu negócio,
             sem paragens.
           </p>
 
-          <div className="mt-7 flex flex-wrap gap-2.5">
+          <div className="mt-5 flex flex-wrap gap-2 small:mt-7 small:gap-2.5">
             {PILLS.map((pill) => (
               <span
                 key={pill}
@@ -36,25 +36,25 @@ const AtFeature = () => {
             ))}
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-col gap-2.5 small:mt-8 small:flex-row small:flex-wrap small:gap-3">
             <LocalizedClientLink
               href="/assistencia-tecnica"
-              className="inline-flex items-center gap-2.5 rounded-pill bg-svc-signal px-6 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.32)] transition-transform hover:-translate-y-0.5 hover:bg-svc-signal-ink"
+              className="inline-flex w-full items-center justify-center gap-2.5 rounded-pill bg-svc-signal px-6 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.32)] transition-transform hover:-translate-y-0.5 hover:bg-svc-signal-ink small:w-auto small:justify-start"
             >
               Pedir assistência
               <span aria-hidden>→</span>
             </LocalizedClientLink>
             <LocalizedClientLink
               href="/assistencia-tecnica"
-              className="inline-flex items-center gap-2.5 rounded-pill border-[1.5px] border-svc-line bg-transparent px-6 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-svc-ground-2"
+              className="inline-flex w-full items-center justify-center gap-2.5 rounded-pill border-[1.5px] border-svc-line bg-transparent px-6 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-svc-ground-2 small:w-auto small:justify-start"
             >
               Saber mais
             </LocalizedClientLink>
           </div>
         </div>
 
-        {/* Visual */}
-        <div className="relative min-h-[280px] overflow-hidden bg-svc-ground-2 small:min-h-[480px]">
+        {/* Visual (decorative radar — desktop only) */}
+        <div className="relative hidden min-h-[280px] overflow-hidden bg-svc-ground-2 small:block small:min-h-[480px]">
           <span className="absolute left-[42%] top-[38%] h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-svc-line" />
           <span className="absolute left-[42%] top-[38%] h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-svc-line opacity-70" />
           <span className="absolute left-[42%] top-[38%] h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-svc-line opacity-40" />

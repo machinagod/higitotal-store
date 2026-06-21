@@ -10,18 +10,18 @@ export default async function Footer() {
   return (
     <footer className="w-full bg-svc-ground text-svc-fg-muted font-sans">
       <div className="content-container">
-        <div className="grid grid-cols-1 gap-10 py-14 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] lg:gap-10">
+        <div className="grid grid-cols-1 gap-x-5 gap-y-6 py-9 xsmall:grid-cols-2 xsmall:gap-6 small:grid-cols-[1.5fr_1fr_1fr_1.2fr] small:gap-10 small:py-14">
           {/* Brand + blurb */}
           <div>
             <LocalizedClientLink href="/" className="inline-block">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/higitotal/logo-white-on-black.png"
+                src="/higitotal/logo-reversed.png"
                 alt="Higitotal"
                 className="mb-5 h-[42px] w-auto"
               />
             </LocalizedClientLink>
-            <p className="max-w-[34ch] text-[13px] leading-[1.65] text-svc-fg-muted">
+            <p className="max-w-none text-[13px] leading-[1.65] text-svc-fg-muted small:max-w-[34ch]">
               Higitotal — Sistemas e Produtos de Higiene, Lda. Distribuição e
               assistência técnica de equipamento profissional de higiene e
               cozinha, desde 1999.
@@ -151,7 +151,7 @@ export default async function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col gap-2 border-t border-svc-line py-7 text-[12px] text-svc-fg-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-svc-line py-7 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
           <span>
             © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de
             Higiene, Lda.
