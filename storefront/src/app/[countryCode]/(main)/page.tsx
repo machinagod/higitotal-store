@@ -5,6 +5,9 @@ import Hero from "@modules/home/components/hero"
 import TrustBar from "@modules/home/components/trust-bar"
 import CategoryCards from "@modules/home/components/category-cards"
 import AtFeature from "@modules/home/components/at-feature"
+import Suppliers from "@modules/home/components/suppliers"
+import Newsletter from "@modules/home/components/newsletter"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 
@@ -28,8 +31,8 @@ export default async function Home({
   }
 
   return (
-    <div className="content-container flex flex-col gap-14 py-9 small:gap-16 small:py-10">
-      <div className="flex flex-col gap-5">
+    <div className="content-container flex flex-col gap-9 py-4 small:gap-16 small:py-10">
+      <div className="flex flex-col gap-3 small:gap-5">
         <Hero />
         <TrustBar />
       </div>
@@ -37,14 +40,23 @@ export default async function Home({
       <CategoryCards />
 
       <section>
-        <div className="mb-7 flex flex-col gap-1">
-          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-cyan">
-            <span className="ind" />
-            Mais vendidos
-          </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-brand-ink">
-            Em destaque
-          </h2>
+        <div className="mb-[18px] flex flex-col items-start gap-1 small:mb-7 small:flex-row small:items-end small:justify-between small:gap-5">
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-cyan">
+              <span className="ind" />
+              Mais vendidos
+            </span>
+            <h2 className="text-2xl font-extrabold tracking-tight text-brand-ink small:text-[34px]">
+              Em destaque esta semana
+            </h2>
+          </div>
+          <LocalizedClientLink
+            href="/store"
+            className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.04em] text-brand-cyan small:text-xs"
+          >
+            Ver tudo
+            <span aria-hidden>→</span>
+          </LocalizedClientLink>
         </div>
         <ul className="flex flex-col gap-x-6">
           <FeaturedProducts collections={collections} region={region} />
@@ -52,6 +64,10 @@ export default async function Home({
       </section>
 
       <AtFeature />
+
+      <Suppliers />
+
+      <Newsletter />
     </div>
   )
 }

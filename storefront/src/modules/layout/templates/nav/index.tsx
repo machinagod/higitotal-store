@@ -102,7 +102,7 @@ export default async function Nav() {
                 <LocalizedClientLink
                   href="/cart"
                   data-testid="nav-cart-link"
-                  className="flex items-center gap-x-2.5 px-4 py-2.5 rounded-pill bg-brand-ink text-white text-xs font-semibold uppercase tracking-wide hover:bg-black transition-colors"
+                  className="flex items-center gap-x-1.5 small:gap-x-2.5 px-3 small:px-4 py-2.5 rounded-pill bg-brand-ink text-white text-xs font-semibold uppercase tracking-wide hover:bg-black transition-colors"
                 >
                   <BagIcon />
                   <span className="hidden small:inline">Carrinho</span>

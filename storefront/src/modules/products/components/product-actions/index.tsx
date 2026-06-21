@@ -238,7 +238,7 @@ export default function ProductActions({
           ].map(([t, s]) => (
             <div key={t} className="rounded-large border border-hairline py-3 px-1">
               <b className="block text-xsmall-regular text-grey-70">{t}</b>
-              <span className="text-[11px] text-grey-50">{s}</span>
+              <span className="hidden small:block text-[11px] text-grey-50">{s}</span>
             </div>
           ))}
         </div>

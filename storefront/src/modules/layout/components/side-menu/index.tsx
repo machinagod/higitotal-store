@@ -79,7 +79,7 @@ const SideMenu = ({
                     <div className="flex items-center justify-between" id="xmark">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/higitotal/logo-white-on-black.png"
+                        src="/higitotal/logo-reversed.png"
                         alt="Higitotal"
                         className="h-8 w-auto"
                       />
