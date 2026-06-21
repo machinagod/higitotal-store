@@ -71,7 +71,7 @@ export default async function Nav() {
 
           <SearchBox />
 
-          <div className="flex items-center gap-x-1 small:gap-x-2 ml-auto small:ml-0">
+          <div className="flex items-center gap-x-1 small:gap-x-2 ml-auto">
             <LocalizedClientLink
               href="/account"
               data-testid="nav-account-link"
