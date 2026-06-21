@@ -1,159 +1,105 @@
 import { HttpTypes } from "@medusajs/types"
-import {
-  getCategoryById,
-  getRootCategories,
-} from "@lib/data/categories"
-import { getProductsList } from "@lib/data/products"
-import PathBar, { PathOption, PathSegment } from "./path-bar"
+import { getCategoryById } from "@lib/data/categories"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type PathBarWrapperProps = {
   product: HttpTypes.StoreProduct
   countryCode: string
 }
 
-/** Max sibling products listed in the leaf (product) dropdown. */
-const MAX_SIBLING_PRODUCTS = 12
+type Crumb = { label: string; href?: string }
 
 /**
- * Pick the "deepest" category for a product: the one with the longest parent
- * chain. Products can belong to several categories; we follow the most specific.
+ * Pick the "deepest" category for a product: the one that is itself a child
+ * (has a parent), falling back to the first. Products can belong to several
+ * categories; we follow the most specific for the breadcrumb.
  */
 function pickDeepestCategory(
   categories: HttpTypes.StoreProductCategory[]
 ): HttpTypes.StoreProductCategory | undefined {
   if (!categories.length) return undefined
-  // Prefer a category that is itself a child (has a parent) — i.e. a leaf-ish
-  // node — falling back to the first one.
   const withParent = categories.filter((c) => c.parent_category)
   return (withParent[0] ?? categories[0]) as HttpTypes.StoreProductCategory
 }
 
 /**
- * Server wrapper that derives the breadcrumb path from the product's categories
- * and fetches sibling options for each level, then hands plain arrays to the
- * interactive client <PathBar>.
- *
- * Graceful degradation: if the product has no categories, renders a minimal
- * "Início / Produtos / {title}" path. Sibling fetches fail soft to a
- * single-option (current-only) dropdown.
+ * Product breadcrumb — a plain "Início / Categoria / Subcategoria / Produto"
+ * trail (no category dropdowns; the top-level navigator covers category
+ * browsing). Derived from the product's category chain, failing soft to
+ * "Início / Produtos / {title}".
  */
-const PathBarWrapper = async ({
-  product,
-  countryCode,
-}: PathBarWrapperProps) => {
-  const productHref = `/products/${product.handle}`
+const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
   const categories = (product.categories ??
     []) as HttpTypes.StoreProductCategory[]
 
-  // --- No categories: minimal path -----------------------------------------
+  const crumbs: Crumb[] = [{ label: "Início", href: "/" }]
+
   if (!categories.length) {
-    const segments: PathSegment[] = [
-      {
-        label: "Produtos",
-        options: [{ label: "Produtos", href: "/store", current: true }],
-      },
-      {
-        label: product.title,
-        options: [{ label: product.title, href: productHref, current: true }],
-      },
-    ]
-    return <PathBar segments={segments} />
-  }
-
-  // --- Walk the parent chain (leaf → root) ----------------------------------
-  const deepest = pickDeepestCategory(categories)!
-
-  // The product's categories arrive with one level of parent. To build the full
-  // chain we re-fetch each category by id (which carries parent + children).
-  const chain: HttpTypes.StoreProductCategory[] = []
-  let cursorId: string | undefined = deepest.id
-  // Guard against cycles / runaway depth.
-  let guard = 0
-  while (cursorId && guard < 8) {
-    const cat = await getCategoryById(cursorId)
-    if (!cat) break
-    chain.unshift(cat as HttpTypes.StoreProductCategory)
-    cursorId = (cat.parent_category as HttpTypes.StoreProductCategory | null)
-      ?.id
-    guard++
-  }
-
-  // Fallback if the re-fetch failed entirely: use what came on the product.
-  const path = chain.length ? chain : [deepest]
-
-  const rootCategories = await getRootCategories()
-
-  // --- Build a dropdown segment per category level --------------------------
-  const categorySegments: PathSegment[] = path.map((cat, level) => {
-    const parent = cat.parent_category as
-      | HttpTypes.StoreProductCategory
-      | null
-      | undefined
-
-    // Siblings = parent's children, or the root categories for the top level.
-    const siblings: HttpTypes.StoreProductCategory[] =
-      level === 0
-        ? (rootCategories as HttpTypes.StoreProductCategory[])
-        : ((parent?.category_children as
-            | HttpTypes.StoreProductCategory[]
-            | undefined) ?? [])
-
-    const options: PathOption[] = (
-      siblings.length ? siblings : [cat]
-    ).map((sib) => ({
-      label: sib.name,
-      href: `/categories/${sib.handle}`,
-      current: sib.id === cat.id,
-    }))
-
-    return { label: cat.name, options }
-  })
-
-  // --- Leaf segment: the product, with sibling products in its category -----
-  let productOptions: PathOption[] = [
-    { label: product.title, href: productHref, current: true },
-  ]
-
-  try {
-    const {
-      response: { products: siblings },
-    } = await getProductsList({
-      queryParams: {
-        category_id: [deepest.id],
-        limit: MAX_SIBLING_PRODUCTS,
-      } as any,
-      countryCode,
-    })
-
-    const siblingOptions = siblings
-      .filter((p) => p.handle)
-      .map((p) => ({
-        label: p.title,
-        href: `/products/${p.handle}`,
-        current: p.id === product.id,
-      }))
-
-    // Ensure the current product is present even if outside the fetched window.
-    if (siblingOptions.length) {
-      if (!siblingOptions.some((o) => o.current)) {
-        siblingOptions.unshift({
-          label: product.title,
-          href: productHref,
-          current: true,
-        })
-      }
-      productOptions = siblingOptions
+    crumbs.push({ label: "Produtos", href: "/store" })
+  } else {
+    // Walk the parent chain (leaf → root), re-fetching each category by id to
+    // get its parent. Guard against cycles / runaway depth.
+    const deepest = pickDeepestCategory(categories)!
+    const chain: HttpTypes.StoreProductCategory[] = []
+    let cursorId: string | undefined = deepest.id
+    let guard = 0
+    while (cursorId && guard < 8) {
+      const cat = await getCategoryById(cursorId)
+      if (!cat) break
+      chain.unshift(cat as HttpTypes.StoreProductCategory)
+      cursorId = (cat.parent_category as HttpTypes.StoreProductCategory | null)
+        ?.id
+      guard++
     }
-  } catch {
-    // fall through to the single-option (current-only) leaf
+    const path = chain.length ? chain : [deepest]
+    for (const cat of path) {
+      crumbs.push({ label: cat.name, href: `/categories/${cat.handle}` })
+    }
   }
 
-  const segments: PathSegment[] = [
-    ...categorySegments,
-    { label: product.title, options: productOptions },
-  ]
+  // Leaf: the current product (no link).
+  crumbs.push({ label: product.title })
 
-  return <PathBar segments={segments} />
+  return (
+    <div className="content-container">
+      <nav
+        aria-label="Breadcrumb"
+        data-testid="product-breadcrumb"
+        className="flex items-center gap-x-2 overflow-x-auto no-scrollbar py-4 text-xs font-semibold tracking-wide text-fg-muted"
+      >
+        {crumbs.map((crumb, i) => {
+          const isLast = i === crumbs.length - 1
+          return (
+            <span
+              key={`${crumb.label}-${i}`}
+              className="flex items-center gap-x-2"
+            >
+              {i > 0 && (
+                <span className="text-hairline" aria-hidden="true">
+                  /
+                </span>
+              )}
+              {crumb.href && !isLast ? (
+                <LocalizedClientLink
+                  href={crumb.href}
+                  className="whitespace-nowrap hover:text-brand-ink transition-colors"
+                >
+                  {crumb.label}
+                </LocalizedClientLink>
+              ) : (
+                <span
+                  aria-current={isLast ? "page" : undefined}
+                  className="whitespace-nowrap text-brand-ink"
+                >
+                  {crumb.label}
+                </span>
+              )}
+            </span>
+          )
+        })}
+      </nav>
+    </div>
+  )
 }
 
-export default PathBarWrapper
+export default PathBar

@@ -41,32 +41,38 @@ export default async function RelatedProducts({
       .filter(Boolean) as string[]
   }
   queryParams.is_giftcard = false
+  // Keep the rail short (the mock shows a single row). Fetch a small window and
+  // trim to RELATED_LIMIT after removing the current product.
+  queryParams.limit = 8
+
+  const RELATED_LIMIT = 4
 
   const products = await getProductsList({
     queryParams,
     countryCode,
-  }).then(({ response }) => {
-    return response.products.filter(
-      (responseProduct) => responseProduct.id !== product.id
-    )
-  })
+  }).then(({ response }) =>
+    response.products
+      .filter((responseProduct) => responseProduct.id !== product.id)
+      .slice(0, RELATED_LIMIT)
+  )
 
   if (!products.length) {
     return null
   }
 
   return (
-    <div className="product-page-constraint">
-      <div className="flex flex-col items-center text-center mb-16">
-        <span className="text-base-regular text-gray-600 mb-6">
-          Related products
+    <div className="content-container">
+      <div className="mb-7 flex flex-col gap-1">
+        <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-cyan">
+          <span className="ind" />
+          Sugestões
         </span>
-        <p className="text-2xl-regular text-ui-fg-base max-w-lg">
-          You might also want to check out these products.
-        </p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-brand-ink small:text-[28px]">
+          Costuma comprar com
+        </h2>
       </div>
 
-      <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
+      <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-6 small:gap-x-6">
         {products.map((product) => (
           <li key={product.id}>
             {region && <Product region={region} product={product} />}
