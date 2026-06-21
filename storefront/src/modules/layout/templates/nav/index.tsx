@@ -7,7 +7,8 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import CategoryNav from "@modules/layout/components/category-nav"
-import { Phone, Search, User, ShoppingBag } from "lucide-react"
+import SearchBox from "@modules/layout/components/search-box"
+import { Phone, User, ShoppingBag } from "lucide-react"
 
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
@@ -68,21 +69,7 @@ export default async function Nav() {
             />
           </LocalizedClientLink>
 
-          {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
-            <LocalizedClientLink
-              href="/search"
-              scroll={false}
-              data-testid="nav-search-link"
-              className="order-last small:order-none basis-full small:basis-auto flex-1 small:max-w-[520px] flex items-center gap-x-2.5 bg-white border-[1.5px] border-hairline rounded-pill pl-5 pr-1.5 py-1.5 text-fg-muted hover:border-brand-cyan focus-within:border-brand-cyan transition-colors"
-            >
-              <span className="flex-1 text-sm font-medium text-[#98a0a8] truncate">
-                Pesquisar produtos, marcas ou referências…
-              </span>
-              <span className="flex-none flex items-center justify-center w-10 h-10 rounded-pill bg-brand-cyan text-white">
-                <Search className="h-[18px] w-[18px]" />
-              </span>
-            </LocalizedClientLink>
-          )}
+          <SearchBox />
 
           <div className="flex items-center gap-x-1 small:gap-x-2 ml-auto small:ml-0">
             <LocalizedClientLink
