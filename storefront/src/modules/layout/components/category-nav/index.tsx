@@ -36,7 +36,8 @@ const CategoryNav = ({ categories }: { categories: NavCategory[] }) => {
   )
 
   return (
-    <nav className="bg-white border-b border-hairline">
+    // Hidden on mobile — the hamburger side-menu already lists the categories.
+    <nav className="hidden small:block bg-white border-b border-hairline">
       <div className="content-container flex items-center gap-x-2 small:gap-x-3 h-[54px]">
         {/* Inline categories — scroll within the available width if needed */}
         <div className="flex items-center gap-x-1 flex-1 min-w-0 overflow-x-auto no-scrollbar">

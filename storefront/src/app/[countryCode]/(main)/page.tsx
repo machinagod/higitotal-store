@@ -7,7 +7,7 @@ import CategoryCards from "@modules/home/components/category-cards"
 import AtFeature from "@modules/home/components/at-feature"
 import Suppliers from "@modules/home/components/suppliers"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { getCollectionsWithProducts } from "@lib/data/collections"
+import { getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
@@ -22,17 +22,22 @@ export default async function Home({
   params: Promise<{ countryCode: string }>
 }) {
   const { countryCode } = await params
-  const collections = await getCollectionsWithProducts(countryCode)
   const region = await getRegion(countryCode)
 
-  if (!collections || !region) {
+  if (!region) {
     return null
   }
+
+  // Populate the "Em destaque" rail directly from the catalog (the store has no
+  // collections), so the section is never empty.
+  const {
+    response: { products: featured },
+  } = await getProductsList({ queryParams: { limit: 8 }, countryCode })
 
   return (
     <div className="content-container flex flex-col gap-9 py-4 small:gap-16 small:py-10">
       <div className="flex flex-col gap-3 small:gap-5">
-        <Hero />
+        <Hero image={featured?.[0]?.thumbnail} />
         <TrustBar />
       </div>
 
@@ -57,9 +62,7 @@ export default async function Home({
             <span aria-hidden>→</span>
           </LocalizedClientLink>
         </div>
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
+        <FeaturedProducts products={featured} region={region} />
       </section>
 
       <AtFeature />

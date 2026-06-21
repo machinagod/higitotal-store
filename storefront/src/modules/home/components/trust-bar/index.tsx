@@ -1,4 +1,4 @@
-import { Truck, Award, Star, Headphones, type LucideIcon } from "lucide-react"
+import { Truck, Clock, Award, Wrench, type LucideIcon } from "lucide-react"
 
 const ITEMS: { Icon: LucideIcon; title: string; subtitle: string }[] = [
   {
@@ -7,17 +7,17 @@ const ITEMS: { Icon: LucideIcon; title: string; subtitle: string }[] = [
     subtitle: "Portugal Continental",
   },
   {
-    Icon: Award,
+    Icon: Clock,
     title: "27 anos",
     subtitle: "de experiência",
   },
   {
-    Icon: Star,
+    Icon: Award,
     title: "Marcas líderes",
     subtitle: "Fagor · Sammic · Nilfisk",
   },
   {
-    Icon: Headphones,
+    Icon: Wrench,
     title: "Assistência própria",
     subtitle: "Equipa técnica certificada",
   },

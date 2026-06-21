@@ -1,16 +1,25 @@
 import { HttpTypes } from "@medusajs/types"
-import ProductRail from "@modules/home/components/featured-products/product-rail"
+import ProductPreview from "@modules/products/components/product-preview"
 
-export default async function FeaturedProducts({
-  collections,
+export default function FeaturedProducts({
+  products,
   region,
 }: {
-  collections: HttpTypes.StoreCollection[]
+  products: HttpTypes.StoreProduct[]
   region: HttpTypes.StoreRegion
 }) {
-  return collections.map((collection) => (
-    <li key={collection.id}>
-      <ProductRail collection={collection} region={region} />
-    </li>
-  ))
+  if (!products?.length) {
+    return null
+  }
+
+  return (
+    <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-6 small:gap-x-6 small:gap-y-8">
+      {products.map((product) => (
+        <li key={product.id}>
+          {/* @ts-ignore */}
+          <ProductPreview product={product} region={region} isFeatured />
+        </li>
+      ))}
+    </ul>
+  )
 }

@@ -1,7 +1,7 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getFeaturedCategories } from "@lib/data/categories"
 
-const Hero = async () => {
+const Hero = async ({ image }: { image?: string | null }) => {
   const featured = await getFeaturedCategories()
   const href = (label: string) =>
     featured.find((c) => c.label === label)?.href ?? "/store"
@@ -52,6 +52,25 @@ const Hero = async () => {
             </LocalizedClientLink>
           </div>
         </div>
+
+        {/* Media panel (desktop only) — a featured product shot on the glow */}
+        {image && (
+          <div className="relative z-[2] hidden small:flex small:flex-[1_1_44%] items-center justify-center self-stretch">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute h-72 w-72 rounded-full bg-white/20 blur-2xl"
+            />
+            <span className="absolute right-0 top-2 inline-flex items-center gap-2 rounded-pill bg-white/15 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-white backdrop-blur">
+              <span className="ind" /> Em destaque
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={image}
+              alt=""
+              className="relative max-h-[320px] w-auto object-contain drop-shadow-2xl"
+            />
+          </div>
+        )}
       </div>
 
       {/* Side column */}

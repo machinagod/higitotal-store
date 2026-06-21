@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Phone, Mail, MapPin, Check } from "lucide-react"
 import { sdk } from "@lib/config"
 
 /**
@@ -80,7 +81,7 @@ const RequestForm = () => {
             className="flex items-center gap-3 text-[15px] font-semibold"
           >
             <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-white/[0.16]">
-              ☎
+              <Phone className="h-[18px] w-[18px]" />
             </span>
             +351 278 262 913
           </a>
@@ -89,13 +90,13 @@ const RequestForm = () => {
             className="flex items-center gap-3 text-[15px] font-semibold"
           >
             <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-white/[0.16]">
-              ✉
+              <Mail className="h-[18px] w-[18px]" />
             </span>
             higitotal@higitotal.pt
           </a>
           <div className="flex items-center gap-3 text-[15px] font-semibold">
             <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-white/[0.16]">
-              ◎
+              <MapPin className="h-[18px] w-[18px]" />
             </span>
             Mirandela · Portugal
           </div>
@@ -109,8 +110,8 @@ const RequestForm = () => {
             className="flex h-full flex-col justify-center"
             data-testid="request-form-success"
           >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-svc-ok/15 text-2xl text-svc-ok">
-              ✓
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-svc-ok/15 text-svc-ok">
+              <Check className="h-6 w-6" />
             </div>
             <h3 className="text-xl font-extrabold text-brand-ink">
               Pedido enviado

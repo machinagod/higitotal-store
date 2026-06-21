@@ -2,7 +2,6 @@ import React, { Suspense } from "react"
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
-import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
@@ -34,23 +33,18 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
       <Suspense fallback={null}>
         <PathBar product={product} countryCode={countryCode} />
       </Suspense>
+
+      {/* Two-column: gallery (sticky) | info + buy box */}
       <div
-        className="content-container flex flex-col small:flex-row small:items-start py-6 relative"
+        className="content-container grid grid-cols-1 small:grid-cols-2 small:items-start small:gap-x-10 py-6"
         data-testid="product-container"
       >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-          <ProductInfo product={product} />
-          <Suspense fallback={null}>
-            <ProductHighlights productId={product.id} />
-          </Suspense>
-          <ProductSpecSheet product={product} />
-          <ProductTabs product={product} />
-        </div>
-        <div className="block w-full relative">
+        <div className="w-full small:sticky small:top-32">
           <ImageGallery images={product?.images || []} />
         </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
-          <ProductOnboardingCta />
+
+        <div className="flex flex-col gap-y-6 py-6 small:py-0 w-full">
+          <ProductInfo product={product} />
           <Suspense
             fallback={
               <ProductActions
@@ -62,10 +56,20 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           >
             <ProductActionsWrapper id={product.id} region={region} />
           </Suspense>
+          <Suspense fallback={null}>
+            <ProductHighlights productId={product.id} />
+          </Suspense>
         </div>
       </div>
+
+      {/* Full-width details: spec sheet + tabs */}
+      <div className="content-container flex flex-col gap-y-6 pb-6">
+        <ProductSpecSheet product={product} />
+        <ProductTabs product={product} />
+      </div>
+
       <div
-        className="content-container my-16 small:my-32"
+        className="content-container my-16 small:my-24"
         data-testid="related-products-container"
       >
         <Suspense fallback={<SkeletonRelatedProducts />}>

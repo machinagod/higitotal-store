@@ -1,3 +1,5 @@
+import { MapPin, Phone, Mail } from "lucide-react"
+
 import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 
@@ -109,7 +111,7 @@ export default async function Footer() {
               <div className="flex flex-col gap-[14px] text-[13px] font-medium leading-[1.5] text-svc-fg">
                 <div className="flex items-start gap-3">
                   <span className="mt-px shrink-0 text-brand-cyan">
-                    <span className="ind" />
+                    <MapPin className="h-4 w-4" />
                   </span>
                   <span>
                     Zona Industrial, Rua J nº 137
@@ -119,7 +121,7 @@ export default async function Footer() {
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="mt-px shrink-0 text-brand-cyan">
-                    <span className="ind" />
+                    <Phone className="h-4 w-4" />
                   </span>
                   <a
                     href="tel:+351278262913"
@@ -130,7 +132,7 @@ export default async function Footer() {
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="mt-px shrink-0 text-brand-cyan">
-                    <span className="ind" />
+                    <Mail className="h-4 w-4" />
                   </span>
                   <a
                     href="mailto:higitotal@higitotal.pt"

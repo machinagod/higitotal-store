@@ -1,3 +1,5 @@
+import { Phone } from "lucide-react"
+
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 /**
@@ -52,7 +54,7 @@ const Hero = () => {
               href="tel:+351278262913"
               className="inline-flex items-center gap-[10px] rounded-pill border-[1.5px] border-svc-line bg-transparent px-7 py-[15px] text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:-translate-y-0.5 hover:bg-svc-ground-2"
             >
-              ☎ +351 278 262 913
+              <Phone className="h-4 w-4" /> +351 278 262 913
             </a>
           </div>
           <div className="mt-8 flex flex-wrap gap-[26px]">

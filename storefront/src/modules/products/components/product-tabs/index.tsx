@@ -1,9 +1,5 @@
 "use client"
 
-import Back from "@modules/common/icons/back"
-import FastDelivery from "@modules/common/icons/fast-delivery"
-import Refresh from "@modules/common/icons/refresh"
-
 import Accordion from "./accordion"
 import { HttpTypes } from "@medusajs/types"
 
@@ -12,16 +8,26 @@ type ProductTabsProps = {
 }
 
 const ProductTabs = ({ product }: ProductTabsProps) => {
+  const specs = getProductSpecs(product)
+
   const tabs = [
-    {
-      label: "Product Information",
-      component: <ProductInfoTab product={product} />,
-    },
-    {
-      label: "Shipping & Returns",
-      component: <ShippingInfoTab />,
-    },
-  ]
+    product.description
+      ? {
+          label: "Descrição",
+          component: <DescriptionTab product={product} />,
+        }
+      : null,
+    specs.length > 0
+      ? {
+          label: "Características",
+          component: <SpecsTab specs={specs} />,
+        }
+      : null,
+  ].filter(Boolean) as { label: string; component: JSX.Element }[]
+
+  if (tabs.length === 0) {
+    return null
+  }
 
   return (
     <div className="w-full">
@@ -41,79 +47,66 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
   )
 }
 
-const ProductInfoTab = ({ product }: ProductTabsProps) => {
+const DescriptionTab = ({ product }: ProductTabsProps) => {
   return (
     <div className="text-small-regular py-8">
-      <div className="grid grid-cols-2 gap-x-8">
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Country of origin</span>
-            <p>{product.origin_country ? product.origin_country : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Type</span>
-            <p>{product.type ? product.type.value : "-"}</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Weight</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Dimensions</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
-                : "-"}
-            </p>
-          </div>
-        </div>
-      </div>
+      <p className="whitespace-pre-line">{product.description}</p>
     </div>
   )
 }
 
-const ShippingInfoTab = () => {
+type Spec = {
+  label: string
+  value: string
+}
+
+const getProductSpecs = (product: HttpTypes.StoreProduct): Spec[] => {
+  const specs: Spec[] = []
+
+  if (product.material) {
+    specs.push({ label: "Material", value: product.material })
+  }
+
+  if (product.weight) {
+    specs.push({ label: "Peso", value: `${product.weight} g` })
+  }
+
+  if (product.origin_country) {
+    specs.push({ label: "País de origem", value: product.origin_country })
+  }
+
+  if (product.type?.value) {
+    specs.push({ label: "Tipo", value: product.type.value })
+  }
+
+  if (product.length && product.width && product.height) {
+    specs.push({
+      label: "Dimensões",
+      value: `${product.length} x ${product.width} x ${product.height}`,
+    })
+  }
+
+  return specs
+}
+
+const SpecsTab = ({ specs }: { specs: Spec[] }) => {
   return (
     <div className="text-small-regular py-8">
-      <div className="grid grid-cols-1 gap-y-8">
-        <div className="flex items-start gap-x-2">
-          <FastDelivery />
-          <div>
-            <span className="font-semibold">Fast delivery</span>
-            <p className="max-w-sm">
-              Your package will arrive in 3-5 business days at your pick up
-              location or in the comfort of your home.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-x-2">
-          <Refresh />
-          <div>
-            <span className="font-semibold">Simple exchanges</span>
-            <p className="max-w-sm">
-              Is the fit not quite right? No worries - we&apos;ll exchange your
-              product for a new one.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-x-2">
-          <Back />
-          <div>
-            <span className="font-semibold">Easy returns</span>
-            <p className="max-w-sm">
-              Just return your product and we&apos;ll refund your money. No
-              questions asked – we&apos;ll do our best to make sure your return
-              is hassle-free.
-            </p>
-          </div>
-        </div>
-      </div>
+      <table className="w-full">
+        <tbody>
+          {specs.map((spec) => (
+            <tr
+              key={spec.label}
+              className="border-b border-ui-border-base last:border-b-0"
+            >
+              <th className="py-2 pr-4 text-left font-semibold align-top whitespace-nowrap">
+                {spec.label}
+              </th>
+              <td className="py-2 text-ui-fg-subtle">{spec.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

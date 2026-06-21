@@ -1,3 +1,5 @@
+import { Check } from "lucide-react"
+
 const POINTS = [
   {
     title: "Manutenção preventiva",
@@ -51,8 +53,8 @@ const Maintenance = () => {
         <div className="flex flex-col justify-center gap-[18px] bg-[#0e1116] p-8 sm:p-[50px]">
           {POINTS.map((p) => (
             <div key={p.title} className="flex items-start gap-4">
-              <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[9px] bg-svc-ok/[0.14] text-[15px] text-svc-ok">
-                ✓
+              <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[9px] bg-svc-ok/[0.14] text-svc-ok">
+                <Check className="h-[15px] w-[15px]" />
               </span>
               <div>
                 <b className="text-[15px] font-bold leading-snug text-white">

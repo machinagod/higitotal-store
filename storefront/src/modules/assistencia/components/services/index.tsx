@@ -1,6 +1,8 @@
+import { Wrench, Cog, Calendar, type LucideIcon } from "lucide-react"
+
 type Service = {
   num: string
-  icon: string
+  Icon: LucideIcon
   title: string
   body: string
   points: string[]
@@ -9,7 +11,7 @@ type Service = {
 const SERVICES: Service[] = [
   {
     num: "01",
-    icon: "🔧",
+    Icon: Wrench,
     title: "Instalação",
     body: "Instalação e arranque de equipamento profissional, com configuração e formação à sua equipa.",
     points: [
@@ -20,7 +22,7 @@ const SERVICES: Service[] = [
   },
   {
     num: "02",
-    icon: "⚙",
+    Icon: Cog,
     title: "Reparação",
     body: "Diagnóstico e reparação no local ou em oficina, com peças originais e garantia do serviço.",
     points: [
@@ -31,7 +33,7 @@ const SERVICES: Service[] = [
   },
   {
     num: "03",
-    icon: "🗓",
+    Icon: Calendar,
     title: "Contratos de manutenção",
     body: "Manutenção preventiva planeada que reduz avarias, prolonga o equipamento e evita paragens.",
     points: [
@@ -75,8 +77,8 @@ const Services = () => {
               <div className="text-[13px] font-extrabold leading-none tracking-[0.1em] text-svc-signal">
                 {s.num}
               </div>
-              <div className="my-5 flex h-[58px] w-[58px] items-center justify-center rounded-[16px] bg-svc-signal/[0.12] text-[26px] text-svc-signal">
-                {s.icon}
+              <div className="my-5 flex h-[58px] w-[58px] items-center justify-center rounded-[16px] bg-svc-signal/[0.12] text-svc-signal">
+                <s.Icon className="h-7 w-7" />
               </div>
               <h3 className="text-[22px] font-bold leading-tight tracking-[-0.01em] text-white">
                 {s.title}

@@ -1,5 +1,4 @@
 import { HttpTypes } from "@medusajs/types"
-import { Container } from "@medusajs/ui"
 import Image from "next/image"
 
 type ImageGalleryProps = {
@@ -7,33 +6,51 @@ type ImageGalleryProps = {
 }
 
 const ImageGallery = ({ images }: ImageGalleryProps) => {
+  const main = images?.[0]
+  const thumbs = (images || []).slice(0, 5)
+
   return (
-    <div className="flex items-start relative">
-      <div className="flex flex-col flex-1 small:mx-16 gap-y-4">
-        {images.map((image, index) => {
-          return (
-            <Container
+    <div className="flex flex-col gap-3">
+      {/* Main image — square, white background; product sits cleanly via
+          object-contain + multiply (removes the white box halo). */}
+      <div className="relative aspect-square w-full overflow-hidden rounded-card border border-hairline bg-white">
+        {main?.url ? (
+          <Image
+            src={main.url}
+            priority
+            alt="Imagem do produto"
+            fill
+            sizes="(max-width: 768px) 100vw, 600px"
+            className="object-contain p-6 small:p-10 mix-blend-multiply"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center text-sm text-fg-muted">
+            Sem imagem
+          </div>
+        )}
+      </div>
+
+      {/* Thumbnail strip (only when there are multiple images) */}
+      {thumbs.length > 1 && (
+        <div className="grid grid-cols-5 gap-3">
+          {thumbs.map((image, index) => (
+            <div
               key={image.id}
-              className="relative aspect-[29/34] w-full overflow-hidden bg-ui-bg-subtle"
-              id={image.id}
+              className="relative aspect-square overflow-hidden rounded-[12px] border border-hairline bg-white"
             >
               {!!image.url && (
                 <Image
                   src={image.url}
-                  priority={index <= 2 ? true : false}
-                  className="absolute inset-0 rounded-rounded"
-                  alt={`Product image ${index + 1}`}
+                  alt={`Imagem ${index + 1}`}
                   fill
-                  sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
-                  style={{
-                    objectFit: "cover",
-                  }}
+                  sizes="120px"
+                  className="object-contain p-2 mix-blend-multiply"
                 />
               )}
-            </Container>
-          )
-        })}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

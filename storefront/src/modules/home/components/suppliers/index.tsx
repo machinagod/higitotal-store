@@ -1,4 +1,4 @@
-const BRANDS = ["Fagor", "Vileda", "Sammic", "Nilfisk", "Vileda Origo"]
+const BRANDS = ["Fagor", "Vileda", "Sammic", "Nilfisk", "Vileda Origo", "CELEA"]
 
 const Suppliers = () => {
   return (
