@@ -364,7 +364,12 @@ jobs:
   e2e-prod:
     name: Production e2e (post-deploy)
     needs: [changes, deploy]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # always() + explicit deploy check: without it, a skipped upstream image job
+    # (single-app push) propagates "skipped" down the chain and this never runs,
+    # even though deploy succeeded.
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      && needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
