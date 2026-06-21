@@ -72,6 +72,11 @@ ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL} \
 
 COPY --from=builder /app ./
 
+# Commit baked in for the /api/healthcheck probe — CI polls it post-deploy to
+# confirm this exact build is live before running prod e2e.
+ARG GIT_SHA
+ENV GIT_SHA=${GIT_SHA}
+
 # Railway injects PORT; default to the repo's 8000 convention.
 EXPOSE 8000
 CMD ["sh", "-c", "node_modules/.bin/next start -p ${PORT:-8000}"]

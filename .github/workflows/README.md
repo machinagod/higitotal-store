@@ -7,42 +7,44 @@ push to master ──► GitHub Actions "CI" (ci.yml)
     │
     ├─ changes            paths-filter → which app changed (backend / storefront)
     │                          │
-    ├─ e2e                spins Postgres + backend + storefront, runs Playwright e2e
-    │                     (ALWAYS — full-stack functional gate)
-    │                          │ green
-    │                          ▼
-    ├─ image-smoke        builds + boots ONLY the changed app's image(s)
+    ├─ image-smoke        builds + boots ONLY the changed app's image(s)   ◄ the gate
     │                     (skips the backend build/boot for storefront-only pushes)
     │                          │ green
     │                          ▼
-    ├─ backend-image     build+push  (only if backend/** changed)
-    ├─ storefront-image  build+push  (only if storefront/** changed)
+    ├─ backend-image     build+push  (only if backend/** changed; bakes GIT_SHA)
+    ├─ storefront-image  build+push  (only if storefront/** changed; bakes GIT_SHA)
     │                                                 │
-    └─ deploy ── railway redeploy ──────────────────────┘  (only the changed service(s))
+    ├─ deploy ── railway redeploy ──► WAIT until prod reports the new commit
+    │            (/version + /api/healthcheck report GIT_SHA)
+    │                          │ live
+    │                          ▼
+    └─ e2e-prod           read-only Playwright against LIVE prod (token-gated)
 ```
 
 **Path-filtered for fast iteration:** a `changes` job (dorny/paths-filter) detects
 whether `backend/**` or `storefront/**` changed; a change to `.github/workflows/ci.yml`
-counts as both. `e2e` and `image-smoke` ALWAYS run (so the required checks always
-report), but `image-smoke` only builds/boots the changed app, and the image-push +
-`deploy` jobs are per-app. So a storefront-only push skips the entire backend Docker
-build + migrate + boot + redeploy (and vice-versa) — a much faster publish.
+counts as both. `image-smoke` ALWAYS runs (so the gate reports), but only
+builds/boots the changed app, and the image-push + `deploy` + `e2e-prod` jobs are
+per-app. So a storefront-only push skips the entire backend Docker build + migrate
++ boot + redeploy (and vice-versa) — a much faster publish.
 
 GitHub Actions **builds, smoke-tests, and pushes the images**, then **nudges
 Railway to pull the new `:latest` immediately** (`deploy` job, `railway redeploy
---from-source`). Railway services also have **GHCR image auto-updates** enabled
-as a fallback — if the nudge is skipped (no `RAILWAY_TOKEN`) or fails, Railway
-still picks up the new image on its next poll (just slower, 10+ min). Railway no
-longer builds from the repo.
+--from-source`). Each image bakes the commit into `GIT_SHA`, and `deploy` then
+**waits until prod reports that commit** — the backend at `/version`, the
+storefront at `/api/healthcheck` — so we never test a half-rolled deploy. Railway
+services also have **GHCR image auto-updates** enabled as a fallback.
 
-`e2e` and `image-smoke` both gate the push: a red run blocks the image (and
-therefore the deploy). `e2e` runs the app from source with devDependencies
-present; `image-smoke` boots the **pruned** production images, so a runtime
-dependency misfiled as a devDependency (e.g. storefront `ansi-colors`, backend
-`react`) can't pass `e2e` yet crash the deployed image.
+**`image-smoke` is the only pre-push gate** — it boots the **pruned** production
+images, so a runtime dependency misfiled as a devDependency (e.g. storefront
+`ansi-colors`, backend `react`) is caught before publish. `e2e` is **no longer a
+pre-merge gate**: it runs as `e2e-prod` *after* the deploy, validating the live
+site. It is strictly **read-only** (navigation/render assertions; never creates
+carts/accounts/orders) and authenticates through the pre-launch access gate with
+the `STOREFRONT_ACCESS_TOKEN` secret.
 
-`backend-image` and `storefront-image` only run on **push to master** (not on
-PRs). PRs get the full `e2e` + `image-smoke` gate.
+`backend-image`, `storefront-image`, `deploy`, and `e2e-prod` only run on **push
+to master** (not on PRs). **PRs run only `image-smoke`** (build + boot).
 
 ## Images
 
@@ -70,15 +72,19 @@ time, they are still statically prerendered.
 
 **Secrets:**
 - `GITHUB_TOKEN` — provided automatically; has `packages: write` for pushing to GHCR.
-- `RAILWAY_TOKEN` — **optional but recommended.** A Railway *project* token scoped
-  to the **production** environment (Railway → project → Settings → Tokens). Stored
-  as a secret on the **`scintillating-adaptation / production` GitHub Environment**
-  (not a plain repo secret), which is why the `deploy` job declares
+- `RAILWAY_TOKEN` — A Railway *project* token scoped to the **production**
+  environment (Railway → project → Settings → Tokens). Stored as a secret on the
+  **`scintillating-adaptation / production` GitHub Environment** (not a plain repo
+  secret), which is why the `deploy` job declares
   `environment: "scintillating-adaptation / production"`. The job uses it to force
   an immediate `railway redeploy --from-source` of both services so they pull the
   new `:latest` without waiting on Railway's auto-update poll (which can lag 10+
-  min). If unset, the `deploy` job no-ops with a warning and image auto-updates
-  (step 2) remain the fallback.
+  min). If unset, the redeploy no-ops with a warning and image auto-updates (step
+  2) remain the fallback — but then `deploy` waits on the slower poll before
+  `e2e-prod` can run.
+- `STOREFRONT_ACCESS_TOKEN` — **repo secret.** The pre-launch access-gate token;
+  `e2e-prod` uses it to authenticate against live prod. Must match the storefront
+  service's `STOREFRONT_ACCESS_TOKEN` env var.
 
 **Variables** (these are `NEXT_PUBLIC_*` — public values, not secrets — inlined
 into the storefront image at build time):
@@ -106,9 +112,10 @@ into the storefront image at build time):
    image runs `next start`).
 4. Keep the existing **health check paths** (`/health`, `/api/healthcheck`).
 5. **Enable image auto-updates** on the service so Railway polls the GHCR tag and
-   redeploys when CI publishes a new `:latest`. This is what deploys — CI has no
-   deploy job. (The old **"Wait for CI"** git setting is moot for image-source
-   services; leave it off.)
+   redeploys when CI publishes a new `:latest`. CI's `deploy` job force-redeploys
+   for speed; this auto-update is the fallback when `RAILWAY_TOKEN` is absent. (The
+   old **"Wait for CI"** git setting is moot for image-source services; leave it
+   off.)
 
 > Because the images don't exist until the first `master` build runs, do the
 > Railway source switch **after** that first build has pushed both images

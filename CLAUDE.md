@@ -94,21 +94,31 @@ Fix failures before committing — including pre-existing ones in files you touc
   image tag and redeploys itself when a new `:latest` is published. Railway no
   longer builds from the repo. `init-backend` + the start command run DB
   migrations on boot (backend image `CMD`).
-- **Pipeline order**: `e2e` → `image-smoke` → `backend-image` + `storefront-image`.
-  `e2e` (full-stack Playwright) and `image-smoke` (builds + boots the real Docker
-  images) both run on an ephemeral CI Postgres (never prod; no secrets) and gate
-  the image push. `e2e` runs the app from source (devDeps present); `image-smoke`
-  boots the **pruned** production images, so a runtime dep misfiled as a
-  devDependency (it has bitten us: storefront `ansi-colors`, backend `react`) is
-  caught before publish. The image-push jobs run only on push to `master`.
+- **Pipeline order**: `image-smoke` → `backend-image` + `storefront-image` →
+  `deploy` → `e2e-prod`. `image-smoke` is the **only pre-push gate** (runs on PRs
+  + master): it builds the real Docker images and boots the **pruned** production
+  images, so a runtime dep misfiled as a devDependency (it has bitten us:
+  storefront `ansi-colors`, backend `react`) is caught before publish, on an
+  ephemeral CI Postgres (never prod; no secrets). The image-push + `deploy` +
+  `e2e-prod` jobs run on push to `master` only.
+- **e2e runs AFTER deploy, against LIVE prod** (not a pre-merge gate). Each image
+  bakes the commit into `GIT_SHA`; the `deploy` job force-redeploys then **waits
+  until prod reports the new commit** (`/version` on the backend,
+  `/api/healthcheck` on the storefront) before `e2e-prod` runs. `e2e-prod`
+  (`pnpm test-e2e:prod`, `playwright.prod.config.ts` → `e2e/prod/`) is **strictly
+  read-only** — navigation/render assertions only, never creates carts/accounts/
+  orders — and authenticates through the access-token gate with the
+  `STOREFRONT_ACCESS_TOKEN` repo secret. PRs run **no** e2e.
 - **Storefront images are env-specific**: `NEXT_PUBLIC_*` (incl. the publishable
   key) are inlined at build time from GitHub Actions **Variables**. The backend
   image needs no build secrets.
 - **Required config** (one-time): the `NEXT_PUBLIC_*` Actions Variables, a GHCR
   pull credential on each Railway service, and **image auto-updates** enabled on
-  each service (all in the Railway dashboard — not settable via API). No
-  `RAILWAY_TOKEN` is needed (CI doesn't deploy). Full list in
-  `.github/workflows/README.md`.
+  each service (Railway dashboard — not settable via API). CI now force-redeploys
+  and runs prod e2e, so it also needs: `RAILWAY_TOKEN` (project token on the
+  `scintillating-adaptation / production` Environment), the `RAILWAY_BACKEND_SERVICE`
+  / `RAILWAY_STOREFRONT_SERVICE` Variables, and the `STOREFRONT_ACCESS_TOKEN` repo
+  secret (for the prod e2e gate). Full list in `.github/workflows/README.md`.
 - The `storefront/e2e` suite **drops/recreates its DB** — only ever point it at a
   `test_`-prefixed DB, never the production `DATABASE_URL`.
 

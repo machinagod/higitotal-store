@@ -2,19 +2,20 @@ name: CI
 
 # Build + deploy pipeline for master:
 #
-#   push ──► e2e (full-stack Playwright gate, ephemeral CI Postgres)
-#             └─► image-smoke (build the real Docker images + boot them)
-#                   └─► backend-image  ┐  push to GHCR
-#                   └─► storefront-image┘  (tags :latest + :sha-<commit>)
+#   push ──► image-smoke (build the real Docker images + boot them)  ◄ the gate
+#             ├─► backend-image  ┐  push to GHCR (:latest + :sha-<commit>,
+#             └─► storefront-image┘  GIT_SHA baked into the image)
+#                   └─► deploy (railway redeploy --from-source, then WAIT until
+#                       prod /version + /api/healthcheck report the new commit)
+#                         └─► e2e-prod (read-only Playwright against LIVE prod)
 #
-# Railway no longer builds from the repo, and CI no longer triggers the deploy:
-# each service has GHCR image auto-updates enabled, so Railway redeploys itself
-# when a new :latest is published. e2e + image-smoke both gate the push: a red run
-# blocks the image (and therefore the deploy). e2e exercises the app from source
-# (devDeps present); image-smoke boots the pruned production images so runtime
-# deps misfiled as devDependencies can't slip through. Both stacks are
-# self-contained (CI Postgres, no external services/secrets) and never touch
-# production. See .github/workflows/README.md.
+# e2e now runs AFTER the deploy, validating the live site — it is no longer a
+# pre-merge gate. PRs run only image-smoke (build + boot the pruned production
+# images), which catches runtime deps misfiled as devDependencies. The image
+# push + deploy + e2e-prod jobs run on push to master only. image-smoke uses an
+# ephemeral CI Postgres (no secrets, never touches prod); prod e2e is strictly
+# read-only and authenticates through the access-token gate. See
+# .github/workflows/README.md.
 
 on:
   push:
@@ -33,9 +34,9 @@ permissions:
 
 jobs:
   # Detect which app changed so single-app pushes skip the other app's heavy
-  # image build / boot / redeploy. e2e + image-smoke still always RUN (so the
-  # required checks always report), but image-smoke does only the changed app's
-  # work, and the image-push + deploy jobs are per-app.
+  # image build / boot / redeploy. image-smoke always RUNS (the gate), but does
+  # only the changed app's work, and the image-push + deploy + e2e-prod jobs are
+  # per-app. A change to ci.yml counts as both apps.
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
@@ -55,160 +56,15 @@ jobs:
               - 'storefront/**'
               - '.github/workflows/ci.yml'
 
-  e2e:
-    name: Build + full-stack e2e
-    needs: changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      # ── Backend ──────────────────────────────────────────────────────────
-      # development here so pnpm installs devDependencies (build tooling) and the
-      # backend behaves like local dev. The storefront *build/start* override to
-      # production per-step (next build breaks under NODE_ENV=development).
-      NODE_ENV: development
-      DATABASE_URL: postgres://test_medusa_user:test_pw@localhost:5432/test_medusa_db
-      JWT_SECRET: supersecret
-      COOKIE_SECRET: supersecret
-      ADMIN_CORS: http://localhost:7000,http://localhost:7001,http://localhost:9000
-      AUTH_CORS: http://localhost:7000,http://localhost:7001,http://localhost:9000,http://localhost:8000
-      STORE_CORS: http://localhost:8000
-      MEDUSA_ADMIN_EMAIL: admin@medusa-test.com
-      MEDUSA_ADMIN_PASSWORD: supersecret
-      # No MOLONI_*/STRIPE_*/MINIO_*/MEILISEARCH_* → those modules stay disabled
-      # in CI (local fallbacks), so the gate needs no external services/secrets.
-
-      # ── Storefront (public env) ──────────────────────────────────────────
-      NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
-      NEXT_PUBLIC_BASE_URL: http://localhost:8000
-      NEXT_PUBLIC_DEFAULT_REGION: dk
-
-      # ── e2e DB harness (storefront/e2e/.env.example) ─────────────────────
-      PGHOST: localhost
-      PGPORT: "5432"
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      PGDATABASE: postgres
-      TEST_POSTGRES_USER: test_medusa_user
-      TEST_POSTGRES_PASSWORD: test_pw
-      TEST_POSTGRES_DATABASE: test_medusa_db
-      TEST_POSTGRES_DATABASE_TEMPLATE: test_medusa_db_template
-      TEST_POSTGRES_HOST: localhost
-      PRODUCTION_POSTGRES_DATABASE: medusa_db
-      CLIENT_SERVER: http://localhost:9000
-      CI: "true"
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.10.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: pnpm
-          cache-dependency-path: |
-            backend/pnpm-lock.yaml
-            storefront/pnpm-lock.yaml
-
-      - name: Create test database and role
-        run: |
-          export PGPASSWORD=postgres
-          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-            CREATE ROLE test_medusa_user WITH LOGIN PASSWORD 'test_pw' CREATEDB;
-            CREATE DATABASE test_medusa_db OWNER test_medusa_user;
-          SQL
-
-      # ── Backend ────────────────────────────────────────────────────────
-      - name: Install backend deps
-        working-directory: backend
-        run: pnpm install --frozen-lockfile
-
-      - name: Build backend
-        working-directory: backend
-        run: pnpm build
-
-      - name: Start backend (migrate + seed + serve)
-        working-directory: backend
-        run: |
-          # `pnpm start` runs init-backend (migrations + base seed + admin user)
-          # then serves on :9000.
-          nohup pnpm start > /tmp/backend.log 2>&1 &
-          echo "Waiting for backend health…"
-          npx --yes wait-on -t 180000 http://localhost:9000/health
-          echo "Backend up."
-
-      # ── Storefront ───────────────────────────────────────────────────────
-      - name: Install storefront deps
-        working-directory: storefront
-        run: pnpm install --frozen-lockfile
-
-      - name: Build storefront
-        working-directory: storefront
-        # launch-storefront waits for the backend and resolves the publishable key.
-        # Must be production — next build breaks the /500 prerender under development.
-        env:
-          NODE_ENV: production
-        run: pnpm build
-
-      - name: Install Playwright browser
-        working-directory: storefront
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run e2e smoke tests
-        working-directory: storefront
-        # Playwright's webServer starts the storefront (pnpm start) and waits for
-        # it — do NOT pre-start it here, or the port collides. Production so
-        # `next start` serves the production build. Uses the v2-correct smoke
-        # suite (the bundled legacy e2e suite targets Medusa v1).
-        env:
-          NODE_ENV: production
-          # Storefront is served over http://localhost in CI, so auth/cart
-          # cookies must not be Secure (test-only; never set in production).
-          MEDUSA_INSECURE_COOKIES: "true"
-        run: pnpm test-e2e:smoke
-
-      - name: Upload Playwright report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: storefront/playwright-report
-          retention-days: 7
-
-      - name: Dump server logs on failure
-        if: failure()
-        run: |
-          echo "===== backend.log ====="; tail -n 200 /tmp/backend.log || true
-          echo "===== storefront.log ====="; tail -n 200 /tmp/storefront.log || true
-
   # ── Image boot smoke test ────────────────────────────────────────────────
-  # Builds the ACTUAL Docker images and boots them. The e2e job above installs
-  # with devDependencies present and runs `pnpm start`/`next start` directly, so
-  # it never exercises the image's `pnpm prune --prod` tree — runtime deps that
-  # are misfiled under devDependencies (e.g. react for the email templates,
-  # ansi-colors for next.config) pass e2e but crash the deployed image. This job
-  # closes that gap: it runs on PRs + master and gates the image push + deploy.
+  # The pre-push gate. Builds the ACTUAL Docker images and boots them, asserting
+  # the backend serves /health and the storefront serves on its port. Booting the
+  # pruned production images catches runtime deps misfiled under devDependencies
+  # (e.g. react for the email templates, ansi-colors for next.config) that a
+  # source build would miss. Runs on PRs + master; gates the image push + deploy.
   image-smoke:
     name: Image boot smoke test
-    needs: [changes, e2e]
+    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -248,6 +104,7 @@ jobs:
           # the push job; smoke only asserts /health, so the baked URL is moot here.
           build-args: |
             BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
+            GIT_SHA=${{ github.sha }}
 
       - name: Create smoke database
         if: needs.changes.outputs.backend == 'true'
@@ -335,7 +192,7 @@ jobs:
   # ── Backend image ──────────────────────────────────────────────────────────
   backend-image:
     name: Build + push backend image
-    needs: [changes, e2e, image-smoke]
+    needs: [changes, image-smoke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -377,11 +234,12 @@ jobs:
           # public URL (https://storeadmin.higitotal.pt).
           build-args: |
             BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
+            GIT_SHA=${{ github.sha }}
 
   # ── Storefront image ─────────────────────────────────────────────────────
   storefront-image:
     name: Build + push storefront image
-    needs: [changes, e2e, image-smoke]
+    needs: [changes, image-smoke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.storefront == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -431,6 +289,7 @@ jobs:
             NEXT_PUBLIC_SEARCH_ENDPOINT=${{ vars.NEXT_PUBLIC_SEARCH_ENDPOINT }}
             NEXT_PUBLIC_SEARCH_API_KEY=${{ vars.NEXT_PUBLIC_SEARCH_API_KEY }}
             NEXT_PUBLIC_INDEX_NAME=${{ vars.NEXT_PUBLIC_INDEX_NAME }}
+            GIT_SHA=${{ github.sha }}
 
   # ── Deploy ───────────────────────────────────────────────────────────────
   # Railway services have GHCR image auto-updates enabled, but the poll can lag
@@ -450,7 +309,7 @@ jobs:
       always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
       && (needs.backend-image.result == 'success' || needs.storefront-image.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     # RAILWAY_TOKEN lives as a secret on this GitHub Environment (no protection
     # rules), so the job must declare it to resolve the secret.
     environment: "scintillating-adaptation / production"
@@ -473,3 +332,75 @@ jobs:
             echo "Redeploying $svc from configured image source…"
             railway redeploy --service "$svc" --from-source -y
           done
+
+      - name: Wait until prod reports the new commit
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BACKEND_URL: ${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
+          STOREFRONT_URL: ${{ vars.NEXT_PUBLIC_BASE_URL }}
+        run: |
+          poll() {
+            url="$1"; label="$2"
+            echo "Waiting for $label to report ${GIT_SHA} ($url)…"
+            for i in $(seq 1 72); do
+              live=$(curl -fsS -A "Mozilla/5.0" -H "Cache-Control: no-cache" "$url?cb=$i" 2>/dev/null \
+                | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+              if [ "$live" = "$GIT_SHA" ]; then echo "✓ $label live ($live)"; return 0; fi
+              echo "  [$i/72] $label sha=${live:-<none>} — retry in 15s"
+              sleep 15
+            done
+            echo "::error::$label never reported $GIT_SHA — deploy not live in time"
+            return 1
+          }
+          [ "$DEPLOY_BACKEND" = "true" ] && poll "$BACKEND_URL/version" backend
+          [ "$DEPLOY_STOREFRONT" = "true" ] && poll "$STOREFRONT_URL/api/healthcheck" storefront
+          echo "Prod is serving ${GIT_SHA}."
+
+  # ── Production e2e (post-deploy) ───────────────────────────────────────────
+  # Runs only after `deploy` confirmed the new commit is live on prod. Strictly
+  # read-only against production data (navigation + render assertions; never
+  # creates carts/accounts/orders). Authenticates through the pre-launch access
+  # gate with STOREFRONT_ACCESS_TOKEN.
+  e2e-prod:
+    name: Production e2e (post-deploy)
+    needs: [changes, deploy]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.10.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+          cache-dependency-path: storefront/pnpm-lock.yaml
+
+      - name: Install storefront deps
+        working-directory: storefront
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        working-directory: storefront
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run read-only prod e2e
+        working-directory: storefront
+        env:
+          NEXT_PUBLIC_BASE_URL: ${{ vars.NEXT_PUBLIC_BASE_URL }}
+          NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
+          NEXT_PUBLIC_DEFAULT_REGION: ${{ vars.NEXT_PUBLIC_DEFAULT_REGION }}
+          STOREFRONT_ACCESS_TOKEN: ${{ secrets.STOREFRONT_ACCESS_TOKEN }}
+        run: pnpm test-e2e:prod
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-playwright-report
+          path: storefront/playwright-report
+          retention-days: 7

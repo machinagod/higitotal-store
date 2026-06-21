@@ -57,6 +57,11 @@ WORKDIR /app
 # Built app: pruned root node_modules + .medusa (server tree already prod-installed).
 COPY --from=builder /app ./
 
+# Commit baked in for the /version probe — CI polls it post-deploy to confirm
+# this exact build is live before running prod e2e.
+ARG GIT_SHA
+ENV GIT_SHA=${GIT_SHA}
+
 # Railway injects PORT; Medusa serves on 9000 by default.
 EXPOSE 9000
 
