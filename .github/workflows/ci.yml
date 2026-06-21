@@ -32,8 +32,32 @@ permissions:
   contents: read
 
 jobs:
+  # Detect which app changed so single-app pushes skip the other app's heavy
+  # image build / boot / redeploy. e2e + image-smoke still always RUN (so the
+  # required checks always report), but image-smoke does only the changed app's
+  # work, and the image-push + deploy jobs are per-app.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      storefront: ${{ steps.filter.outputs.storefront }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            storefront:
+              - 'storefront/**'
+              - '.github/workflows/ci.yml'
+
   e2e:
     name: Build + full-stack e2e
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -184,7 +208,7 @@ jobs:
   # closes that gap: it runs on PRs + master and gates the image push + deploy.
   image-smoke:
     name: Image boot smoke test
-    needs: e2e
+    needs: [changes, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -211,6 +235,7 @@ jobs:
       # Build the backend image locally (shares the gha cache scope with the
       # backend-image push job, so that job rebuilds from cache, not from zero).
       - name: Build backend image
+        if: needs.changes.outputs.backend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: backend
@@ -225,6 +250,7 @@ jobs:
             BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
 
       - name: Create smoke database
+        if: needs.changes.outputs.backend == 'true'
         run: |
           export PGPASSWORD=postgres
           psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 \
@@ -235,6 +261,7 @@ jobs:
       # runs `cd .medusa/server && medusa db:migrate && medusa start`). sslmode is
       # disabled because the CI Postgres has no SSL (prod's does).
       - name: Pre-migrate the smoke database
+        if: needs.changes.outputs.backend == 'true'
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
         run: |
@@ -247,6 +274,7 @@ jobs:
             -c "./node_modules/.bin/medusa db:migrate"
 
       - name: Boot backend image and assert /health
+        if: needs.changes.outputs.backend == 'true'
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
         run: |
@@ -265,7 +293,7 @@ jobs:
           echo "Backend image booted healthy."
 
       - name: Backend image logs on failure
-        if: failure()
+        if: failure() && needs.changes.outputs.backend == 'true'
         run: docker logs backend-smoke 2>&1 | tail -n 200 || true
 
       # Storefront: build args are inlined by `next build`; values are dummy
@@ -273,6 +301,7 @@ jobs:
       # must resolve its runtime deps in the pruned image). The backend booted
       # above is reachable at localhost:9000 for any on-demand rendering.
       - name: Build storefront image
+        if: needs.changes.outputs.storefront == 'true'
         uses: docker/build-push-action@v6
         with:
           context: storefront
@@ -287,6 +316,7 @@ jobs:
             NEXT_PUBLIC_DEFAULT_REGION=dk
 
       - name: Boot storefront image and assert it serves
+        if: needs.changes.outputs.storefront == 'true'
         run: |
           docker run -d --name storefront-smoke --network host \
             -e PORT=8000 storefront:smoke
@@ -299,14 +329,14 @@ jobs:
           test "$code" != "000"
 
       - name: Storefront image logs on failure
-        if: failure()
+        if: failure() && needs.changes.outputs.storefront == 'true'
         run: docker logs storefront-smoke 2>&1 | tail -n 200 || true
 
   # ── Backend image ──────────────────────────────────────────────────────────
   backend-image:
     name: Build + push backend image
-    needs: [e2e, image-smoke]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [changes, e2e, image-smoke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -351,8 +381,8 @@ jobs:
   # ── Storefront image ─────────────────────────────────────────────────────
   storefront-image:
     name: Build + push storefront image
-    needs: [e2e, image-smoke]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [changes, e2e, image-smoke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.storefront == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -413,8 +443,12 @@ jobs:
   # and the auto-update poll still deploys (just slower).
   deploy:
     name: Force Railway redeploy
-    needs: [backend-image, storefront-image]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [changes, backend-image, storefront-image]
+    # Runs if EITHER image job published (the other may be skipped for a single-app
+    # change). Only redeploys the service(s) whose image was rebuilt.
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      && (needs.backend-image.result == 'success' || needs.storefront-image.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # RAILWAY_TOKEN lives as a secret on this GitHub Environment (no protection
@@ -422,15 +456,20 @@ jobs:
     environment: "scintillating-adaptation / production"
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      DEPLOY_BACKEND: ${{ needs.changes.outputs.backend }}
+      DEPLOY_STOREFRONT: ${{ needs.changes.outputs.storefront }}
     steps:
-      - name: Redeploy services (pull freshly-pushed :latest)
+      - name: Redeploy changed services (pull freshly-pushed :latest)
         run: |
           if [ -z "$RAILWAY_TOKEN" ]; then
             echo "::warning::RAILWAY_TOKEN not set — skipping force-deploy. Railway image auto-update will pull the new :latest on its next poll (slower)."
             exit 0
           fi
           npm install -g @railway/cli
-          for svc in "${{ vars.RAILWAY_BACKEND_SERVICE }}" "${{ vars.RAILWAY_STOREFRONT_SERVICE }}"; do
+          svcs=()
+          [ "$DEPLOY_BACKEND" = "true" ] && svcs+=("${{ vars.RAILWAY_BACKEND_SERVICE }}")
+          [ "$DEPLOY_STOREFRONT" = "true" ] && svcs+=("${{ vars.RAILWAY_STOREFRONT_SERVICE }}")
+          for svc in "${svcs[@]}"; do
             echo "Redeploying $svc from configured image source…"
             railway redeploy --service "$svc" --from-source -y
           done

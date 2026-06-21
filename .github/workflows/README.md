@@ -5,19 +5,28 @@
 ```
 push to master ──► GitHub Actions "CI" (ci.yml)
     │
+    ├─ changes            paths-filter → which app changed (backend / storefront)
+    │                          │
     ├─ e2e                spins Postgres + backend + storefront, runs Playwright e2e
-    │                     (ephemeral CI Postgres — never production)
+    │                     (ALWAYS — full-stack functional gate)
     │                          │ green
     │                          ▼
-    ├─ image-smoke        build + boot the REAL backend & storefront images,
-    │                     assert backend /health and storefront serves
+    ├─ image-smoke        builds + boots ONLY the changed app's image(s)
+    │                     (skips the backend build/boot for storefront-only pushes)
     │                          │ green
     │                          ▼
-    ├─ backend-image     build backend/Dockerfile  ─┐  push to GHCR (private)
-    ├─ storefront-image  build storefront/Dockerfile ┘  tags :latest + :sha-<commit>
+    ├─ backend-image     build+push  (only if backend/** changed)
+    ├─ storefront-image  build+push  (only if storefront/** changed)
     │                                                 │
-    └─ deploy ── railway redeploy --from-source ──────┘  (nudge Railway to pull now)
+    └─ deploy ── railway redeploy ──────────────────────┘  (only the changed service(s))
 ```
+
+**Path-filtered for fast iteration:** a `changes` job (dorny/paths-filter) detects
+whether `backend/**` or `storefront/**` changed; a change to `.github/workflows/ci.yml`
+counts as both. `e2e` and `image-smoke` ALWAYS run (so the required checks always
+report), but `image-smoke` only builds/boots the changed app, and the image-push +
+`deploy` jobs are per-app. So a storefront-only push skips the entire backend Docker
+build + migrate + boot + redeploy (and vice-versa) — a much faster publish.
 
 GitHub Actions **builds, smoke-tests, and pushes the images**, then **nudges
 Railway to pull the new `:latest` immediately** (`deploy` job, `railway redeploy
