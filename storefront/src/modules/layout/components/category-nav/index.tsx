@@ -1,15 +1,22 @@
 "use client"
 
+import { Fragment } from "react"
 import { usePathname } from "next/navigation"
+import { Popover, Transition } from "@headlessui/react"
+import { ChevronDown } from "lucide-react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type NavCategory = { label: string; href: string; icon?: string }
 
+// How many categories show inline before the rest collapse into "Mais".
+const TOP_N = 3
+
 /**
- * Top-level category strip. Mirrors the design mock: clean text pills, the
- * active category marked with a cyan dot, and a right-aligned "Pedir
- * assistência" service pill. The active state needs the current path, so this
- * is a client component (the surrounding nav is server-rendered).
+ * Top-level category strip (matches the design mock): the first few categories
+ * inline, the remainder under a "Mais" dropdown, and a right-pinned "Pedir
+ * assistência" service pill. The active category gets a cyan dot. Needs the
+ * current path, so this is a client component (the surrounding nav is server-
+ * rendered).
  */
 const CategoryNav = ({ categories }: { categories: NavCategory[] }) => {
   const pathname = usePathname() || ""
@@ -20,12 +27,20 @@ const CategoryNav = ({ categories }: { categories: NavCategory[] }) => {
     return !!handle && pathname.includes(`/categories/${handle}`)
   }
 
+  const top = categories.slice(0, TOP_N)
+  const rest = categories.slice(TOP_N)
+  const restActive = rest.some((c) => isActive(c.href))
+
+  const dot = (
+    <span className="h-[7px] w-[7px] flex-none rounded-full bg-brand-cyan shadow-[0_0_0_3px_rgba(0,173,239,0.18)]" />
+  )
+
   return (
     <nav className="bg-white border-b border-hairline">
-      <div className="content-container flex items-center gap-x-3 h-[54px]">
-        {/* Scrollable category list — takes the available width */}
+      <div className="content-container flex items-center gap-x-2 small:gap-x-3 h-[54px]">
+        {/* Inline categories — scroll within the available width if needed */}
         <div className="flex items-center gap-x-1 flex-1 min-w-0 overflow-x-auto no-scrollbar">
-          {categories.map((cat, idx) => {
+          {top.map((cat, idx) => {
             const active = isActive(cat.href)
             return (
               <LocalizedClientLink
@@ -38,16 +53,67 @@ const CategoryNav = ({ categories }: { categories: NavCategory[] }) => {
                     : "text-[#4a5560] hover:bg-[#f1f4f7] hover:text-brand-ink"
                 }`}
               >
-                {active && (
-                  <span className="h-[7px] w-[7px] flex-none rounded-full bg-brand-cyan shadow-[0_0_0_3px_rgba(0,173,239,0.18)]" />
-                )}
+                {active && dot}
                 {cat.label}
               </LocalizedClientLink>
             )
           })}
         </div>
 
-        {/* Service pill — pinned right, always visible regardless of list length */}
+        {/* "Mais" dropdown — kept outside the scroll container so the panel
+            isn't clipped by overflow-x. */}
+        {rest.length > 0 && (
+          <Popover className="relative flex-none">
+            <Popover.Button
+              className={`inline-flex items-center gap-x-1.5 whitespace-nowrap px-4 py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors focus:outline-none ${
+                restActive
+                  ? "text-brand-cyan"
+                  : "text-[#4a5560] hover:bg-[#f1f4f7] hover:text-brand-ink"
+              }`}
+            >
+              {restActive && dot}
+              Mais
+              <ChevronDown className="h-4 w-4" />
+            </Popover.Button>
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-150"
+              enterFrom="opacity-0 translate-y-1"
+              enterTo="opacity-100 translate-y-0"
+              leave="transition ease-in duration-100"
+              leaveFrom="opacity-100 translate-y-0"
+              leaveTo="opacity-0 translate-y-1"
+            >
+              <Popover.Panel className="absolute right-0 top-full z-50 mt-1 min-w-[230px] max-h-[70vh] overflow-y-auto rounded-card border border-hairline bg-white p-2 shadow-[0_18px_40px_rgba(16,24,40,0.12)]">
+                {({ close }) => (
+                  <div className="flex flex-col">
+                    {rest.map((cat, idx) => {
+                      const active = isActive(cat.href)
+                      return (
+                        <LocalizedClientLink
+                          key={`${cat.label}-${idx}`}
+                          href={cat.href}
+                          onClick={() => close()}
+                          aria-current={active ? "page" : undefined}
+                          className={`inline-flex items-center gap-x-2 px-3 py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                            active
+                              ? "text-brand-cyan bg-[#f1f4f7]"
+                              : "text-[#4a5560] hover:bg-[#f1f4f7] hover:text-brand-ink"
+                          }`}
+                        >
+                          {active && dot}
+                          {cat.label}
+                        </LocalizedClientLink>
+                      )
+                    })}
+                  </div>
+                )}
+              </Popover.Panel>
+            </Transition>
+          </Popover>
+        )}
+
+        {/* Service pill — pinned right, always visible */}
         <LocalizedClientLink
           href="/assistencia-tecnica"
           data-testid="nav-assistencia-link"
