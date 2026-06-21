@@ -22,32 +22,36 @@ const CategoryNav = ({ categories }: { categories: NavCategory[] }) => {
 
   return (
     <nav className="bg-white border-b border-hairline">
-      <div className="content-container flex items-center gap-x-1 h-[54px] overflow-x-auto no-scrollbar">
-        {categories.map((cat, idx) => {
-          const active = isActive(cat.href)
-          return (
-            <LocalizedClientLink
-              key={`${cat.label}-${idx}`}
-              href={cat.href}
-              aria-current={active ? "page" : undefined}
-              className={`whitespace-nowrap flex-none inline-flex items-center gap-x-2 px-4 py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors ${
-                active
-                  ? "text-brand-cyan"
-                  : "text-[#4a5560] hover:bg-[#f1f4f7] hover:text-brand-ink"
-              }`}
-            >
-              {active && (
-                <span className="h-[7px] w-[7px] flex-none rounded-full bg-brand-cyan shadow-[0_0_0_3px_rgba(0,173,239,0.18)]" />
-              )}
-              {cat.label}
-            </LocalizedClientLink>
-          )
-        })}
+      <div className="content-container flex items-center gap-x-3 h-[54px]">
+        {/* Scrollable category list — takes the available width */}
+        <div className="flex items-center gap-x-1 flex-1 min-w-0 overflow-x-auto no-scrollbar">
+          {categories.map((cat, idx) => {
+            const active = isActive(cat.href)
+            return (
+              <LocalizedClientLink
+                key={`${cat.label}-${idx}`}
+                href={cat.href}
+                aria-current={active ? "page" : undefined}
+                className={`whitespace-nowrap flex-none inline-flex items-center gap-x-2 px-4 py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                  active
+                    ? "text-brand-cyan"
+                    : "text-[#4a5560] hover:bg-[#f1f4f7] hover:text-brand-ink"
+                }`}
+              >
+                {active && (
+                  <span className="h-[7px] w-[7px] flex-none rounded-full bg-brand-cyan shadow-[0_0_0_3px_rgba(0,173,239,0.18)]" />
+                )}
+                {cat.label}
+              </LocalizedClientLink>
+            )
+          })}
+        </div>
 
+        {/* Service pill — pinned right, always visible regardless of list length */}
         <LocalizedClientLink
           href="/assistencia-tecnica"
           data-testid="nav-assistencia-link"
-          className="ml-auto flex-none inline-flex items-center gap-x-2 whitespace-nowrap bg-svc-signal text-white px-3 small:px-[18px] py-2.5 rounded-pill text-xs font-bold uppercase tracking-[0.04em] hover:bg-svc-signal-ink transition-colors"
+          className="flex-none inline-flex items-center gap-x-2 whitespace-nowrap bg-svc-signal text-white px-3 small:px-[18px] py-2.5 rounded-pill text-xs font-bold uppercase tracking-[0.04em] hover:bg-svc-signal-ink transition-colors"
         >
           <span className="h-2 w-2 flex-none rounded-full bg-white shadow-[0_0_0_3px_rgba(255,255,255,0.35)]" />
           <span className="hidden xsmall:inline">Pedir assistência</span>
