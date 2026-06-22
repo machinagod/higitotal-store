@@ -11,6 +11,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { getProductsList } from "@lib/data/products"
 import { getCollectionByHandle } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
+import { SLIDES } from "@modules/home/components/hero/featured-slides"
 
 const FEATURED_COLLECTION = "fornos-profissionais"
 
@@ -56,10 +57,40 @@ export default async function Home({
     featured = (withImage.length >= 8 ? withImage : pool).slice(0, 8)
   }
 
+  // Resolve a representative product image per hero carousel collection so the
+  // "Em destaque" carousel shows product imagery — including on mobile, where the
+  // big hero shot is hidden. Empty/draft collections resolve to undefined, leaving
+  // that slide text-only.
+  const carouselImages = Object.fromEntries(
+    await Promise.all(
+      SLIDES.map(async (slide) => {
+        const slideCollection = await getCollectionByHandle(slide.handle).catch(
+          () => null
+        )
+        if (!slideCollection?.id) {
+          return [slide.handle, undefined] as const
+        }
+        const {
+          response: { products: slideProducts },
+        } = await getProductsList({
+          queryParams: { collection_id: [slideCollection.id], limit: 1 } as any,
+          countryCode,
+        })
+        return [
+          slide.handle,
+          slideProducts.find((p) => p.thumbnail)?.thumbnail,
+        ] as const
+      })
+    )
+  )
+
   return (
     <div className="content-container flex flex-col gap-6 py-3 small:gap-16 small:py-10">
       <div className="flex flex-col gap-2.5 small:gap-5">
-        <Hero image={featured?.[0]?.thumbnail} />
+        <Hero
+          image={featured?.[0]?.thumbnail}
+          carouselImages={carouselImages}
+        />
         <TrustBar />
       </div>
 

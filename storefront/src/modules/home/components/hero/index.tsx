@@ -2,7 +2,13 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { getFeaturedCategories } from "@lib/data/categories"
 import FeaturedCarousel from "@modules/home/components/hero/featured-carousel"
 
-const Hero = async ({ image }: { image?: string | null }) => {
+const Hero = async ({
+  image,
+  carouselImages,
+}: {
+  image?: string | null
+  carouselImages?: Record<string, string | undefined>
+}) => {
   const featured = await getFeaturedCategories()
   const href = (label: string) =>
     featured.find((c) => c.label === label)?.href ?? "/store"
@@ -85,7 +91,7 @@ const Hero = async ({ image }: { image?: string | null }) => {
       {/* Side column */}
       <div className="grid grid-cols-1 gap-3 small:grid-rows-2 small:gap-5">
         {/* Featured card — auto-rotating carousel over a few collections */}
-        <FeaturedCarousel />
+        <FeaturedCarousel images={carouselImages} />
 
         {/* Service card */}
         <div className="relative flex flex-col justify-center overflow-hidden rounded-card border border-svc-line bg-svc-ground p-5 text-svc-fg small:p-7">
