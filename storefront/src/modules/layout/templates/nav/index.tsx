@@ -14,6 +14,20 @@ export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
   const categories = await getNavCategories()
 
+  const cartFallback = (
+    <LocalizedClientLink
+      href="/cart"
+      data-testid="nav-cart-link"
+      className="flex items-center gap-x-1.5 small:gap-x-2.5 px-3 small:px-4 py-2.5 rounded-pill bg-brand-ink text-white text-xs font-semibold uppercase tracking-wide hover:bg-black transition-colors"
+    >
+      <ShoppingBag className="h-[18px] w-[18px]" />
+      <span className="hidden small:inline">Carrinho</span>
+      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-pill bg-brand-cyan text-white text-[11px] font-bold">
+        0
+      </span>
+    </LocalizedClientLink>
+  )
+
   return (
     <div className="sticky top-0 inset-x-0 z-50">
       {/* Utility topbar — dark "pro" register with contacts */}
@@ -55,7 +69,7 @@ export default async function Nav() {
 
       {/* Main header — logo, search, account, cart */}
       <header className="bg-white/90 backdrop-blur-md border-b border-hairline">
-        <div className="content-container flex items-center gap-x-4 small:gap-x-7 min-h-[72px] small:h-[84px] py-3 small:py-0 flex-wrap small:flex-nowrap">
+        <div className="content-container flex items-center gap-x-3 small:gap-x-7 min-h-[60px] small:h-[84px] py-2 small:py-0 flex-wrap small:flex-nowrap">
           <LocalizedClientLink
             href="/"
             className="flex items-center shrink-0"
@@ -65,44 +79,40 @@ export default async function Nav() {
             <img
               src="/higitotal/logo-full.png"
               alt="Higitotal"
-              className="h-9 small:h-[46px] w-auto"
+              className="h-8 small:h-[46px] w-auto"
             />
           </LocalizedClientLink>
 
-          <SearchBox />
+          {/* Hamburger — mobile only, pinned right on the logo row */}
+          <div className="small:hidden flex items-center shrink-0 ml-auto">
+            <SideMenu regions={regions} categories={categories} />
+          </div>
 
-          <div className="flex items-center gap-x-1 small:gap-x-2 ml-auto">
+          {/* Search + cart. On mobile this is its own full-width row with the
+              cart pinned to the right of the search; on desktop it's the middle
+              search field (the cart shows in the account group instead). */}
+          <div className="order-last small:order-none basis-full small:basis-auto small:flex-1 small:max-w-[520px] flex items-center gap-x-2">
+            <SearchBox />
+            <div className="small:hidden shrink-0">
+              <Suspense fallback={cartFallback}>
+                <CartButton />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* Account + cart — desktop only, right-aligned */}
+          <div className="hidden small:flex items-center gap-x-2 ml-auto">
             <LocalizedClientLink
               href="/account"
               data-testid="nav-account-link"
-              className="hidden small:flex items-center gap-x-2.5 px-4 py-2.5 rounded-pill text-xs font-semibold uppercase tracking-wide text-brand-ink hover:bg-[#f1f4f7] transition-colors"
+              className="flex items-center gap-x-2.5 px-4 py-2.5 rounded-pill text-xs font-semibold uppercase tracking-wide text-brand-ink hover:bg-[#f1f4f7] transition-colors"
             >
               <User className="h-[18px] w-[18px]" />
               <span>Conta</span>
             </LocalizedClientLink>
-
-            <Suspense
-              fallback={
-                <LocalizedClientLink
-                  href="/cart"
-                  data-testid="nav-cart-link"
-                  className="flex items-center gap-x-1.5 small:gap-x-2.5 px-3 small:px-4 py-2.5 rounded-pill bg-brand-ink text-white text-xs font-semibold uppercase tracking-wide hover:bg-black transition-colors"
-                >
-                  <ShoppingBag className="h-[18px] w-[18px]" />
-                  <span className="hidden small:inline">Carrinho</span>
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-pill bg-brand-cyan text-white text-[11px] font-bold">
-                    0
-                  </span>
-                </LocalizedClientLink>
-              }
-            >
+            <Suspense fallback={cartFallback}>
               <CartButton />
             </Suspense>
-          </div>
-
-          {/* SideMenu — small screens only */}
-          <div className="small:hidden flex items-center shrink-0">
-            <SideMenu regions={regions} categories={categories} />
           </div>
         </div>
       </header>

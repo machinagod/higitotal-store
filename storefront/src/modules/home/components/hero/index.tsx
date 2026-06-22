@@ -9,7 +9,7 @@ const Hero = async ({ image }: { image?: string | null }) => {
   return (
     <div className="grid grid-cols-1 gap-5 small:grid-cols-[1.15fr_0.85fr]">
       {/* Main cyan card */}
-      <div className="relative flex min-h-0 flex-col items-start gap-5 overflow-hidden rounded-hero bg-gradient-to-br from-brand-navy to-brand-cyan px-6 py-8 text-white small:min-h-[440px] small:flex-row small:items-center small:px-13 small:py-12">
+      <div className="relative flex min-h-0 flex-col items-start gap-4 overflow-hidden rounded-hero bg-gradient-to-br from-brand-navy to-brand-cyan px-5 py-7 text-white small:min-h-[440px] small:flex-row small:items-center small:gap-5 small:px-13 small:py-12">
         {/* Decorative orbs (desktop only) */}
         <span
           aria-hidden

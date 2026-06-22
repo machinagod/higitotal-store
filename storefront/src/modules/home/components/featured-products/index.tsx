@@ -13,7 +13,7 @@ export default function FeaturedProducts({
   }
 
   return (
-    <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-6 small:gap-x-6 small:gap-y-8">
+    <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-3 gap-y-4 small:gap-x-6 small:gap-y-8">
       {products.map((product) => (
         <li key={product.id}>
           {/* @ts-ignore */}

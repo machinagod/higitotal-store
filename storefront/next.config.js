@@ -7,6 +7,9 @@ checkEnvVariables()
  */
 const nextConfig = {
   reactStrictMode: true,
+  // Pin the file-tracing root to this app so Next doesn't warn about inferring
+  // the workspace root from sibling lockfiles outside the repo.
+  outputFileTracingRoot: __dirname,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -50,9 +53,6 @@ const nextConfig = {
       }] : []),
     ],
   },
-  serverRuntimeConfig: {
-    port: process.env.PORT || 3000
-  }
 }
 
 module.exports = nextConfig

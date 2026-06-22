@@ -26,7 +26,7 @@ const SearchBox = () => {
       onSubmit={onSubmit}
       role="search"
       data-testid="nav-search-form"
-      className="order-last small:order-none basis-full small:basis-auto flex-1 small:max-w-[520px] flex items-center gap-x-2.5 bg-white border-[1.5px] border-hairline rounded-pill pl-5 pr-1.5 py-1.5 transition-colors focus-within:border-brand-cyan focus-within:shadow-[0_0_0_4px_rgba(0,173,239,0.12)]"
+      className="flex-1 min-w-0 flex items-center gap-x-2.5 bg-white border-[1.5px] border-hairline rounded-pill pl-5 pr-1.5 py-1.5 transition-colors focus-within:border-brand-cyan focus-within:shadow-[0_0_0_4px_rgba(0,173,239,0.12)]"
     >
       <input
         type="search"

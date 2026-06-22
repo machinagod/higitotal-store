@@ -57,8 +57,8 @@ export default async function Home({
   }
 
   return (
-    <div className="content-container flex flex-col gap-9 py-4 small:gap-16 small:py-10">
-      <div className="flex flex-col gap-3 small:gap-5">
+    <div className="content-container flex flex-col gap-6 py-3 small:gap-16 small:py-10">
+      <div className="flex flex-col gap-2.5 small:gap-5">
         <Hero image={featured?.[0]?.thumbnail} />
         <TrustBar />
       </div>
@@ -66,7 +66,7 @@ export default async function Home({
       <CategoryCards />
 
       <section>
-        <div className="mb-[18px] flex flex-col items-start gap-1 small:mb-7 small:flex-row small:items-end small:justify-between small:gap-5">
+        <div className="mb-3 flex flex-col items-start gap-1 small:mb-7 small:flex-row small:items-end small:justify-between small:gap-5">
           <div className="flex flex-col gap-1">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-cyan">
               <span className="ind" />
