@@ -33,7 +33,10 @@ export default async function ProductPreview({
     product.collection?.title ?? product.categories?.[0]?.name ?? null
 
   // Single (default) variant — add it straight to the cart from the card.
-  const variantId = (pricedProduct.variants ?? [])[0]?.id
+  const variant = (pricedProduct.variants ?? [])[0]
+  const variantId = variant?.id
+  const inStock =
+    !variant?.manage_inventory || (variant?.inventory_quantity ?? 0) > 0
   const countryCode = region.countries?.[0]?.iso_2 ?? "pt"
 
   return (
@@ -78,7 +81,11 @@ export default async function ProductPreview({
         <div className="min-w-0">
           {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
         </div>
-        <ProductCardAddButton variantId={variantId} countryCode={countryCode} />
+        <ProductCardAddButton
+          variantId={variantId}
+          inStock={inStock}
+          countryCode={countryCode}
+        />
       </div>
     </div>
   )

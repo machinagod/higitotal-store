@@ -14,7 +14,7 @@ import ContactModal from "../contact-modal"
 import { addToCart } from "@lib/data/cart"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { HttpTypes } from "@medusajs/types"
-import { Phone, ArrowRight } from "lucide-react"
+import { Phone, ArrowRight, Clock } from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -69,28 +69,13 @@ export default function ProductActions({
     }))
   }
 
-  // check if the selected variant is in stock
-  const inStock = useMemo(() => {
-    // If we don't manage inventory, we can always add to cart
-    if (selectedVariant && !selectedVariant.manage_inventory) {
-      return true
-    }
-
-    // If we allow back orders on the variant, we can add to cart
-    if (selectedVariant?.allow_backorder) {
-      return true
-    }
-
-    // If there is inventory available, we can add to cart
-    if (
-      selectedVariant?.manage_inventory &&
-      (selectedVariant?.inventory_quantity || 0) > 0
-    ) {
-      return true
-    }
-
-    // Otherwise, we can't add to cart
-    return false
+  // Real stock availability (ignores backorder) — drives the "sob encomenda"
+  // label/icon. Backorder is allowed on the variants, so we still let the user
+  // add it; this only changes how the action is presented.
+  const hasStock = useMemo(() => {
+    if (!selectedVariant) return false
+    if (!selectedVariant.manage_inventory) return true
+    return (selectedVariant.inventory_quantity || 0) > 0
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
@@ -199,16 +184,19 @@ export default function ProductActions({
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={!inStock || !selectedVariant || !!disabled || isAdding}
+            disabled={!selectedVariant || !!disabled || isAdding}
             data-testid="add-product-button"
             className="flex-1 h-[52px] rounded-btn bg-brand-ink text-white font-bold uppercase tracking-wide text-small-regular flex items-center justify-center gap-2 transition hover:bg-brand-cyan hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-brand-ink"
           >
             {!selectedVariant ? (
               "Selecionar variante"
-            ) : !inStock ? (
-              "Esgotado"
             ) : isAdding ? (
               "A adicionar…"
+            ) : !hasStock ? (
+              <>
+                <Clock className="h-4 w-4" />
+                Adicionar (sob encomenda)
+              </>
             ) : (
               <>
                 Adicionar ao carrinho
@@ -255,7 +243,7 @@ export default function ProductActions({
           variant={selectedVariant}
           options={options}
           updateOptions={setOptionValue}
-          inStock={inStock}
+          inStock={hasStock}
           handleAddToCart={handleAddToCart}
           isAdding={isAdding}
           show={!inView}
