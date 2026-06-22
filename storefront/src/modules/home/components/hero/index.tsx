@@ -1,5 +1,6 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getFeaturedCategories } from "@lib/data/categories"
+import FeaturedCarousel from "@modules/home/components/hero/featured-carousel"
 
 const Hero = async ({ image }: { image?: string | null }) => {
   const featured = await getFeaturedCategories()
@@ -83,34 +84,8 @@ const Hero = async ({ image }: { image?: string | null }) => {
 
       {/* Side column */}
       <div className="grid grid-cols-1 gap-3 small:grid-rows-2 small:gap-5">
-        {/* Featured card */}
-        <div className="relative flex flex-col justify-center overflow-hidden rounded-card border border-hairline bg-white p-5 small:p-7">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -bottom-8 -right-8 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(0,173,239,0.18),transparent_70%)]"
-          />
-          <div className="relative z-[2]">
-            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-cyan">
-              <span className="ind" />
-              Em destaque
-            </span>
-            <h3 className="mt-2.5 max-w-[13ch] text-xl font-bold leading-tight tracking-tight text-brand-ink small:text-2xl">
-              Fornos profissionais
-            </h3>
-            <p className="mt-2 max-w-[28ch] text-[13px] font-medium leading-snug text-[#5a636c]">
-              Fornos combinados Fagor para cozinha profissional.
-            </p>
-            <LocalizedClientLink
-              href="/collections/fornos-profissionais"
-              className="mt-4 inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.04em] text-brand-ink"
-            >
-              Comprar
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-cyan text-white">
-                →
-              </span>
-            </LocalizedClientLink>
-          </div>
-        </div>
+        {/* Featured card — auto-rotating carousel over a few collections */}
+        <FeaturedCarousel />
 
         {/* Service card */}
         <div className="relative flex flex-col justify-center overflow-hidden rounded-card border border-svc-line bg-svc-ground p-5 text-svc-fg small:p-7">
