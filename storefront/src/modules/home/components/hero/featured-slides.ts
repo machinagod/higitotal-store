@@ -22,9 +22,9 @@ export const SLIDES: Slide[] = [
     handle: "maquinas-de-limpeza",
   },
   {
-    title: "Unilever",
-    blurb: "Cif, Sun, Comfort e outras marcas profissionais Unilever.",
-    href: "/collections/unilever",
-    handle: "unilever",
+    title: "Diversey",
+    blurb: "Suma, Taski, Clax e outras marcas profissionais Diversey.",
+    href: "/collections/diversey",
+    handle: "diversey",
   },
 ]
