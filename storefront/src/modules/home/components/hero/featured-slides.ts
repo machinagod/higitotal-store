@@ -27,4 +27,10 @@ export const SLIDES: Slide[] = [
     href: "/collections/diversey",
     handle: "diversey",
   },
+  {
+    title: "Unilever",
+    blurb: "Cif, Sun, Comfort e outras marcas profissionais Unilever.",
+    href: "/collections/unilever",
+    handle: "unilever",
+  },
 ]
