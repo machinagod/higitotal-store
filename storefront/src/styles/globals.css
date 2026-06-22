@@ -157,6 +157,17 @@ body {
   }
 }
 
+/* Prevent iOS Safari from zooming the page when a form control is focused — it
+   auto-zooms whenever the control's font-size is < 16px. Force 16px on mobile
+   (below the `small` breakpoint); desktop keeps the smaller utility sizes. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Hero "Em destaque" carousel — active indicator fills to show time-to-next. */
 @keyframes carousel-progress {
   from {
