@@ -1,18 +1,43 @@
 import { Suspense } from "react"
 
 import { listRegions } from "@lib/data/regions"
-import { getNavCategories } from "@lib/data/categories"
+import { getNavCategories, listCategories } from "@lib/data/categories"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import CategoryNav from "@modules/layout/components/category-nav"
-import SearchBox from "@modules/layout/components/search-box"
+import SearchBox, {
+  type SearchCategory,
+} from "@modules/layout/components/search-box"
+
+// Flatten categories for the predictive search, excluding internal parts/repair
+// categories (EQ_/ML_ prefixes, "Maquinas / Acessórios") that aren't browsable.
+function buildSearchCategories(all: any[]): SearchCategory[] {
+  const internal = (n: string) =>
+    /^(EQ_|ML_)/.test(n) || n.includes("Maquinas / Acessórios")
+  const out: SearchCategory[] = []
+  for (const c of all || []) {
+    if (c.parent_category_id || internal(c.name || "")) continue
+    out.push({ name: c.name, handle: c.handle, type: "category" })
+    for (const ch of c.category_children || []) {
+      if (internal(ch.name || "")) continue
+      out.push({
+        name: ch.name,
+        handle: ch.handle,
+        type: "subcategory",
+        parent: c.name,
+      })
+    }
+  }
+  return out
+}
 import { Phone, User, ShoppingBag, Wrench } from "lucide-react"
 
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
   const categories = await getNavCategories()
+  const searchCategories = buildSearchCategories(await listCategories())
 
   const cartFallback = (
     <LocalizedClientLink
@@ -92,7 +117,7 @@ export default async function Nav() {
               cart pinned to the right of the search; on desktop it's the middle
               search field (the cart shows in the account group instead). */}
           <div className="order-last small:order-none basis-full small:basis-auto small:flex-1 small:max-w-[520px] flex items-center gap-x-2">
-            <SearchBox />
+            <SearchBox categories={searchCategories} />
             <div className="small:hidden shrink-0">
               <Suspense fallback={cartFallback}>
                 <CartButton />
