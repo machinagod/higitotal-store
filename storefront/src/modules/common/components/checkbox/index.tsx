@@ -19,7 +19,7 @@ const CheckboxWithLabel: React.FC<CheckboxProps> = ({
   return (
     <div className="flex items-center space-x-2 ">
       <Checkbox
-        className="text-base-regular flex items-center gap-x-2"
+        className="text-base-regular flex items-center gap-x-2 data-[state=checked]:!bg-brand-cyan data-[state=checked]:!border-brand-cyan"
         id="checkbox"
         role="checkbox"
         type="button"

@@ -1,6 +1,6 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ChevronDown from "@modules/common/icons/chevron-down"
-import MedusaCTA from "@modules/layout/components/medusa-cta"
+import { ShieldCheck } from "lucide-react"
 
 export default function CheckoutLayout({
   children,
@@ -9,35 +9,45 @@ export default function CheckoutLayout({
 }) {
   return (
     <div className="w-full bg-white relative small:min-h-screen">
-      <div className="h-16 bg-white border-b ">
-        <nav className="flex h-full items-center content-container justify-between">
+      <header className="bg-white/90 backdrop-blur-md border-b border-hairline">
+        <nav className="content-container flex h-[60px] small:h-[72px] items-center justify-between">
           <LocalizedClientLink
             href="/cart"
-            className="text-small-semi text-ui-fg-base flex items-center gap-x-2 uppercase flex-1 basis-0"
+            className="flex flex-1 basis-0 items-center gap-x-1.5 text-xs font-semibold uppercase tracking-wide text-brand-ink transition-colors hover:text-brand-cyan"
             data-testid="back-to-cart-link"
           >
             <ChevronDown className="rotate-90" size={16} />
-            <span className="mt-px hidden small:block txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base ">
-              Voltar ao carrinho
-            </span>
-            <span className="mt-px block small:hidden txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base">
-              Voltar
-            </span>
+            <span className="hidden small:block">Voltar ao carrinho</span>
+            <span className="block small:hidden">Voltar</span>
           </LocalizedClientLink>
           <LocalizedClientLink
             href="/"
-            className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
+            className="flex shrink-0 items-center"
             data-testid="store-link"
           >
-            Higitotal
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/higitotal/logo-full-transparent.png"
+              alt="Higitotal"
+              className="h-7 small:h-9 w-auto"
+            />
           </LocalizedClientLink>
-          <div className="flex-1 basis-0" />
+          <div className="flex flex-1 basis-0 items-center justify-end gap-x-1.5 text-[11px] font-semibold uppercase tracking-wide text-grey-50">
+            <ShieldCheck className="h-3.5 w-3.5 text-brand-cyan" />
+            <span className="hidden small:inline">Pagamento seguro</span>
+          </div>
         </nav>
+      </header>
+      <div className="relative" data-testid="checkout-container">
+        {children}
       </div>
-      <div className="relative" data-testid="checkout-container">{children}</div>
-      <div className="py-4 w-full flex items-center justify-center">
-        <MedusaCTA />
-      </div>
+      <footer className="border-t border-hairline">
+        <div className="content-container py-5 text-center text-xs text-grey-50">
+          Todos os preços apresentados não incluem IVA à taxa legal em vigor.
+          <span className="mx-2">·</span>
+          Higitotal — Sistemas e Produtos de Higiene, Lda. · NIF 504297040
+        </div>
+      </footer>
     </div>
   )
 }

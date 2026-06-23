@@ -65,7 +65,7 @@ const Shipping: React.FC<ShippingProps> = ({
         <Heading
           level="h2"
           className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
+            "flex flex-row text-2xl-semi text-brand-ink gap-x-2 items-baseline",
             {
               "opacity-50 pointer-events-none select-none":
                 !isOpen && cart.shipping_methods?.length === 0,
@@ -84,7 +84,7 @@ const Shipping: React.FC<ShippingProps> = ({
             <Text>
               <button
                 onClick={handleEdit}
-                className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+                className="text-brand-cyan hover:text-brand-cyan-ink font-medium"
                 data-testid="edit-delivery-button"
               >
                 Editar
@@ -103,9 +103,9 @@ const Shipping: React.FC<ShippingProps> = ({
                     value={option.id}
                     data-testid="delivery-option-radio"
                     className={clx(
-                      "flex items-center justify-between text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
+                      "flex items-center justify-between text-small-regular cursor-pointer py-4 border-[1.5px] border-hairline rounded-btn px-5 small:px-8 mb-2 transition-colors hover:border-[#cdd5dd]",
                       {
-                        "border-ui-border-interactive":
+                        "!border-brand-cyan bg-[#eaf7fe]":
                           option.id === selectedShippingMethod?.id,
                       }
                     )}
@@ -135,7 +135,7 @@ const Shipping: React.FC<ShippingProps> = ({
 
           <Button
             size="large"
-            className="mt-6"
+            className="btn-brand-primary mt-6"
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={!cart.shipping_methods?.[0]}

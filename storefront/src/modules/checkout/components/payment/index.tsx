@@ -119,7 +119,7 @@ const Payment = ({
         <Heading
           level="h2"
           className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
+            "flex flex-row text-2xl-semi text-brand-ink gap-x-2 items-baseline",
             {
               "opacity-50 pointer-events-none select-none":
                 !isOpen && !paymentReady,
@@ -133,7 +133,7 @@ const Payment = ({
           <Text>
             <button
               onClick={handleEdit}
-              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="text-brand-cyan hover:text-brand-cyan-ink font-medium"
               data-testid="edit-payment-button"
             >
               Editar
@@ -207,7 +207,7 @@ const Payment = ({
 
           <Button
             size="large"
-            className="mt-6"
+            className="btn-brand-primary mt-6"
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={

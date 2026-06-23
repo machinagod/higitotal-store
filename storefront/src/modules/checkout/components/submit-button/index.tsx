@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@medusajs/ui"
+import { Button, clx } from "@medusajs/ui"
 import React from "react"
 import { useFormStatus } from "react-dom"
 
@@ -17,10 +17,17 @@ export function SubmitButton({
 }) {
   const { pending } = useFormStatus()
 
+  const brand =
+    variant === "secondary"
+      ? "btn-brand-secondary"
+      : variant === "primary"
+      ? "btn-brand-primary"
+      : ""
+
   return (
     <Button
       size="large"
-      className={className}
+      className={clx(brand, className)}
       type="submit"
       isLoading={pending}
       variant={variant || "primary"}

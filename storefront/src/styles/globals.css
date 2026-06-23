@@ -104,6 +104,22 @@ body {
     @apply px-4 py-2 border border-black rounded-full hover:bg-black hover:text-white transition-colors duration-200 ease-in;
   }
 
+  /* Brand CTA — mirrors the nav/product-card primary action. Uses `!` to win
+     over @medusajs/ui Button's own background/border utilities. */
+  .btn-brand-primary {
+    @apply !rounded-btn !border-0 !bg-brand-ink !text-white font-semibold uppercase tracking-wide transition-colors hover:!bg-brand-cyan disabled:!opacity-60;
+  }
+
+  .btn-brand-secondary {
+    @apply !rounded-btn !border-[1.5px] !border-hairline !bg-white !text-brand-ink font-semibold uppercase tracking-wide transition-colors hover:!border-brand-cyan hover:!text-brand-cyan;
+  }
+
+  /* Brand form control — matches the header search field (white, hairline
+     border, 14px radius, cyan focus ring). */
+  .ht-field {
+    @apply w-full rounded-btn border-[1.5px] border-hairline bg-white px-4 text-brand-ink outline-none transition-colors placeholder:text-[#98a0a8] hover:border-[#cdd5dd] focus:border-brand-cyan focus:shadow-[0_0_0_4px_rgba(0,173,239,0.12)];
+  }
+
   .text-xsmall-regular {
     @apply text-[10px] leading-4 font-normal;
   }
