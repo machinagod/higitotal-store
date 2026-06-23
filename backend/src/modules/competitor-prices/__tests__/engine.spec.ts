@@ -6,6 +6,9 @@ jest.mock("crawlee", () => {
     }
     async run(requests: any[]) {
       const g = globalThis as any
+      if (g.__runThrows) {
+        throw typeof g.__runThrows === "string" ? g.__runThrows : new Error("run boom")
+      }
       for (const r of requests) {
         if ((g.__failUrls || []).includes(r.url)) {
           this.opts.failedRequestHandler(
@@ -64,6 +67,7 @@ beforeEach(() => {
   g.__failUrls = []
   g.__body = "<html></html>"
   g.__tornDown = false
+  g.__runThrows = false
 })
 
 const target = (id: string, scraperKey: string) => ({
@@ -126,5 +130,30 @@ describe("crawlTargets", () => {
       requestTimeoutSecs: 10,
     })
     expect(res.get("m7")).toMatchObject({ status: "ok", price: 1 })
+  })
+
+  it("surfaces a crawl setup failure as an error on every target (no throw)", async () => {
+    ;(globalThis as any).__runThrows = true
+    const res = await crawlTargets([target("a", "echo"), target("b", "echo")])
+    expect(res.get("a")).toMatchObject({ status: "error" })
+    expect(res.get("b")?.errorMessage).toMatch(/scrape engine error/)
+  })
+
+  it("falls back to the raw value when the crawl error has no message", async () => {
+    ;(globalThis as any).__runThrows = "raw-failure"
+    const res = await crawlTargets([target("a2", "echo")])
+    expect(res.get("a2")?.errorMessage).toMatch(/raw-failure/)
+  })
+
+  it("respects preset Crawlee storage env vars", async () => {
+    const prevDir = process.env.CRAWLEE_STORAGE_DIR
+    const prevPurge = process.env.CRAWLEE_PURGE_ON_START
+    process.env.CRAWLEE_STORAGE_DIR = "/tmp/preset"
+    process.env.CRAWLEE_PURGE_ON_START = "true"
+    const res = await crawlTargets([target("m8", "echo")])
+    expect(res.get("m8")?.status).toBe("ok")
+    expect(process.env.CRAWLEE_STORAGE_DIR).toBe("/tmp/preset") // not overwritten
+    process.env.CRAWLEE_STORAGE_DIR = prevDir
+    process.env.CRAWLEE_PURGE_ON_START = prevPurge
   })
 })

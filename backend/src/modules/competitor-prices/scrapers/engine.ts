@@ -1,3 +1,5 @@
+import os from "os"
+import path from "path"
 import { getScraper } from "./registry"
 import { ScrapeResult, ScrapeTarget } from "./types"
 
@@ -28,9 +30,37 @@ export async function crawlTargets(
   const results = new Map<string, ScrapeResult>()
   if (!targets.length) return results
 
-  const { CheerioCrawler, Configuration } = await import("crawlee")
+  // Container hardening: keep Crawlee's storage in a writable tmp dir and never
+  // purge on start — the app dir is read-only / non-writable in the prod image,
+  // and the on-disk default would otherwise throw at startup.
+  if (!process.env.CRAWLEE_STORAGE_DIR) {
+    process.env.CRAWLEE_STORAGE_DIR = path.join(os.tmpdir(), "crawlee-storage")
+  }
+  if (process.env.CRAWLEE_PURGE_ON_START == null) {
+    process.env.CRAWLEE_PURGE_ON_START = "false"
+  }
 
-  const crawler = new CheerioCrawler(
+  // Record an error for every target not already resolved, so a setup failure
+  // surfaces as a stored observation (visible in the admin) instead of a 500.
+  const failAll = (msg: string) => {
+    for (const t of targets) {
+      if (!results.has(t.competitorProductId)) {
+        results.set(t.competitorProductId, { status: "error", errorMessage: msg })
+      }
+    }
+  }
+
+  let crawlee: typeof import("crawlee")
+  try {
+    crawlee = await import("crawlee")
+  } catch (e: any) {
+    failAll(`scrape engine unavailable: ${e?.message ?? e}`)
+    return results
+  }
+  const { CheerioCrawler, Configuration } = crawlee
+
+  try {
+    const crawler = new CheerioCrawler(
     {
       maxConcurrency: opts.concurrency ?? 4,
       maxRequestRetries: opts.maxRetries ?? 2,
@@ -73,22 +103,25 @@ export async function crawlTargets(
         })
       },
     },
-    new Configuration({ persistStorage: false })
+    new Configuration({ persistStorage: false, purgeOnStart: false })
   )
 
-  await crawler.run(
-    targets.map((t) => ({
-      url: t.url,
-      uniqueKey: `${t.competitorProductId}:${t.url}`,
-      userData: {
-        competitorProductId: t.competitorProductId,
-        scraperKey: t.scraperKey,
-        hints: t.hints,
-      },
-    }))
-  )
-  // Release Crawlee's autoscaled pool/event listeners between ticks.
-  await crawler.teardown()
+    await crawler.run(
+      targets.map((t) => ({
+        url: t.url,
+        uniqueKey: `${t.competitorProductId}:${t.url}`,
+        userData: {
+          competitorProductId: t.competitorProductId,
+          scraperKey: t.scraperKey,
+          hints: t.hints,
+        },
+      }))
+    )
+    // Release Crawlee's autoscaled pool/event listeners between ticks.
+    await crawler.teardown()
+  } catch (e: any) {
+    failAll(`scrape engine error: ${e?.message ?? e}`)
+  }
 
   return results
 }
