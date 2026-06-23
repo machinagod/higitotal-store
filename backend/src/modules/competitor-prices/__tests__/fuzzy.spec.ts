@@ -1,0 +1,77 @@
+import {
+  normalizeText,
+  diceCoefficient,
+  matchListing,
+  type CatalogItem,
+} from "../matching/fuzzy"
+
+describe("normalizeText", () => {
+  it("lowercases, strips accents and punctuation", () => {
+    expect(normalizeText("Água  Forte!")).toBe("agua forte")
+  })
+  it("handles null/undefined", () => {
+    expect(normalizeText(null)).toBe("")
+    expect(normalizeText(undefined)).toBe("")
+  })
+})
+
+describe("diceCoefficient", () => {
+  it("is 1 for identical strings", () => {
+    expect(diceCoefficient("oxivir plus", "Oxivir Plus")).toBe(1)
+  })
+  it("is 0 when either side is empty", () => {
+    expect(diceCoefficient("", "abc")).toBe(0)
+    expect(diceCoefficient("ab", "")).toBe(0)
+  })
+  it("is between 0 and 1 for partial overlap", () => {
+    const s = diceCoefficient("suma ultra l2", "suma ultra l3")
+    expect(s).toBeGreaterThan(0)
+    expect(s).toBeLessThan(1)
+  })
+})
+
+describe("matchListing", () => {
+  const catalog: CatalogItem[] = [
+    { product_id: "p1", variant_id: "v1", sku: "7010074", ean: "5011231000019", brand: "Diversey", title: "Suma Ultra L2 20L" },
+    { product_id: "p2", variant_id: "v2", sku: "7513452", ean: null, brand: "Diversey", title: "Oxivir Plus 5L" },
+    { product_id: "p3", sku: "V140695", ean: null, brand: "Vileda", title: "SWEP Mopa HygienePlus" },
+  ]
+
+  it("matches by EAN (score 100)", () => {
+    const m = matchListing({ ean: "5011231000019" }, catalog)
+    expect(m).toMatchObject({ product_id: "p1", method: "ean", score: 100, variant_id: "v1" })
+  })
+
+  it("matches by SKU/reference (score 96)", () => {
+    const m = matchListing({ sku: "7513452" }, catalog)
+    expect(m).toMatchObject({ product_id: "p2", method: "sku", score: 96 })
+  })
+
+  it("matches by reference embedded in the title (brand_ref)", () => {
+    const m = matchListing({ title: "Mopa Vileda ref V140695 azul" }, catalog)
+    expect(m).toMatchObject({ product_id: "p3", method: "brand_ref", score: 92, variant_id: null })
+  })
+
+  it("falls back to fuzzy title, gated by brand", () => {
+    const m = matchListing({ title: "Oxivir Plus 5 litros", brand: "Diversey" }, catalog)
+    expect(m?.product_id).toBe("p2")
+    expect(m?.method).toBe("fuzzy")
+    expect(m!.score).toBeGreaterThan(0)
+  })
+
+  it("skips fuzzy candidates whose brand differs", () => {
+    // Title resembles p2 but brand forces a mismatch → no fuzzy hit.
+    const m = matchListing({ title: "Oxivir Plus 5L", brand: "OtherBrand" }, catalog)
+    expect(m).toBeNull()
+  })
+
+  it("returns null when nothing matches", () => {
+    expect(matchListing({ title: "" }, catalog)).toBeNull()
+    expect(matchListing({}, catalog)).toBeNull()
+  })
+
+  it("does not match EAN when no catalog ean equals it", () => {
+    const m = matchListing({ ean: "0000000000000", title: "Suma Ultra L2 20L" }, catalog)
+    expect(m?.method).not.toBe("ean")
+  })
+})

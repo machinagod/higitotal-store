@@ -13,6 +13,8 @@
     "medusa"
   ],
   "scripts": {
+    "test": "jest --config jest.config.js",
+    "test:coverage": "jest --config jest.config.js --coverage",
     "build": "medusa build && node src/scripts/postBuild.js",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "ib": "init-backend",
@@ -39,6 +41,7 @@
     "@rokmohar/medusa-plugin-meilisearch": "1.3.5",
     "@rsc-labs/medusa-products-bought-together-v2": "^0.0.3",
     "@tanstack/react-query": "5.64.2",
+    "crawlee": "^3.17.0",
     "lucide-react": "^1.21.0",
     "medusajs-launch-utils": "0.0.18",
     "minio": "^8.0.6",
