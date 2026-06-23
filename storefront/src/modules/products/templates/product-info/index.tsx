@@ -26,6 +26,15 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
           {product.title}
         </Heading>
 
+        {product.variants?.[0]?.sku && (
+          <Text
+            className="-mt-2 text-small-regular font-medium uppercase tracking-wide text-ui-fg-muted"
+            data-testid="product-ref"
+          >
+            Ref: {product.variants[0].sku}
+          </Text>
+        )}
+
         <Text
           className="text-medium text-ui-fg-subtle whitespace-pre-line"
           data-testid="product-description"
