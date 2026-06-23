@@ -29,6 +29,14 @@ export const CompetitorProduct = model
     title: model.text().nullable(),
     brand: model.text().nullable(),
 
+    // ── Unit normalization ──
+    // How many of OUR comparable units the competitor listing represents (e.g. a
+    // "2 × 5L" pack mapped to our single 5L = 2). Competitor prices are divided
+    // by this to get a per-unit price comparable to ours. `pack_label` is just
+    // for display (e.g. "2 × 5L").
+    pack_units: model.number().default(1),
+    pack_label: model.text().nullable(),
+
     // ── Matching outcome ──
     // unmatched | fuzzy | confirmed | rejected
     match_status: model.text().default("unmatched"),
@@ -47,6 +55,10 @@ export const CompetitorProduct = model
     last_scraped_at: model.dateTime().nullable(),
     next_scrape_at: model.dateTime().nullable(),
     last_price: model.number().nullable(), // minor units; for change detection
+    // Outcome of the last scrape (ok | not_found | error) + reason on failure —
+    // failed scrapes do NOT create a price row, they just update these.
+    last_status: model.text().nullable(),
+    last_error: model.text().nullable(),
 
     is_active: model.boolean().default(true),
     metadata: model.json().nullable(),

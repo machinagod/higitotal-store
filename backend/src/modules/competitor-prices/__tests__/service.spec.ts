@@ -143,8 +143,18 @@ describe("recordObservation", () => {
       consecutive_failures: 0,
       current_interval_seconds: 300,
       last_price: 500,
+      last_status: "ok",
+      last_error: null,
       title: "Disc Title",
     })
+  })
+
+  it("snapshots our price on the observation", async () => {
+    const svc = makeSvc()
+    await svc.recordObservation(base, { status: "ok", price: 600 }, 8217)
+    expect(svc.createCompetitorPrices).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 600, our_price: 8217 })
+    )
   })
 
   it("detects a price change and resets cadence", async () => {
@@ -158,13 +168,40 @@ describe("recordObservation", () => {
     })
   })
 
-  it("backs off on error and counts the failure", async () => {
+  it("backs off on error, records the reason, and inserts NO price row", async () => {
     const svc = makeSvc()
     const outcome = await svc.recordObservation(base, { status: "error", errorMessage: "boom" })
     expect(outcome).toBe("error")
+    expect(svc.createCompetitorPrices).not.toHaveBeenCalled() // no record on failure
     const upd = svc.updateCompetitorProducts.mock.calls[0][0]
-    expect(upd).toMatchObject({ consecutive_failures: 1, current_interval_seconds: 400 })
+    expect(upd).toMatchObject({
+      consecutive_failures: 1,
+      current_interval_seconds: 400,
+      last_status: "error",
+      last_error: "boom",
+    })
     expect(upd.last_price).toBeUndefined()
+  })
+
+  it("normalizes the listing price by pack_units into unit_price", async () => {
+    const svc = makeSvc()
+    await svc.recordObservation({ ...base, pack_units: 2 }, { status: "ok", price: 6677 })
+    expect(svc.createCompetitorPrices).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 6677, unit_price: 3339 })
+    )
+  })
+
+  it("defaults pack_units to 1 (unit_price == price); zero pack_units is treated as 1", async () => {
+    const svc = makeSvc()
+    await svc.recordObservation(base, { status: "ok", price: 500 })
+    expect(svc.createCompetitorPrices).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 500, unit_price: 500 })
+    )
+    svc.createCompetitorPrices.mockClear()
+    await svc.recordObservation({ ...base, pack_units: 0 }, { status: "ok", price: 900 })
+    expect(svc.createCompetitorPrices).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 900, unit_price: 900 })
+    )
   })
 
   it("treats a null price as unchanged and never overwrites curated fields", async () => {

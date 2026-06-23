@@ -74,11 +74,48 @@ describe("genericJsonLdScraper", () => {
     expect(r).toMatchObject({ status: "ok", price: 400, brand: null, sku: null, ean: null })
   })
 
+  it("reads price + fields from schema.org microdata (itemprop)", () => {
+    const $ = makeCheerio({
+      selectorMap: {
+        '[itemprop="price"]': { attrs: { content: "92.11" } },
+        '[itemprop="priceCurrency"]': { attrs: { content: "EUR" } },
+        '[itemprop="availability"]': { text: "Em stock" },
+        '[itemprop="name"]': { text: "Suma Ultra L2 20L" },
+        '[itemprop="brand"]': { text: "Diversey" },
+        '[itemprop="sku"]': { attrs: { content: "SKU1" } },
+        '[itemprop="gtin13"]': { attrs: { content: "123" } },
+      },
+    })
+    expect(run([], $)).toMatchObject({
+      status: "ok",
+      price: 9211,
+      currencyCode: "EUR",
+      inStock: true,
+      title: "Suma Ultra L2 20L",
+      brand: "Diversey",
+      sku: "SKU1",
+      ean: "123",
+    })
+  })
+
+  it("treats a non-positive (login-gated) price as not_found", () => {
+    const $ = makeCheerio({
+      selectorMap: {
+        '[itemprop="price"]': { attrs: { content: "0" } },
+        '[itemprop="name"]': { text: "Gated Product" },
+      },
+    })
+    const r = run([], $)
+    expect(r.status).toBe("not_found")
+    expect(r.title).toBe("Gated Product")
+    expect(r.errorMessage).toMatch(/gated/)
+  })
+
   it("returns not_found when no price anywhere", () => {
     const r = run([{ "@type": "Product", name: "NoPrice" }])
     expect(r.status).toBe("not_found")
     expect(r.title).toBe("NoPrice")
-    expect(r.raw).toEqual({ jsonLdFound: true })
+    expect(r.raw).toMatchObject({ jsonLdFound: true })
   })
 
   it("tolerates a throwing selector in the meta fallback", () => {

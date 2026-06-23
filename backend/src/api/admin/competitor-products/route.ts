@@ -46,6 +46,8 @@ interface CreateMappingBody {
   competitor_ean?: string
   title?: string
   brand?: string
+  pack_units?: number
+  pack_label?: string
   scraper_key?: string
   refresh_interval_seconds?: number
   metadata?: Record<string, any>
