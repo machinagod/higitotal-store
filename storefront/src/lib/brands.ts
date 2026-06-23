@@ -9,6 +9,5 @@ export const BRANDS: Brand[] = [
   { name: "Vileda", logo: "/brands/vileda.svg" },
   { name: "Sammic" },
   { name: "Nilfisk", logo: "/brands/nilfisk.svg" },
-  { name: "Vileda Origo" },
   { name: "CELEA" },
 ]
