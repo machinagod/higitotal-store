@@ -2,20 +2,18 @@ name: CI
 
 # Build + deploy pipeline for master:
 #
-#   push ──► image-smoke (build the real Docker images + boot them)  ◄ the gate
-#             ├─► backend-image  ┐  push to GHCR (:latest + :sha-<commit>,
-#             └─► storefront-image┘  GIT_SHA baked into the image)
+#   push ──► backend-image  ┐  build ONCE (load) → boot-smoke → push to GHCR
+#           storefront-image┘  (:latest + :sha-<commit>, GIT_SHA baked in)
 #                   └─► deploy (railway redeploy --from-source, then WAIT until
 #                       prod /version + /api/healthcheck report the new commit)
 #                         └─► e2e-prod (read-only Playwright against LIVE prod)
 #
-# e2e now runs AFTER the deploy, validating the live site — it is no longer a
-# pre-merge gate. PRs run only image-smoke (build + boot the pruned production
-# images), which catches runtime deps misfiled as devDependencies. The image
-# push + deploy + e2e-prod jobs run on push to master only. image-smoke uses an
-# ephemeral CI Postgres (no secrets, never touches prod); prod e2e is strictly
-# read-only and authenticates through the access-token gate. See
-# .github/workflows/README.md.
+# Each app's image is built a SINGLE time: the same job builds it (load: true),
+# boots the real container as a smoke gate (catches runtime deps misfiled as
+# devDependencies), and — only on push to master, only if the boot passed —
+# pushes that exact image to GHCR (no rebuild). PRs build + boot but never push.
+# image-smoke boot uses an ephemeral CI Postgres (no secrets, never touches
+# prod); prod e2e is post-deploy and strictly read-only. See README.md.
 
 on:
   push:
@@ -34,9 +32,7 @@ permissions:
 
 jobs:
   # Detect which app changed so single-app pushes skip the other app's heavy
-  # image build / boot / redeploy. image-smoke always RUNS (the gate), but does
-  # only the changed app's work, and the image-push + deploy + e2e-prod jobs are
-  # per-app. A change to ci.yml counts as both apps.
+  # image build / boot / push / redeploy. A change to ci.yml counts as both apps.
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
@@ -56,17 +52,21 @@ jobs:
               - 'storefront/**'
               - '.github/workflows/ci.yml'
 
-  # ── Image boot smoke test ────────────────────────────────────────────────
-  # The pre-push gate. Builds the ACTUAL Docker images and boots them, asserting
-  # the backend serves /health and the storefront serves on its port. Booting the
-  # pruned production images catches runtime deps misfiled under devDependencies
-  # (e.g. react for the email templates, ansi-colors for next.config) that a
-  # source build would miss. Runs on PRs + master; gates the image push + deploy.
-  image-smoke:
-    name: Image boot smoke test
+  # ── Backend image: build once → boot-smoke → push ──────────────────────────
+  # Builds the ACTUAL production image a single time (load: true), boots it to
+  # assert it serves /health (booting the pruned image catches runtime deps
+  # misfiled under devDependencies, e.g. react for email templates), and — only
+  # on push to master, only after the boot passes — pushes that same image to
+  # GHCR. No second build.
+  backend-image:
+    name: Backend image (build · boot · push)
     needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
 
     services:
       postgres:
@@ -85,40 +85,45 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
 
-      # Build the backend image locally (shares the gha cache scope with the
-      # backend-image push job, so that job rebuilds from cache, not from zero).
-      - name: Build backend image
-        if: needs.changes.outputs.backend == 'true'
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      # Build ONCE, load into the local docker store with the final GHCR tags
+      # (plus a local `backend:ci` tag used by the boot steps below). The push
+      # step later just `docker push`es these already-built tags — no rebuild.
+      - name: Build backend image (load)
         uses: docker/build-push-action@v6
         with:
           context: backend
           load: true
-          tags: backend:smoke
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            backend:ci
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
-          # Same build-arg as the push job so this job's cached `pnpm build` layer
-          # is reused there (the arg is part of the layer cache key). Value matches
-          # the push job; smoke only asserts /health, so the baked URL is moot here.
+          # Bakes the admin dashboard's API base URL; GIT_SHA powers /version.
           build-args: |
             BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
             GIT_SHA=${{ github.sha }}
 
       - name: Create smoke database
-        if: needs.changes.outputs.backend == 'true'
         run: |
           export PGPASSWORD=postgres
           psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -c "CREATE DATABASE smoke_db;"
 
       # Pre-migrate so init-backend's checkIfSeeded sees the schema and SKIPS
-      # seeding — mirroring production's already-seeded boot path (the path that
-      # runs `cd .medusa/server && medusa db:migrate && medusa start`). sslmode is
-      # disabled because the CI Postgres has no SSL (prod's does).
+      # seeding — mirroring production's already-seeded boot path.
       - name: Pre-migrate the smoke database
-        if: needs.changes.outputs.backend == 'true'
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
         run: |
@@ -127,11 +132,10 @@ jobs:
             -e JWT_SECRET=smoke -e COOKIE_SECRET=smoke \
             -e MOLONI_CLIENT_ID=dummy -e MOLONI_CLIENT_SECRET=dummy \
             -e MOLONI_USER=dummy -e MOLONI_PASSWORD=dummy -e MOLONI_COMPANY_ID=1 \
-            -w /app/.medusa/server --entrypoint sh backend:smoke \
+            -w /app/.medusa/server --entrypoint sh backend:ci \
             -c "./node_modules/.bin/medusa db:migrate"
 
       - name: Boot backend image and assert /health
-        if: needs.changes.outputs.backend == 'true'
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
         run: |
@@ -144,103 +148,33 @@ jobs:
             -e AUTH_CORS=http://localhost:9000 \
             -e MOLONI_CLIENT_ID=dummy -e MOLONI_CLIENT_SECRET=dummy \
             -e MOLONI_USER=dummy -e MOLONI_PASSWORD=dummy -e MOLONI_COMPANY_ID=1 \
-            backend:smoke
+            backend:ci
           echo "Waiting for backend image health…"
           npx --yes wait-on -t 180000 http://localhost:9000/health
           echo "Backend image booted healthy."
 
       - name: Backend image logs on failure
-        if: failure() && needs.changes.outputs.backend == 'true'
+        if: failure()
         run: docker logs backend-smoke 2>&1 | tail -n 200 || true
 
-      # Storefront: build args are inlined by `next build`; values are dummy
-      # because we only assert the server boots (next.config -> check-env-variables
-      # must resolve its runtime deps in the pruned image). The backend booted
-      # above is reachable at localhost:9000 for any on-demand rendering.
-      - name: Build storefront image
-        if: needs.changes.outputs.storefront == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: storefront
-          load: true
-          tags: storefront:smoke
-          cache-from: type=gha,scope=storefront
-          cache-to: type=gha,mode=max,scope=storefront
-          build-args: |
-            NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000
-            NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_smoke_dummy
-            NEXT_PUBLIC_BASE_URL=http://localhost:8000
-            NEXT_PUBLIC_DEFAULT_REGION=dk
-
-      - name: Boot storefront image and assert it serves
-        if: needs.changes.outputs.storefront == 'true'
-        run: |
-          docker run -d --name storefront-smoke --network host \
-            -e PORT=8000 storefront:smoke
-          echo "Waiting for storefront to listen…"
-          npx --yes wait-on -t 120000 tcp:127.0.0.1:8000
-          # Any HTTP status (even an error page) proves `next start` booted;
-          # 000 means the process crashed (e.g. a pruned runtime dep).
-          code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 || echo 000)
-          echo "storefront / -> HTTP $code"
-          test "$code" != "000"
-
-      - name: Storefront image logs on failure
-        if: failure() && needs.changes.outputs.storefront == 'true'
-        run: docker logs storefront-smoke 2>&1 | tail -n 200 || true
-
-  # ── Backend image ──────────────────────────────────────────────────────────
-  backend-image:
-    name: Build + push backend image
-    needs: [changes, image-smoke]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
+      # Push the already-built image (master push only, after the boot passed).
       - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/backend
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-,format=short
+      - name: Push backend image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: docker push --all-tags ghcr.io/${{ github.repository }}/backend
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: backend
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-          # Bakes the admin dashboard's API base URL. Without it the admin calls
-          # http://localhost:9000 and login fails in production. = the backend's
-          # public URL (https://storeadmin.higitotal.pt).
-          build-args: |
-            BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
-            GIT_SHA=${{ github.sha }}
-
-  # ── Storefront image ─────────────────────────────────────────────────────
+  # ── Storefront image: build once → boot-smoke → push ───────────────────────
   storefront-image:
-    name: Build + push storefront image
-    needs: [changes, image-smoke]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.storefront == 'true'
+    name: Storefront image (build · boot · push)
+    needs: [changes]
+    if: needs.changes.outputs.storefront == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -248,15 +182,7 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Image metadata
         id: meta
@@ -267,19 +193,20 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
 
-      - name: Build and push
+      # Build ONCE (load). NEXT_PUBLIC_* are inlined at build time → must match
+      # production. Set as repo-level Actions *Variables* (public, not secrets).
+      # Missing NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY fails the build by design.
+      - name: Build storefront image (load)
         uses: docker/build-push-action@v6
         with:
           context: storefront
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          load: true
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            storefront:ci
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=storefront
           cache-to: type=gha,mode=max,scope=storefront
-          # NEXT_PUBLIC_* are inlined at build time → must match production. Set
-          # these as repo-level Actions *Variables* (Settings → Secrets and
-          # variables → Actions → Variables); they are public values, not secrets.
-          # Missing NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY fails the build by design.
           build-args: |
             NEXT_PUBLIC_MEDUSA_BACKEND_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
             NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }}
@@ -291,15 +218,41 @@ jobs:
             NEXT_PUBLIC_INDEX_NAME=${{ vars.NEXT_PUBLIC_INDEX_NAME }}
             GIT_SHA=${{ github.sha }}
 
+      # Boot proves `next start` comes up in the pruned image (catches runtime
+      # deps misfiled as devDependencies). Any HTTP status proves it booted; 000
+      # means the process crashed.
+      - name: Boot storefront image and assert it serves
+        run: |
+          docker run -d --name storefront-smoke --network host \
+            -e PORT=8000 storefront:ci
+          echo "Waiting for storefront to listen…"
+          npx --yes wait-on -t 120000 tcp:127.0.0.1:8000
+          code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 || echo 000)
+          echo "storefront / -> HTTP $code"
+          test "$code" != "000"
+
+      - name: Storefront image logs on failure
+        if: failure()
+        run: docker logs storefront-smoke 2>&1 | tail -n 200 || true
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push storefront image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: docker push --all-tags ghcr.io/${{ github.repository }}/storefront
+
   # ── Deploy ───────────────────────────────────────────────────────────────
   # Railway services have GHCR image auto-updates enabled, but the poll can lag
   # 10+ min after a push. This job nudges Railway to pull the freshly-published
-  # :latest immediately via `railway redeploy --from-source` (the flag that
-  # re-pulls the configured image instead of restarting the old digest). Auto-
-  # update stays on as the fallback. Requires a RAILWAY_TOKEN repo secret (a
-  # Railway *project* token scoped to the production environment — Project →
-  # Settings → Tokens). If the secret is absent, the job no-ops with a warning
-  # and the auto-update poll still deploys (just slower).
+  # :latest immediately via `railway redeploy --from-source`. Auto-update stays
+  # on as the fallback. Requires a RAILWAY_TOKEN repo secret; if absent the job
+  # no-ops with a warning and the auto-update poll still deploys (just slower).
   deploy:
     name: Force Railway redeploy
     needs: [changes, backend-image, storefront-image]
@@ -310,8 +263,6 @@ jobs:
       && (needs.backend-image.result == 'success' || needs.storefront-image.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # RAILWAY_TOKEN lives as a secret on this GitHub Environment (no protection
-    # rules), so the job must declare it to resolve the secret.
     environment: "scintillating-adaptation / production"
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -358,15 +309,11 @@ jobs:
 
   # ── Production e2e (post-deploy) ───────────────────────────────────────────
   # Runs only after `deploy` confirmed the new commit is live on prod. Strictly
-  # read-only against production data (navigation + render assertions; never
-  # creates carts/accounts/orders). Authenticates through the pre-launch access
-  # gate with STOREFRONT_ACCESS_TOKEN.
+  # read-only against production data; authenticates through the pre-launch
+  # access gate with STOREFRONT_ACCESS_TOKEN.
   e2e-prod:
     name: Production e2e (post-deploy)
     needs: [changes, deploy]
-    # always() + explicit deploy check: without it, a skipped upstream image job
-    # (single-app push) propagates "skipped" down the chain and this never runs,
-    # even though deploy succeeded.
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
       && needs.deploy.result == 'success'
