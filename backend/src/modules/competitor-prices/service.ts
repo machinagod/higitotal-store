@@ -61,10 +61,12 @@ export default class CompetitorPricesModuleService extends MedusaService({
   static identifier = "competitor_prices"
 
   protected readonly options_: Required<CompetitorPricesModuleOptions>
+  protected readonly logger_: any
 
   constructor(container: any, options?: CompetitorPricesModuleOptions) {
     super(container, options)
     this.options_ = { ...DEFAULTS, ...(options ?? {}) }
+    this.logger_ = container?.logger
   }
 
   getConfig(): Required<CompetitorPricesModuleOptions> {
@@ -123,24 +125,44 @@ export default class CompetitorPricesModuleService extends MedusaService({
    * `mapping` is the already-loaded record (with `competitor` relation) to avoid
    * a re-fetch. Returns the outcome that drove the schedule.
    */
-  async recordObservation(mapping: any, result: ScrapeResult): Promise<Outcome> {
+  async recordObservation(
+    mapping: any,
+    result: ScrapeResult,
+    ourPrice?: number | null
+  ): Promise<Outcome> {
     const now = new Date()
-
-    await this.createCompetitorPrices({
-      competitor_product_id: mapping.id,
-      price: result.price ?? null,
-      original_price: result.originalPrice ?? null,
-      currency_code: result.currencyCode ?? "EUR",
-      in_stock: result.inStock ?? null,
-      availability: result.availability ?? null,
-      status: result.status,
-      error_message: result.errorMessage ?? null,
-      raw: result.raw ?? null,
-      scraped_at: now,
-    })
-
     const ok = result.status === "ok"
-    const changed = ok && result.price != null && result.price !== mapping.last_price
+
+    if (ok) {
+      // Normalize to a per-unit price comparable to our product, and snapshot
+      // our own price at extraction time.
+      const packUnits =
+        mapping.pack_units && mapping.pack_units > 0 ? mapping.pack_units : 1
+      const unitPrice =
+        result.price != null ? Math.round(result.price / packUnits) : null
+      await this.createCompetitorPrices({
+        competitor_product_id: mapping.id,
+        price: result.price ?? null,
+        unit_price: unitPrice,
+        our_price: ourPrice ?? null,
+        original_price: result.originalPrice ?? null,
+        currency_code: result.currencyCode ?? "EUR",
+        in_stock: result.inStock ?? null,
+        availability: result.availability ?? null,
+        status: "ok",
+        raw: result.raw ?? null,
+        scraped_at: now,
+      })
+    } else {
+      // Failed retrieval: log the reason and record it on the mapping, but do
+      // NOT insert a price row (keeps the time-series clean of non-prices).
+      this.logger_?.warn?.(
+        `[competitor-prices] no price for mapping ${mapping.id} (${mapping.competitor_url ?? "?"}): ${result.errorMessage ?? result.status}`
+      )
+    }
+
+    const changed =
+      ok && result.price != null && result.price !== mapping.last_price
     const outcome: Outcome = !ok ? "error" : changed ? "changed" : "unchanged"
 
     const { interval, at } = this.nextSchedule({
@@ -154,6 +176,8 @@ export default class CompetitorPricesModuleService extends MedusaService({
       last_scraped_at: now,
       next_scrape_at: at,
       current_interval_seconds: interval,
+      last_status: result.status,
+      last_error: ok ? null : result.errorMessage ?? result.status,
       consecutive_failures: ok ? 0 : (mapping.consecutive_failures ?? 0) + 1,
       consecutive_unchanged:
         outcome === "unchanged" ? (mapping.consecutive_unchanged ?? 0) + 1 : 0,

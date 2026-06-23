@@ -6,8 +6,9 @@ import { runCompetitorScrape } from "../scrape"
 import { crawlTargets } from "../../../modules/competitor-prices/scrapers/engine"
 
 const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
-const makeContainer = (svc: any) => ({
-  resolve: (n: string) => (n === "logger" ? logger : svc),
+const makeContainer = (svc: any, query?: any) => ({
+  resolve: (n: string) =>
+    n === "logger" ? logger : n === "query" ? query : svc,
 })
 
 const baseSvc = () => ({
@@ -57,5 +58,37 @@ describe("runCompetitorScrape", () => {
     await runCompetitorScrape(makeContainer(svc) as any, { mappingIds: ["a"] })
     expect(svc.listCompetitorProducts).toHaveBeenCalledWith({ id: ["a"] }, { relations: ["competitor"] })
     expect(svc.listDueMappings).not.toHaveBeenCalled()
+  })
+
+  it("snapshots our calculated price and passes it to recordObservation", async () => {
+    const svc = baseSvc()
+    svc.listDueMappings.mockResolvedValue([
+      { id: "m1", is_active: true, competitor_url: "u1", product_id: "p1", competitor: { id: "c" } },
+    ])
+    ;(crawlTargets as jest.Mock).mockResolvedValue(new Map([["m1", { status: "ok", price: 6677 }]]))
+    svc.recordObservation.mockResolvedValue("changed")
+    const query = {
+      graph: jest.fn().mockResolvedValue({
+        data: [
+          { id: "p1", variants: [{ calculated_price: { calculated_amount: null } }, { calculated_price: { calculated_amount: 82.17 } }] },
+        ],
+      }),
+    }
+    await runCompetitorScrape(makeContainer(svc, query) as any, {})
+    // our price (82.17 → 8217 minor) passed as the 3rd arg
+    expect(svc.recordObservation).toHaveBeenCalledWith(expect.anything(), expect.anything(), 8217)
+  })
+
+  it("tolerates an our-price lookup failure", async () => {
+    const svc = baseSvc()
+    svc.listDueMappings.mockResolvedValue([
+      { id: "m1", is_active: true, competitor_url: "u1", product_id: "p1", competitor: { id: "c" } },
+    ])
+    ;(crawlTargets as jest.Mock).mockResolvedValue(new Map([["m1", { status: "ok" }]]))
+    svc.recordObservation.mockResolvedValue("unchanged")
+    const query = { graph: jest.fn().mockRejectedValue(new Error("pricing down")) }
+    await runCompetitorScrape(makeContainer(svc, query) as any, {})
+    expect(svc.recordObservation).toHaveBeenCalledWith(expect.anything(), expect.anything(), undefined)
+    expect(logger.warn).toHaveBeenCalled()
   })
 })

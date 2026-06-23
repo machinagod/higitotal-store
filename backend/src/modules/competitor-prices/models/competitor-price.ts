@@ -12,7 +12,13 @@ export const CompetitorPrice = model
     competitor_product: model.belongsTo(() => CompetitorProduct, {
       mappedBy: "prices",
     }),
-    price: model.number().nullable(), // minor units (cents)
+    price: model.number().nullable(), // minor units (cents) — listing price
+    // Per-unit price (listing price ÷ mapping.pack_units), minor units — the
+    // figure comparable to our own product price.
+    unit_price: model.number().nullable(),
+    // OUR product price at the moment of extraction (minor units, EUR) — snapshot
+    // so historical comparisons stay accurate.
+    our_price: model.number().nullable(),
     original_price: model.number().nullable(), // pre-discount, minor units
     currency_code: model.text().default("EUR"),
     in_stock: model.boolean().nullable(),

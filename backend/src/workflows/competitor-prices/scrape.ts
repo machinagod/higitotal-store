@@ -1,4 +1,5 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
+import { ContainerRegistrationKeys, QueryContext } from "@medusajs/framework/utils"
 import { COMPETITOR_PRICES_MODULE } from "../../modules/competitor-prices"
 import { crawlTargets } from "../../modules/competitor-prices/scrapers/engine"
 import { DEFAULT_SCRAPER_KEY } from "../../modules/competitor-prices/scrapers/registry"
@@ -66,10 +67,16 @@ export async function runCompetitorScrape(
 
   const results = await crawlTargets(targets, { concurrency: cfg.concurrency })
 
+  // Snapshot OUR current EUR price for the mapped products (minor units).
+  const ourPrices = await fetchOurPrices(
+    container,
+    due.map((m) => m.product_id).filter(Boolean)
+  )
+
   for (const m of due) {
     const r = results.get(m.id)
     if (!r) continue
-    const outcome = await svc.recordObservation(m, r)
+    const outcome = await svc.recordObservation(m, r, ourPrices.get(m.product_id))
     report.scraped++
     if (r.status === "not_found") report.notFound++
     if (outcome === "error") report.failed++
@@ -81,4 +88,38 @@ export async function runCompetitorScrape(
     `[competitor-prices] scraped=${report.scraped} changed=${report.changed} unchanged=${report.unchanged} failed=${report.failed} notFound=${report.notFound}`
   )
   return report
+}
+
+/**
+ * Fetch our current EUR price (minor units) for a set of product ids via the
+ * calculated-price engine. Returns a product_id → minor-units map; products
+ * without a resolvable price are simply absent.
+ */
+async function fetchOurPrices(
+  container: MedusaContainer,
+  productIds: string[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>()
+  if (!productIds.length) return out
+  const logger = container.resolve("logger")
+  try {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+    const { data } = await query.graph({
+      entity: "product",
+      fields: ["id", "variants.calculated_price.calculated_amount"],
+      filters: { id: [...new Set(productIds)] },
+      context: {
+        variants: { calculated_price: QueryContext({ currency_code: "eur" }) },
+      },
+    })
+    for (const p of data ?? []) {
+      const amount = p.variants?.find(
+        (v: any) => v?.calculated_price?.calculated_amount != null
+      )?.calculated_price?.calculated_amount
+      if (amount != null) out.set(p.id, Math.round(Number(amount) * 100))
+    }
+  } catch (e: any) {
+    logger.warn(`[competitor-prices] our-price lookup failed: ${e?.message ?? e}`)
+  }
+  return out
 }

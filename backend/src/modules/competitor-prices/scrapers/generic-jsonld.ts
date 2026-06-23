@@ -13,23 +13,30 @@ export const genericJsonLdScraper: CompetitorScraper = {
     const product = findProduct(page.jsonLd)
     const offer = product ? pickOffer(product) : undefined
 
+    // Price source order: JSON-LD Offer → schema.org microdata (`[itemprop=price]`,
+    // common on PrestaShop) → meta/OpenGraph tags.
     const priceRaw =
       offer?.price ??
       offer?.lowPrice ??
+      itemprop(page.$, "price") ??
       metaContent(page.$, "price") ??
       metaContent(page.$, "product:price:amount")
     const price = parsePriceToMinor(priceRaw)
 
-    if (price == null) {
+    // A null or non-positive price means no usable public price — typically a
+    // login-gated B2B catalogue that renders 0,00 €.
+    if (price == null || price <= 0) {
       return {
         status: "not_found",
-        title: textOf(product?.name) ?? null,
-        raw: { jsonLdFound: !!product },
-        errorMessage: "no price found",
+        title: textOf(product?.name) ?? itemprop(page.$, "name") ?? null,
+        raw: { jsonLdFound: !!product, priceRaw: priceRaw ?? null },
+        errorMessage: price === 0 || price != null ? "no public price (gated?)" : "no price found",
       }
     }
 
-    const availability = String(offer?.availability ?? "")
+    const availability = String(
+      offer?.availability ?? itemprop(page.$, "availability") ?? ""
+    )
     const gtin =
       product?.gtin13 ?? product?.gtin ?? product?.gtin8 ?? product?.ean
     return {
@@ -38,17 +45,35 @@ export const genericJsonLdScraper: CompetitorScraper = {
       originalPrice: parsePriceToMinor(offer?.highPrice),
       currencyCode:
         offer?.priceCurrency ??
+        itemprop(page.$, "priceCurrency") ??
         metaContent(page.$, "product:price:currency") ??
         "EUR",
-      inStock: availability ? /InStock/i.test(availability) : null,
+      inStock: availability ? /InStock|em stock|dispon/i.test(availability) : null,
       availability: availability || null,
-      title: textOf(product?.name) ?? null,
-      brand: textOf(product?.brand?.name ?? product?.brand) ?? null,
-      sku: product?.sku != null ? String(product.sku) : null,
-      ean: gtin != null ? String(gtin) : null,
+      title: textOf(product?.name) ?? itemprop(page.$, "name") ?? null,
+      brand:
+        textOf(product?.brand?.name ?? product?.brand) ??
+        itemprop(page.$, "brand") ??
+        null,
+      sku: product?.sku != null ? String(product.sku) : itemprop(page.$, "sku") ?? null,
+      ean: gtin != null ? String(gtin) : itemprop(page.$, "gtin13") ?? null,
       raw: { product, offer },
     }
   },
+}
+
+/** Read a schema.org microdata value: `[itemprop="<name>"]` content attr or text. */
+function itemprop($: any, name: string): string | undefined {
+  try {
+    const el = $(`[itemprop="${name}"]`).first()
+    if (!el || el.length === 0) return undefined
+    const c = el.attr?.("content")
+    if (c && String(c).trim()) return String(c).trim()
+    const t = el.text?.()
+    return t && String(t).trim() ? String(t).trim() : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /** Find the first schema.org Product object across parsed JSON-LD blocks. */
