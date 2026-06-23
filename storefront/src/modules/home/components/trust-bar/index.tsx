@@ -41,11 +41,11 @@ const TrustBar = () => {
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[12px] bg-[#eaf7fe] text-brand-cyan small:h-[42px] small:w-[42px]">
               <item.Icon className="h-[18px] w-[18px] small:h-5 small:w-5" />
             </span>
-            <div>
+            <div className="min-w-0 leading-tight">
               <b className="block text-[13px] font-bold leading-tight text-brand-ink small:text-sm">
                 {item.title}
               </b>
-              <span className="text-[11px] leading-snug text-[#5a636c] small:text-xs">
+              <span className="mt-0.5 block text-[11px] leading-tight text-[#5a636c] small:text-xs">
                 {item.subtitle}
               </span>
             </div>
