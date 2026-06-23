@@ -21,10 +21,10 @@ export default function PrivacyPolicyPage() {
           1. Responsável pelo tratamento
         </h2>
         <p className="mt-2">
-          A Higitotal — Sistemas e Produtos de Higiene, Lda., com sede na Zona
-          Industrial, Rua J nº 137, 5370-565 Mirandela, Portugal, é responsável
-          pelo tratamento dos dados pessoais recolhidos através deste sítio.
-          Contacto: higitotal@higitotal.pt · +351 278 262 913.
+          A Higitotal — Sistemas e Produtos de Higiene, Lda. (NIF 504297040), com
+          sede na Zona Industrial, Rua J nº 137, 5370-565 Mirandela, Portugal, é
+          responsável pelo tratamento dos dados pessoais recolhidos através deste
+          sítio. Contacto: higitotal@higitotal.pt · +351 278 262 913.
         </p>
 
         <h2 className="mt-8 text-xl font-bold text-brand-ink">

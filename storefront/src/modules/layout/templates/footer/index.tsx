@@ -160,7 +160,7 @@ export default async function Footer() {
           <div className="flex flex-col gap-2 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
             <span>
               © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de
-              Higiene, Lda.
+              Higiene, Lda. · NIF 504297040
             </span>
             <span>Mirandela · Portugal</span>
           </div>

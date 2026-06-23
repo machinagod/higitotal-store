@@ -22,8 +22,10 @@ export default function TermsOfUsePage() {
         </h2>
         <p className="mt-2">
           Esta loja é operada pela Higitotal — Sistemas e Produtos de Higiene,
-          Lda., com sede na Zona Industrial, Rua J nº 137, 5370-565 Mirandela,
-          Portugal (higitotal@higitotal.pt · +351 278 262 913).
+          Lda., pessoa coletiva nº 504297040, com sede na Zona Industrial, Rua J
+          nº 137, 5370-565 Mirandela, Portugal, matriculada na Conservatória do
+          Registo Comercial de Mirandela sob o nº 621/981202, com o capital social
+          de 120 000 €. Contactos: higitotal@higitotal.pt · +351 278 262 913.
         </p>
 
         <h2 className="mt-8 text-xl font-bold text-brand-ink">
