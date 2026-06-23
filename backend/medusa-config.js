@@ -161,7 +161,27 @@ const medusaConfig = {
         companyId: MOLONI_COMPANY_ID,
         sandbox: MOLONI_SANDBOX,
       }
-    }] : [])
+    }] : []),
+    {
+      // Competitor price intelligence: stores competitor prices, refreshes them
+      // on an adaptive schedule (faster on change, backoff on error), fuzzy-
+      // matches listings to our catalog, and uses pluggable per-competitor
+      // scraper strategies. Inert until competitors/mappings are configured.
+      resolve: './src/modules/competitor-prices',
+      options: {
+        baseIntervalSeconds: 86400,   // default refresh cadence (1 day)
+        minIntervalSeconds: 3600,     // never faster than hourly
+        maxIntervalSeconds: 1209600,  // never slower than ~14 days
+        backoffFactor: 2,             // x2 interval per consecutive failure
+        stableFactor: 1.5,            // ease off while price is unchanged
+        jitterRatio: 0.1,             // ±10% jitter to de-sync ticks
+        batchSize: 50,                // mappings processed per tick
+        concurrency: 4,               // concurrent in-flight requests per crawl
+        autoConfirmScore: 90,         // fuzzy score to auto-confirm a match
+        productDiscoveryIntervalSeconds: 2592000,  // find new stores per product (30d)
+        catalogDiscoveryIntervalSeconds: 604800,   // detect competitor new products (7d)
+      }
+    }
   ],
   plugins: [
     {
