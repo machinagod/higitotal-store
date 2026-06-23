@@ -29,6 +29,8 @@ const COMPETITORS: Array<{
   { handle: "csh-pt", name: "CSH (PT)", base_url: "https://www.csh.pt", scraper_key: "generic-jsonld" },
   { handle: "lusohigin-pt", name: "Lusohigin (PT)", base_url: "https://www.lusohigin.pt", scraper_key: "config-selectors" },
   { handle: "climprofesional-pt", name: "Clim Profesional (PT)", base_url: "https://www.climprofesional.com/pt", scraper_key: "generic-jsonld" },
+  { handle: "egi-pt", name: "EGI (PT)", base_url: "https://www.egi.com.pt", scraper_key: "generic-jsonld" },
+  { handle: "hegisantos-pt", name: "Hegisantos (PT)", base_url: "https://hegisantos.pt", scraper_key: "generic-jsonld" },
   // ── Spain ──
   { handle: "batoy-es", name: "Distribuciones Batoy (ES)", base_url: "https://distribucionesbatoy.com", scraper_key: "prestashop" },
   { handle: "bunzlspain-es", name: "Bunzl Spain (ES)", base_url: "https://store.bunzlspain.com", scraper_key: "generic-jsonld" },
