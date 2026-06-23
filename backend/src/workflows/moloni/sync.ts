@@ -45,6 +45,7 @@ import {
   toCustomerAddress,
   toCustomerInput,
   totalStock,
+  vatPercent,
 } from "./mappers"
 
 export type MoloniSyncEntity =
@@ -258,7 +259,7 @@ export async function runMoloniSync(
   // we actually fetched (keeps incremental runs cheap as the catalog grows).
   const variantByMoloni = new Map<
     number,
-    { productId: string; variantId: string }
+    { productId: string; variantId: string; metadata: Record<string, any> }
   >()
   if (moloniProducts.length) {
     const externalIds = moloniProducts.map((p) => String(p.product_id))
@@ -268,7 +269,7 @@ export async function runMoloniSync(
         ...(await graphAll(
           query,
           "product",
-          ["id", "external_id", "variants.id", "variants.sku"],
+          ["id", "external_id", "metadata", "variants.id", "variants.sku"],
           { external_id: ids }
         ))
       )
@@ -278,7 +279,12 @@ export async function runMoloniSync(
       const mid = Number(p.external_id)
       if (Number.isNaN(mid)) continue
       const variantId = p.variants?.[0]?.id
-      if (variantId) variantByMoloni.set(mid, { productId: p.id, variantId })
+      if (variantId)
+        variantByMoloni.set(mid, {
+          productId: p.id,
+          variantId,
+          metadata: p.metadata ?? {},
+        })
     }
   }
 
@@ -286,7 +292,14 @@ export async function runMoloniSync(
     const toCreate: MoloniProduct[] = []
     const toUpdate: MoloniProduct[] = []
     for (const p of moloniProducts) {
-      ;(variantByMoloni.has(p.product_id) ? toUpdate : toCreate).push(p)
+      const ref = variantByMoloni.get(p.product_id)
+      if (!ref) {
+        toCreate.push(p)
+      } else if (ref.metadata?.excluded !== true) {
+        toUpdate.push(p)
+      }
+      // Products flagged `metadata.excluded` (manually dropped from the catalog)
+      // are left untouched — the sync never re-publishes or overwrites them.
     }
 
     // creates (batched)
@@ -308,7 +321,11 @@ export async function runMoloniSync(
           const mid = Number(created.external_id)
           const variantId = created.variants?.[0]?.id
           if (!Number.isNaN(mid) && variantId) {
-            variantByMoloni.set(mid, { productId: created.id, variantId })
+            variantByMoloni.set(mid, {
+              productId: created.id,
+              variantId,
+              metadata: {},
+            })
           }
         }
       }
@@ -328,9 +345,13 @@ export async function runMoloniSync(
             category_ids: categoryMap.get(p.category_id)
               ? [categoryMap.get(p.category_id)!]
               : undefined,
+            // Merge onto existing metadata so manually-set keys (e.g. `excluded`)
+            // and `moloni_vat_percent` survive re-syncs instead of being wiped.
             metadata: {
+              ...ref.metadata,
               moloni_product_id: p.product_id,
               moloni_category_id: p.category_id,
+              moloni_vat_percent: vatPercent(p) ?? null,
             },
             variants: [
               {
