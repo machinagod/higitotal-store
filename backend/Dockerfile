@@ -50,6 +50,12 @@ FROM ${NODE_IMAGE} AS runner
 ENV NODE_ENV=production
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
+# `procps` provides `ps`, which Crawlee's autoscaled pool shells out to for CPU/
+# memory snapshots — absent from the slim base, it fails the competitor scraper
+# with "spawn ps ENOENT".
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends procps \
+  && rm -rf /var/lib/apt/lists/*
 # Bake pnpm into the image so container start does not hit the network.
 RUN corepack enable && corepack prepare pnpm@9.10.0 --activate
 WORKDIR /app
