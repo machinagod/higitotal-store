@@ -153,12 +153,17 @@ export default async function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col gap-2 border-t border-svc-line py-7 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
-          <span>
-            © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de
-            Higiene, Lda.
-          </span>
-          <span>Mirandela · Portugal</span>
+        <div className="border-t border-svc-line py-7">
+          <p className="mb-3 text-[12px] leading-relaxed text-svc-fg-muted">
+            Todos os preços apresentados não incluem IVA à taxa legal em vigor.
+          </p>
+          <div className="flex flex-col gap-2 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
+            <span>
+              © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de
+              Higiene, Lda.
+            </span>
+            <span>Mirandela · Portugal</span>
+          </div>
         </div>
       </div>
     </footer>

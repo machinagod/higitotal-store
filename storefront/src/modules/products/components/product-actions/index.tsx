@@ -144,11 +144,15 @@ export default function ProductActions({
           <ProductPrice product={product} variant={selectedVariant} />
           {grossLabel && (
             <span className="ml-auto text-right text-xsmall-regular text-grey-50 leading-snug">
-              <b className="block text-grey-70 text-small-regular">{grossLabel} c/ IVA</b>
-              Preço sem IVA
+              <b className="block text-grey-70 text-small-regular">
+                {grossLabel} c/ IVA
+              </b>
             </span>
           )}
         </div>
+        <p className="-mt-1 text-xsmall-regular text-grey-50">
+          Preço sem IVA — IVA à taxa legal em vigor.
+        </p>
 
         {/* Buy row: quantity + add to cart */}
         <div className="flex items-stretch gap-3 mt-2">
