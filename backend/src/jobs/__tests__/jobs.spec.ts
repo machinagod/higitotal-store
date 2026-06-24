@@ -2,7 +2,10 @@ jest.mock("../../workflows/competitor-prices/scrape", () => ({ runCompetitorScra
 jest.mock("../../workflows/competitor-prices/discovery-catalog", () => ({ runCatalogDiscovery: jest.fn() }))
 jest.mock("../../workflows/competitor-prices/discovery-product", () => ({ runProductDiscovery: jest.fn() }))
 jest.mock("../../modules/competitor-prices/discovery/registry", () => ({ isDiscoveryConfigured: jest.fn() }))
+jest.mock("../../workflows/competitor-prices/snapshot-our-prices", () => ({ runSnapshotOurPrices: jest.fn() }))
 
+import snapshotJob from "../snapshot-our-prices"
+import { runSnapshotOurPrices } from "../../workflows/competitor-prices/snapshot-our-prices"
 import scrapeJob, { config as scrapeConfig } from "../scrape-competitor-prices"
 import catalogJob, { config as catalogConfig } from "../discover-competitor-catalog"
 import productJob, { config as productConfig } from "../discover-product-competitors"
@@ -35,6 +38,25 @@ describe("scrape-competitor-prices job", () => {
   it("logs errors from the workflow", async () => {
     ;(runCompetitorScrape as jest.Mock).mockRejectedValue(new Error("boom"))
     await scrapeJob(okContainer as any)
+    expect(logger.error).toHaveBeenCalled()
+  })
+})
+
+describe("snapshot-our-prices job", () => {
+  it("skips when the module is not registered", async () => {
+    await snapshotJob(noModuleContainer as any)
+    expect(runSnapshotOurPrices).not.toHaveBeenCalled()
+  })
+
+  it("runs the snapshot workflow", async () => {
+    ;(runSnapshotOurPrices as jest.Mock).mockResolvedValue({ considered: 0, snapshotted: 0 })
+    await snapshotJob(okContainer as any)
+    expect(runSnapshotOurPrices).toHaveBeenCalled()
+  })
+
+  it("logs errors from the snapshot workflow", async () => {
+    ;(runSnapshotOurPrices as jest.Mock).mockRejectedValue(new Error("boom"))
+    await snapshotJob(okContainer as any)
     expect(logger.error).toHaveBeenCalled()
   })
 
