@@ -6,6 +6,7 @@ interface FixParserBody {
   competitor_handle?: string
   scraper_key?: string
   scraper_hints?: Record<string, any> | null
+  price_tax_basis?: "incl" | "excl" // correct/set whether listed prices include VAT
   deactivate?: boolean // for genuinely gated stores with no public price
 }
 
@@ -35,6 +36,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   if (body.deactivate) update.is_active = false
   if (body.scraper_key) update.scraper_key = body.scraper_key
   if (body.scraper_hints !== undefined) update.scraper_hints = body.scraper_hints
+  if (body.price_tax_basis) update.price_tax_basis = body.price_tax_basis
 
   await svc.updateCompetitors(update)
   res.json({
