@@ -5,28 +5,23 @@ description: Find competitor product listings for our watched products via the M
 
 # Competitor discovery worker
 
-You are the **worker** for the competitor-price discovery queue. The Medusa
-backend holds the queue of our products to find at competitors; you pull a
-batch, do the web research yourself, and submit the listings back. The backend
-never calls an LLM API — *you* are the intelligence, run on a schedule.
-
-This mirrors the higitotal-deno contest-enrichment pattern (`enrich_next_batch`
-→ research → `enrich_submit`).
+You drive the competitor-price discovery queue. The Medusa backend holds the
+queue of our products to find at competitors; you pull a batch, do the web
+research yourself, and submit verified listings back. The backend never calls an
+LLM API — *you* are the intelligence, run on a schedule. Mirrors the
+higitotal-deno contest-enrichment pattern (`enrich_next_batch` → research →
+`enrich_submit`).
 
 ## Endpoints (Medusa admin API, admin-authed)
 
 Base URL: `${MEDUSA_BACKEND_URL:-https://storeadmin.higitotal.pt}`
 
-1. `GET  /admin/competitor-prices/discovery/next-batch?limit=N` → `{ watches:[{watch_id, product_id, sku, title, brand, ean}], competitors:[{handle,name,base_url,country,scraper_key}] }`
-2. `POST /admin/competitor-prices/discovery/submit` → `{ watch_id, listings:[{competitor_handle, competitor_name?, competitor_base_url?, url, title?, brand?, sku?, confidence?}] }`
-3. `POST /admin/competitor-prices/discovery/skip`   → `{ watch_id }` (nothing found)
+1. `GET  /admin/competitor-prices/discovery/next-batch?limit=N` → `{ count, watches:[{watch_id, product_id, sku, title, brand, ean}], competitors:[{handle,name,base_url,country,scraper_key}] }`
+2. `POST /admin/competitor-prices/discovery/submit` → `{ watch_id, listings:[{competitor_handle, competitor_base_url?, url, title?, brand?, sku?, confidence}] }`
+3. `POST /admin/competitor-prices/discovery/skip`   → `{ watch_id }` (nothing qualified)
 4. `GET  /admin/competitor-prices/discovery/stats`  → queue health
 
-## Auth
-
-Get a bearer token once, reuse it for the run. Credentials come from env
-(`MEDUSA_ADMIN_EMAIL` / `MEDUSA_ADMIN_PASSWORD`), falling back to `backend/.env`
-when running locally:
+## Auth (once per run, reuse the token)
 
 ```bash
 BE="${MEDUSA_BACKEND_URL:-https://storeadmin.higitotal.pt}"
@@ -37,33 +32,65 @@ TOK=$(curl -s -X POST "$BE/auth/user/emailpass" -H 'Content-Type: application/js
   | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).token||''))")
 ```
 
+## ⛔ Submission gate — a listing is eligible ONLY if ALL are true
+
+1. The `url` is a **product page** on one of OUR competitor `base_url` domains.
+2. You **opened it with `WebFetch`** and **saw a numeric EUR price shown WITHOUT
+   login** — not a category/brand/PDF page, not a search result.
+3. The **pack size matches ours** (same litres / kg / count, accounting for
+   multipliers: our `6x2L` = their `6x2L`/`12L`, NOT their single `2L`; our `4L`
+   is NOT their `4x4L` case).
+
+If any is uncertain → **do NOT submit that listing.** Reject pages that show
+*login / registo / iniciar sessão / sob consulta / pedir preço / presupuesto /
+solicitar precio* or no price at all. **Never invent a URL or a price.** If a
+watch has zero eligible listings, `skip` it. A wrong/garbage match is worse than
+a skip — the absurd Δ it produces has to be cleaned up by hand.
+
+**Confidence**: 95+ = verified exact product + size + public price; 85–94 =
+public price verified but size shown via a multi-size selector (slight
+ambiguity); never submit > 80 if you did not actually see the price.
+
+## Site intel (saves fetches — current as of this writing, re-verify if stale)
+
+- **Public prices (target these):** `egi-pt` (richest — carries most of the
+  Diversey range), `hegisantos-pt` (Magento), `higienaroma-pt` (Magento),
+  `batoy-es` (PrestaShop), and `progelcone-pt` **/store/** pages.
+- **GATED — skip, don't waste fetches:** `exaclean-pt`, `moreiracarneiro-pt`,
+  mostly `lusohigin-pt`, `grupoapr-pt`, `csh-pt`, and progelcone-pt **/catalogo/**
+  pages (the `/store/` variant of the same product is the public one).
+- **Private-label / own-brand → competitors don't carry it, skip fast:**
+  Higitotal own codes (`DL`/`DA`/`DT`/`PA`/`PB`/`PC`/`PE`/`PF`/`FR`/`AC`/`AH`…)
+  and brands **Amoos**, **Celea**; generic dispensers/paper. Spend effort on
+  clearly **branded** items: Diversey (Suma, Clax, Taski, Jontec, Optimax,
+  Hypofoam, Soft Care, Divosan, Sprint, Good Sense), Vileda/SWEP, Nilfisk,
+  Sammic, Fagor, Renova, Swarfega/Deb.
+
 ## Loop
 
-1. **Pull a batch**: `GET /next-batch?limit=10`. If `count` is 0, the queue is
-   drained — report and stop.
-2. **For each watch**, research where the product is sold among the returned
-   `competitors` (prefer the ones whose `country` matches and that publish public
-   prices). Use `WebSearch` and `WebFetch`:
-   - Search the product's `title` + `brand` (+ size) scoped to a competitor's
-     `base_url` domain, e.g. `WebSearch("Oxivir Plus 5L site:distribucionesbatoy.com")`.
-   - Open the best candidate with `WebFetch` and **verify it is the same product
-     and the same pack size** (a 5L listing is NOT our 20L). Capture the exact
-     product-page `url`, and the listing `title`/`brand`/`sku` if visible.
-   - **Confidence (0–100)**: 95+ exact same product & size & brand; 80–94 same
-     product, size inferred/slightly ambiguous; <80 uncertain — submit with the
-     low score (the backend keeps it as `fuzzy` for human review) rather than
-     inventing certainty. Never fabricate a URL.
-3. **Submit**: `POST /submit { watch_id, listings:[…] }` with everything found
-   (0..N per competitor). If you found nothing for a watch, `POST /skip
-   { watch_id }` so it leaves the queue.
-4. Repeat from step 1 until the batch is empty or you hit your budget.
+1. `GET /next-batch?limit=N`. If `count` is 0 the queue is drained — report + stop.
+2. Research each watch (see fan-out below). Apply the submission gate strictly.
+3. `POST /submit { watch_id, listings:[…] }` for watches with ≥1 eligible
+   listing; `POST /skip { watch_id }` for the rest. Every watch in the batch must
+   get exactly one submit OR skip so it leaves the queue.
+4. Repeat until `count` is 0 or you hit your budget. End with `GET /stats` and
+   report: watches processed, listings submitted, skipped, queue remaining.
 
-## Rules
+## Fan-out with subagents (for batches > ~6 watches)
 
-- **Read-only on the web.** Only writes are the queue `submit`/`skip` calls.
-- **One listing per (competitor, product)** — the backend dedupes by URL anyway.
-- Don't guess prices; the scraper captures the live price from the `url` you
-  submit. Submitting an accurate URL + size is what matters.
-- Be a polite crawler: a handful of fetches per product, not hundreds.
-- At the end, `GET /stats` and report: batches processed, listings submitted,
-  watches skipped, queue remaining.
+Parallelise the slow web research; keep the writes central.
+
+- Spawn **research subagents on the `haiku` model** (`model: "haiku"`), ~3
+  watches each. They are **READ-ONLY**: WebSearch/WebFetch only, **never POST**.
+- Give each subagent: its assigned watches (it must stay on those `watch_id`s
+  only), the competitor list, the submission gate above, and the site intel.
+- Each subagent returns **STRICT JSON only**:
+  `{"results":[{"watch_id":"…","listings":[{"competitor_handle":"…","url":"…","title":"…","confidence":95}]}]}`
+  (empty `listings` = skip).
+- **The orchestrator (you) aggregates and does ALL submit/skip calls**, after
+  re-checking the gate: drop any listing whose agent didn't clearly confirm a
+  public price (Haiku tends to over-report gated pages). When unsure, skip.
+
+The backend scraper is the backstop: if a submitted URL turns out gated, it
+records `not_found` with no price row — but don't rely on that to excuse loose
+submissions; garbage matches (wrong pack size) still produce misleading prices.
