@@ -80,8 +80,10 @@ ambiguity); never submit > 80 if you did not actually see the price.
 
 Parallelise the slow web research; keep the writes central.
 
-- Spawn **research subagents on the `haiku` model** (`model: "haiku"`), ~3
+- Spawn **research subagents on the `sonnet` model** (`model: "sonnet"`), ~3
   watches each. They are **READ-ONLY**: WebSearch/WebFetch only, **never POST**.
+  (Sonnet follows the submission gate far more reliably than Haiku — worth the
+  cost for submit-ready output.)
 - Give each subagent: its assigned watches (it must stay on those `watch_id`s
   only), the competitor list, the submission gate above, and the site intel.
 - Each subagent returns **STRICT JSON only**:
@@ -89,7 +91,7 @@ Parallelise the slow web research; keep the writes central.
   (empty `listings` = skip).
 - **The orchestrator (you) aggregates and does ALL submit/skip calls**, after
   re-checking the gate: drop any listing whose agent didn't clearly confirm a
-  public price (Haiku tends to over-report gated pages). When unsure, skip.
+  public price. When unsure, skip.
 
 The backend scraper is the backstop: if a submitted URL turns out gated, it
 records `not_found` with no price row — but don't rely on that to excuse loose
