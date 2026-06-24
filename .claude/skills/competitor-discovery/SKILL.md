@@ -1,6 +1,6 @@
 ---
 name: competitor-discovery
-description: Find competitor product listings for our watched products via the Medusa discovery queue. Use when asked to "run competitor discovery", "find competitor listings/URLs", "process the discovery queue", or on a scheduled routine. Does the web research itself (no Anthropic API key in the backend) and submits results back to the queue.
+description: Find competitor product listings for our watched products via the Medusa discovery queue, driven through the medusa-mcp discovery MCP tools. Use when asked to "run competitor discovery", "find competitor listings/URLs", "process the discovery queue", or on a scheduled routine. Does the web research itself (no Anthropic API key in the backend) and submits results back via the discovery MCP tools.
 ---
 
 # Competitor discovery worker
@@ -12,25 +12,34 @@ LLM API — *you* are the intelligence, run on a schedule. Mirrors the
 higitotal-deno contest-enrichment pattern (`enrich_next_batch` → research →
 `enrich_submit`).
 
-## Endpoints (Medusa admin API, admin-authed)
+## Tools (MCP — the `medusa-mcp` server fronts the discovery queue)
 
-Base URL: `${MEDUSA_BACKEND_URL:-https://storeadmin.higitotal.pt}`
+Call these MCP tools directly — they're **pre-authenticated, no curl / no admin
+login**. They wrap `/admin/competitor-prices/discovery/*`; the backend still holds
+all the data and runs the deterministic scrapers.
 
-1. `GET  /admin/competitor-prices/discovery/next-batch?limit=N` → `{ count, watches:[{watch_id, product_id, sku, title, brand, ean}], competitors:[{handle,name,base_url,country,scraper_key}] }`
-2. `POST /admin/competitor-prices/discovery/submit` → `{ watch_id, listings:[{competitor_handle, competitor_base_url?, url, title?, brand?, sku?, confidence}] }`
-3. `POST /admin/competitor-prices/discovery/skip`   → `{ watch_id }` (nothing qualified)
-4. `GET  /admin/competitor-prices/discovery/stats`  → queue health
+**Forward queue (product-anchored — our product → find it at competitors):**
 
-## Auth (once per run, reuse the token)
+1. `competitor_discovery_next_batch({ limit?, force? })` → `{ count, watches:[{watch_id, product_id, sku, title, brand, ean}], competitors:[{handle,name,base_url,country,scraper_key}] }`
+2. `competitor_discovery_submit({ watch_id, listings:[{competitor_handle, url, confidence, competitor_name?, competitor_base_url?, competitor_country?, competitor_scraper_key?, competitor_scraper_hints?, is_new_competitor?, title?, brand?, sku?, ean?}] })`
+3. `competitor_discovery_skip({ watch_id })` — nothing qualified
+4. `competitor_discovery_stats()` — queue health
+5. `competitor_discovery_scrape({ force? })` — kick a price scrape after submitting
 
-```bash
-BE="${MEDUSA_BACKEND_URL:-https://storeadmin.higitotal.pt}"
-E="${MEDUSA_ADMIN_EMAIL:-$(grep -m1 '^MEDUSA_ADMIN_EMAIL=' backend/.env | cut -d= -f2-)}"
-P="${MEDUSA_ADMIN_PASSWORD:-$(grep -m1 '^MEDUSA_ADMIN_PASSWORD=' backend/.env | cut -d= -f2-)}"
-TOK=$(curl -s -X POST "$BE/auth/user/emailpass" -H 'Content-Type: application/json' \
-  --data-binary "$(node -e "console.log(JSON.stringify({email:process.env.E,password:process.env.P}))" E="$E" P="$P")" \
-  | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).token||''))")
-```
+**Reverse queue (competitor-anchored — crawl a competitor's whole catalog):**
+
+6. `competitor_discovery_catalog_next_batch({ limit?, force? })` → competitors due for a full-catalog crawl, each with the listing URLs we already track (`known_urls` — skip those)
+7. `competitor_discovery_catalog_submit({ competitor_handle | competitor_id, listings:[{url, title?, brand?, sku?, ean?}] })` — the listings you crawled; the backend ingests them as unmatched and runs the matcher
+
+**Parser self-correction:**
+
+8. `competitor_discovery_parser_issues()` → competitors whose parser yields no prices, with the current recipe + sample failing URLs
+9. `competitor_discovery_fix_parser({ competitor_handle, scraper_key?, scraper_hints?, deactivate? })` — apply a corrected recipe (or deactivate a login-gated store)
+
+> Fallback only if the MCP server is unavailable: the same routes are reachable via
+> `curl` against `${MEDUSA_BACKEND_URL:-https://storeadmin.higitotal.pt}` with an
+> admin bearer token (`POST /auth/user/emailpass` with `MEDUSA_ADMIN_EMAIL` /
+> `MEDUSA_ADMIN_PASSWORD`). Prefer the MCP tools.
 
 ## Goal — find NEW price sources, then make them scrape themselves
 
@@ -136,13 +145,22 @@ don't add — note it in your report instead.
 
 ## Loop
 
-1. `GET /next-batch?limit=N`. If `count` is 0 the queue is drained — report + stop.
+1. `competitor_discovery_next_batch({ limit: N })`. If `count` is 0 the queue is drained — report + stop.
 2. Research each watch (see fan-out below). Apply the submission gate strictly.
-3. `POST /submit { watch_id, listings:[…] }` for watches with ≥1 eligible
-   listing; `POST /skip { watch_id }` for the rest. Every watch in the batch must
-   get exactly one submit OR skip so it leaves the queue.
-4. Repeat until `count` is 0 or you hit your budget. End with `GET /stats` and
-   report: watches processed, listings submitted, skipped, queue remaining.
+3. `competitor_discovery_submit({ watch_id, listings:[…] })` for watches with ≥1
+   eligible listing; `competitor_discovery_skip({ watch_id })` for the rest. Every
+   watch in the batch must get exactly one submit OR skip so it leaves the queue.
+4. After each batch, `competitor_discovery_scrape({ force: true })` to price the new
+   mappings, then `competitor_discovery_parser_issues()` — fix any broken parser
+   with `competitor_discovery_fix_parser(...)`.
+5. Repeat until `count` is 0 or you hit your budget. End with
+   `competitor_discovery_stats()` and report: watches processed, listings
+   submitted, skipped, queue remaining.
+
+**Reverse (catalog) discovery:** pull `competitor_discovery_catalog_next_batch`,
+crawl each competitor's catalog (sitemap / category pages / search) **skipping its
+`known_urls`**, and post what you find with `competitor_discovery_catalog_submit`;
+the backend matches it to our products (strict SKU/EAN + size-aware fuzzy).
 
 ## Fan-out with subagents (for batches > ~6 watches)
 
@@ -151,10 +169,11 @@ Parallelise the slow web research; keep the writes central.
 - Spawn **research subagents on the `sonnet` model** (`model: "sonnet"`), ~3
   watches each. (Sonnet follows the submission gate far more reliably than Haiku
   — worth the cost for submit-ready output.)
-- **Subagents are PURE WEB RESEARCH: WebSearch/WebFetch only.** They must NOT run
-  curl, authenticate, or call the Medusa backend in any way — tell them so
-  explicitly (some will otherwise try to run this whole skill and hit the
-  permission classifier). Only the orchestrator touches the backend.
+- **Subagents are PURE WEB RESEARCH: WebSearch/WebFetch only.** They must NOT call
+  the discovery MCP tools, run curl, authenticate, or touch the Medusa backend in
+  any way — tell them so explicitly (some will otherwise try to run this whole
+  skill and hit the permission classifier). Only the orchestrator calls the
+  discovery tools.
 - Give each subagent: its assigned watches (it must stay on those `watch_id`s
   only), the competitor list, the submission gate above (incl. new-store rule),
   and the site intel.
