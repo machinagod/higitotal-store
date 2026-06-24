@@ -1,4 +1,5 @@
 import { QueryContext } from "@medusajs/framework/utils"
+import { parseMeasure, unitPriceMinor, type BaseUnit } from "./normalize"
 
 export type OurPrice = {
   title?: string
@@ -6,6 +7,13 @@ export type OurPrice = {
   pvp1: number | null
   pvp2: number | null
   cost: number | null
+  // Canonical unit prices (€ per base unit, minor units) derived from the
+  // product title's pack size — null when the title carries no size.
+  base_unit: BaseUnit | null
+  qty: number | null
+  pvp1_unit: number | null
+  pvp2_unit: number | null
+  cost_unit: number | null
 }
 
 const toMinor = (a: any): number | null =>
@@ -49,6 +57,11 @@ export async function readProductPrices(
         pvp1: toMinor(v?.calculated_price?.calculated_amount),
         pvp2: null,
         cost: null,
+        base_unit: null,
+        qty: null,
+        pvp1_unit: null,
+        pvp2_unit: null,
+        cost_unit: null,
       }
       for (const vv of p.variants ?? []) if (vv.id) variantToProduct[vv.id] = p.id
     }
@@ -73,6 +86,17 @@ export async function readProductPrices(
     }
   } catch {
     // price lists unavailable → PVP1 only
+  }
+
+  // Canonical €/base-unit for each tier, parsed from the product title's size.
+  for (const p of Object.values(out)) {
+    const measure = parseMeasure(p.title)
+    if (!measure) continue
+    p.base_unit = measure.base_unit
+    p.qty = measure.qty
+    p.pvp1_unit = unitPriceMinor(p.pvp1, measure)
+    p.pvp2_unit = unitPriceMinor(p.pvp2, measure)
+    p.cost_unit = unitPriceMinor(p.cost, measure)
   }
   return out
 }
