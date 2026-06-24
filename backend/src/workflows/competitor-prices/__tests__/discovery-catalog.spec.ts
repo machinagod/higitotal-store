@@ -1,6 +1,11 @@
 jest.mock("../../../modules/competitor-prices/scrapers/catalog", () => ({
   enumerateCatalog: jest.fn(),
 }))
+// fetchText validates every URL against the SSRF guard before fetching; stub the
+// guard to a no-op pass-through so the fetch path itself is what's under test.
+jest.mock("../../../modules/competitor-prices/scrapers/ssrf", () => ({
+  assertPublicUrl: jest.fn(async (u: string) => new URL(u)),
+}))
 jest.mock("../match", () => ({ runCompetitorMatch: jest.fn().mockResolvedValue({}) }))
 
 import { runCatalogDiscovery, fetchText } from "../discovery-catalog"
@@ -80,12 +85,40 @@ describe("fetchText", () => {
   afterEach(() => {
     global.fetch = realFetch
   })
+  const res = (over: any) => ({ ok: true, status: 200, headers: { get: () => null }, ...over })
+
   it("returns the body on 2xx", async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, text: async () => "<xml/>" }) as any
-    expect(await fetchText("https://x/sitemap.xml")).toBe("<xml/>")
+    global.fetch = jest.fn().mockResolvedValue(res({ text: async () => "<xml/>" })) as any
+    expect(await fetchText("https://x.es/sitemap.xml")).toBe("<xml/>")
   })
+
   it("throws on a non-2xx response", async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503 }) as any
-    await expect(fetchText("https://x/sitemap.xml")).rejects.toThrow("HTTP 503")
+    global.fetch = jest.fn().mockResolvedValue(res({ ok: false, status: 503 })) as any
+    await expect(fetchText("https://x.es/sitemap.xml")).rejects.toThrow("HTTP 503")
+  })
+
+  it("follows a redirect, re-validating the new location", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        res({ status: 301, headers: { get: (h: string) => (h === "location" ? "/final" : null) } })
+      )
+      .mockResolvedValueOnce(res({ text: async () => "<final/>" })) as any
+    expect(await fetchText("https://x.es/start")).toBe("<final/>")
+    expect((global.fetch as jest.Mock).mock.calls[1][0].toString()).toBe("https://x.es/final")
+  })
+
+  it("throws on a redirect with no Location header", async () => {
+    global.fetch = jest.fn().mockResolvedValue(res({ status: 302 })) as any
+    await expect(fetchText("https://x.es/loop")).rejects.toThrow("without Location")
+  })
+
+  it("gives up after too many redirects", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        res({ status: 302, headers: { get: (h: string) => (h === "location" ? "/again" : null) } })
+      ) as any
+    await expect(fetchText("https://x.es/again")).rejects.toThrow("too many redirects")
   })
 })
