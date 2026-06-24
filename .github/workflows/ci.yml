@@ -76,13 +76,12 @@ jobs:
         with:
           version: 9.10.0
 
+      # No pnpm cache here on purpose: the install steps below are conditional
+      # (skipped on docs-only PRs), so enabling `cache: pnpm` makes setup-node's
+      # post-step fail trying to save a store that was never created.
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: pnpm
-          cache-dependency-path: |
-            backend/pnpm-lock.yaml
-            storefront/pnpm-lock.yaml
 
       - uses: actions/setup-python@v5
         with:
