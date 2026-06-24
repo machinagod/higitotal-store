@@ -16,7 +16,7 @@ type Price = {
 type Row = {
   id: string
   product_id?: string | null
-  competitor?: { name?: string } | null
+  competitor?: { name?: string; price_tax_basis?: "incl" | "excl" | null } | null
   title?: string | null
   product_sku?: string | null
   competitor_url?: string | null
@@ -32,6 +32,7 @@ type Product = {
   pvp1: number | null
   pvp2: number | null
   cost: number | null
+  vat: number | null
 }
 
 const money = (minor?: number | null, cur = "EUR") =>
@@ -222,13 +223,14 @@ const ProductGroup = ({ group, series }: { group: Group; series?: Series }) => {
       <div className="mt-2">
         {rows
           .slice()
-          .sort((a, b) => deltaOf(a, ourPrice) - deltaOf(b, ourPrice))
+          .sort((a, b) => deltaOf(a, ourPrice, product?.vat) - deltaOf(b, ourPrice, product?.vat))
           .map((r) => (
             <CompetitorRow
               key={r.id}
               row={r}
               pvp1={product?.pvp1 ?? null}
               pvp2={product?.pvp2 ?? null}
+              vat={product?.vat ?? null}
             />
           ))}
       </div>
@@ -240,8 +242,14 @@ const compOf = (r: Row): number | null => {
   const lp = r.latest_price
   return lp?.status === "ok" ? lp.unit_price ?? lp.price ?? null : null
 }
-const deltaOf = (r: Row, basis: number | null): number => {
-  const comp = compOf(r)
+// Our prices are net (ex-VAT). Convert an incl-VAT competitor down to net so the
+// comparison is apples-to-apples (excl / unknown → as-is).
+const toNet = (v: number | null, basis?: string | null, vat?: number | null): number | null =>
+  v == null ? null : basis === "incl" && vat ? Math.round(v / (1 + vat)) : v
+const compNetOf = (r: Row, vat?: number | null): number | null =>
+  toNet(compOf(r), r.competitor?.price_tax_basis, vat)
+const deltaOf = (r: Row, basis: number | null, vat?: number | null): number => {
+  const comp = compNetOf(r, vat)
   if (comp == null || !basis) return Number.POSITIVE_INFINITY
   return ((comp - basis) / basis) * 100
 }
@@ -261,13 +269,16 @@ const CompetitorRow = ({
   row,
   pvp1,
   pvp2,
+  vat,
 }: {
   row: Row
   pvp1: number | null
   pvp2: number | null
+  vat: number | null
 }) => {
   const lp = row.latest_price
-  const comp = compOf(row)
+  const comp = compNetOf(row, vat) // net (ex-VAT) — comparable to our prices
+  const basis = row.competitor?.price_tax_basis
   return (
     <div className="flex items-center justify-between gap-x-3 border-t border-ui-border-base py-2 first:border-t-0">
       {/* Left: competitor + listing (shrinks/truncates on mobile) */}
@@ -280,6 +291,15 @@ const CompetitorRow = ({
             {row.match_status}
             {row.match_score != null ? ` ${row.match_score}` : ""}
           </Badge>
+          {basis ? (
+            <Badge
+              size="2xsmall"
+              color={basis === "incl" ? "orange" : "green"}
+              className="shrink-0"
+            >
+              {basis === "incl" ? "inc-VAT" : "ex-VAT"}
+            </Badge>
+          ) : null}
         </div>
         {row.competitor_url ? (
           <a
