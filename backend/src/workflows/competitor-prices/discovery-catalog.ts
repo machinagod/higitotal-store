@@ -1,6 +1,7 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { COMPETITOR_PRICES_MODULE } from "../../modules/competitor-prices"
 import { enumerateCatalog } from "../../modules/competitor-prices/scrapers/catalog"
+import { assertPublicUrl } from "../../modules/competitor-prices/scrapers/ssrf"
 import { runCompetitorMatch } from "./match"
 
 export interface CatalogDiscoveryOptions {
@@ -15,14 +16,32 @@ export interface CatalogDiscoveryReport {
   newListings: number
 }
 
-/** Polite, bounded fetch of a catalog/sitemap/products.json resource. */
+/**
+ * Polite, bounded, SSRF-guarded fetch of a catalog/sitemap/products.json
+ * resource. URLs reach here from untrusted upstream content (a competitor's
+ * sitemap `<loc>` entries, redirect `Location` headers), so the initial URL AND
+ * every redirect hop are validated against the private/loopback/metadata ranges
+ * before the request is made. Redirects are followed manually for that reason.
+ */
 export async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; HigitotalCatalogBot/1.0)" },
-    signal: AbortSignal.timeout(20_000),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.text()
+  let current = url
+  for (let hop = 0; hop < 5; hop++) {
+    const safe = await assertPublicUrl(current)
+    const res = await fetch(safe, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; HigitotalCatalogBot/1.0)" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location")
+      if (!location) throw new Error(`HTTP ${res.status} without Location`)
+      current = new URL(location, safe).toString() // re-validated on the next hop
+      continue
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.text()
+  }
+  throw new Error(`too many redirects: ${url}`)
 }
 
 /**
