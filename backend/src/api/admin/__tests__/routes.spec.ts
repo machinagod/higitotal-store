@@ -62,7 +62,7 @@ describe("admin routes", () => {
   it("GET /admin/competitor-products attaches latest price + our product map", async () => {
     const svc = {
       listCompetitorProducts: jest.fn().mockResolvedValue([
-        { id: "m1", product_id: "p1", competitor: {}, prices: [
+        { id: "m1", product_id: "p1", title: "Rival Item (2L)", competitor: {}, prices: [
           { price: 1, scraped_at: "2024-01-01" },
           { price: 2, scraped_at: "2024-02-01" },
         ] },
@@ -93,6 +93,9 @@ describe("admin routes", () => {
     expect(payload.competitor_products[0].latest_price.price).toBe(2)
     expect(payload.competitor_products[1].latest_price).toBeNull()
     expect(payload.competitor_products[0].prices).toBeUndefined()
+    // canonical €/base from the listing's own title: 2 ÷ 2L → 1 per L
+    expect(payload.competitor_products[0]).toMatchObject({ base_unit: "L", unit_price: 1 })
+    expect(payload.competitor_products[1]).toMatchObject({ base_unit: null, unit_price: null })
     expect(payload.products.p1).toMatchObject({ title: "Our Prod", sku: "S1", pvp1: 8217, pvp2: 7000, cost: 5500 })
   })
 

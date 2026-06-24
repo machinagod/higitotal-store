@@ -2,6 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { COMPETITOR_PRICES_MODULE } from "../../../modules/competitor-prices"
 import { readProductPrices } from "../../../modules/competitor-prices/pricing"
+import { normalizedUnitPrice } from "../../../modules/competitor-prices/normalize"
 
 /**
  * GET /admin/competitor-products — list competitor mappings with their latest
@@ -34,7 +35,16 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       null
     )
     const { prices, ...rest } = m
-    return { ...rest, latest_price: latest }
+    // Canonical €/base-unit for this listing (parsed from its own title), so the
+    // UI can compare to our product on a common €/L·kg·un basis even when the
+    // pack sizes differ.
+    const norm = normalizedUnitPrice(latest?.price, m.title)
+    return {
+      ...rest,
+      latest_price: latest,
+      base_unit: norm?.base_unit ?? null,
+      unit_price: norm?.unit_price ?? null,
+    }
   })
 
   // Resolve OUR product title + PVP1/PVP2/cost for grouping headings.
