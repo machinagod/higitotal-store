@@ -266,6 +266,26 @@ export default class CompetitorPricesModuleService extends MedusaService({
     })
   }
 
+  /**
+   * Active competitors due for a catalog crawl (reverse discovery): least-
+   * recently-crawled first. Unlike listDueCatalogDiscovery this does NOT require
+   * the legacy `catalog_discovery_enabled` flag — every active competitor is a
+   * crawl target; the per-competitor `next_catalog_discovery_at` paces it.
+   */
+  async listDueCatalogCrawl(limit?: number, force = false): Promise<any[]> {
+    const filters: Record<string, any> = { is_active: true }
+    if (!force) {
+      filters.$or = [
+        { next_catalog_discovery_at: null },
+        { next_catalog_discovery_at: { $lte: new Date() } },
+      ]
+    }
+    return this.listCompetitors(filters, {
+      take: limit ?? this.options_.batchSize,
+      order: { next_catalog_discovery_at: "ASC" },
+    })
+  }
+
   /** Product watches due for store discovery. */
   async listDueProductWatches(limit?: number, force = false): Promise<any[]> {
     const filters: Record<string, any> = { is_active: true }

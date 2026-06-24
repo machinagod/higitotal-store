@@ -15,6 +15,9 @@ import { POST as dqSkipPOST } from "../competitor-prices/discovery/skip/route"
 import { GET as dqStatsGET } from "../competitor-prices/discovery/stats/route"
 import { GET as parserIssuesGET } from "../competitor-prices/discovery/parser-issues/route"
 import { POST as fixParserPOST } from "../competitor-prices/discovery/fix-parser/route"
+import { GET as catBatchGET } from "../competitor-prices/discovery/catalog/next-batch/route"
+import { POST as catSubmitPOST } from "../competitor-prices/discovery/catalog/submit/route"
+import { runCompetitorMatch } from "../../../workflows/competitor-prices/match"
 import { runCompetitorScrape } from "../../../workflows/competitor-prices/scrape"
 import { runCatalogDiscovery } from "../../../workflows/competitor-prices/discovery-catalog"
 import { runProductDiscovery } from "../../../workflows/competitor-prices/discovery-product"
@@ -323,5 +326,60 @@ describe("discovery queue routes", () => {
       unmatched_mappings: 15,
       matched_mappings: 25,
     })
+  })
+})
+
+describe("catalog (reverse) discovery routes", () => {
+  it("GET /discovery/catalog/next-batch returns due competitors with known urls", async () => {
+    const svc = {
+      listDueCatalogCrawl: jest.fn().mockResolvedValue([
+        { id: "c1", handle: "egi-pt", name: "EGI", base_url: "https://egi.com.pt", country: "PT", scraper_key: "generic-jsonld", scraper_hints: null },
+      ]),
+      listCompetitorProducts: jest.fn().mockResolvedValue([{ competitor_url: "u1" }, { competitor_url: "u2" }]),
+    }
+    const res = makeRes()
+    await catBatchGET(makeReq(svc, {}, { limit: "3" }) as any, res)
+    const payload = res.json.mock.calls[0][0]
+    expect(svc.listDueCatalogCrawl).toHaveBeenCalledWith(3, false)
+    expect(payload).toMatchObject({ count: 1 })
+    expect(payload.competitors[0]).toMatchObject({ competitor_id: "c1", handle: "egi-pt", known_urls: ["u1", "u2"] })
+  })
+
+  it("POST /discovery/catalog/submit ingests listings, marks crawled, and runs the matcher", async () => {
+    ;(runCompetitorMatch as jest.Mock).mockResolvedValueOnce({ considered: 1, confirmed: 1, fuzzy: 1, unmatched: 0 })
+    const svc = {
+      listCompetitors: jest.fn().mockResolvedValue([{ id: "c1", handle: "egi-pt" }]),
+      upsertDiscoveredMapping: jest.fn().mockResolvedValue({ id: "m1", match_status: "unmatched" }),
+      markCatalogDiscovered: jest.fn().mockResolvedValue(undefined),
+    }
+    const res = makeRes()
+    await catSubmitPOST(
+      makeReq(svc, { competitor_handle: "egi-pt", listings: [{ url: "https://egi.com.pt/p1", title: "X" }, { title: "no url" }] }) as any,
+      res
+    )
+    expect(svc.upsertDiscoveredMapping).toHaveBeenCalledTimes(1) // listing without url skipped
+    expect(svc.markCatalogDiscovered).toHaveBeenCalledWith({ id: "c1", handle: "egi-pt" })
+    expect(runCompetitorMatch).toHaveBeenCalledWith(expect.anything(), { mappingIds: ["m1"] })
+    expect(res.json.mock.calls[0][0]).toMatchObject({ submitted: 2, created: 1, matched: 2 })
+  })
+
+  it("POST /discovery/catalog/submit 404s when the competitor is unknown", async () => {
+    const svc = { listCompetitors: jest.fn().mockResolvedValue([]) }
+    const res = makeRes()
+    await catSubmitPOST(makeReq(svc, { competitor_id: "nope", listings: [] }) as any, res)
+    expect(res.status).toHaveBeenCalledWith(404)
+  })
+
+  it("POST /discovery/catalog/submit skips the matcher when nothing new was created", async () => {
+    ;(runCompetitorMatch as jest.Mock).mockClear()
+    const svc = {
+      listCompetitors: jest.fn().mockResolvedValue([{ id: "c1", handle: "h" }]),
+      upsertDiscoveredMapping: jest.fn().mockResolvedValue({ id: "dup", match_status: "confirmed" }), // existing, not unmatched
+      markCatalogDiscovered: jest.fn().mockResolvedValue(undefined),
+    }
+    const res = makeRes()
+    await catSubmitPOST(makeReq(svc, { competitor_id: "c1", listings: [{ url: "https://h/p" }] }) as any, res)
+    expect(runCompetitorMatch).not.toHaveBeenCalled()
+    expect(res.json.mock.calls[0][0]).toMatchObject({ created: 0, matched: 0 })
   })
 })

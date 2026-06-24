@@ -108,6 +108,20 @@ describe("listDue* filters", () => {
     await svc.listDueProductWatches(2, true)
     expect(svc.listProductWatches.mock.calls[1][0].$or).toBeUndefined()
   })
+
+  it("listDueCatalogCrawl targets active competitors without the enabled flag", async () => {
+    const svc = makeSvc()
+    svc.listCompetitors.mockResolvedValue([])
+    await svc.listDueCatalogCrawl()
+    const [filters, config] = svc.listCompetitors.mock.calls[0]
+    expect(filters).toMatchObject({ is_active: true })
+    expect(filters.catalog_discovery_enabled).toBeUndefined()
+    expect(filters.$or).toHaveLength(2)
+    expect(config).toMatchObject({ take: 7, order: { next_catalog_discovery_at: "ASC" } })
+    await svc.listDueCatalogCrawl(4, true)
+    expect(svc.listCompetitors.mock.calls[1][0].$or).toBeUndefined()
+    expect(svc.listCompetitors.mock.calls[1][1].take).toBe(4)
+  })
 })
 
 describe("recordObservation", () => {
