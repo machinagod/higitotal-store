@@ -149,4 +149,11 @@ describe("matchListing", () => {
     const m = matchListing({ ean: "0000000000000", title: "Suma Ultra L2 20L" }, catalog)
     expect(m?.method).not.toBe("ean")
   })
+
+  it("does NOT force-match a dissimilar title to its nearest neighbour", () => {
+    // A different product whose title only incidentally overlaps must stay
+    // unmatched (→ catalog_only), not become a low-confidence fuzzy match.
+    expect(matchListing({ title: "Inseticida de Rastejantes Raid 400ml" }, catalog)).toBeNull()
+    expect(matchListing({ title: "Caixa para Batata Frita 500un" }, catalog)).toBeNull()
+  })
 })
