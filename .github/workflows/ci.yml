@@ -12,7 +12,7 @@ name: CI
 # boots the real container as a smoke gate (catches runtime deps misfiled as
 # devDependencies), and — only on push to master, only if the boot passed —
 # pushes that exact image to GHCR (no rebuild). PRs build + boot but never push.
-# image-smoke boot uses an ephemeral CI Postgres (no secrets, never touches
+# The backend boot-smoke uses an ephemeral CI Postgres (no secrets, never touches
 # prod); prod e2e is post-deploy and strictly read-only. See README.md.
 
 on:
@@ -398,8 +398,14 @@ jobs:
             echo "::error::$label never reported $GIT_SHA — deploy not live in time"
             return 1
           }
-          [ "$DEPLOY_BACKEND" = "true" ] && poll "$BACKEND_URL/version" backend
-          [ "$DEPLOY_STOREFRONT" = "true" ] && poll "$STOREFRONT_URL/api/healthcheck" storefront
+          # Poll both services concurrently so a both-app deploy waits max(backend,
+          # storefront), not their sum — each poll can otherwise run up to 18 min.
+          pids=()
+          [ "$DEPLOY_BACKEND" = "true" ] && { poll "$BACKEND_URL/version" backend & pids+=($!); }
+          [ "$DEPLOY_STOREFRONT" = "true" ] && { poll "$STOREFRONT_URL/api/healthcheck" storefront & pids+=($!); }
+          rc=0
+          for pid in "${pids[@]}"; do wait "$pid" || rc=1; done
+          [ "$rc" -eq 0 ] || exit 1
           echo "Prod is serving ${GIT_SHA}."
 
   # ── Production e2e (post-deploy) ───────────────────────────────────────────
@@ -431,9 +437,29 @@ jobs:
         working-directory: storefront
         run: pnpm install --frozen-lockfile
 
+      # Cache the chromium binary across runs (keyed by Playwright version) so we
+      # only re-download it when the version bumps. On a cache hit we still run
+      # install-deps to lay down the OS libraries (apt packages aren't cached).
+      - name: Resolve Playwright version
+        id: pw
+        working-directory: storefront
+        run: echo "version=$(pnpm exec playwright --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Playwright browser
         working-directory: storefront
-        run: pnpm exec playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            pnpm exec playwright install-deps chromium
+          else
+            pnpm exec playwright install --with-deps chromium
+          fi
 
       - name: Run read-only prod e2e
         working-directory: storefront

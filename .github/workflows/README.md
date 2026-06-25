@@ -7,12 +7,11 @@ push to master ──► GitHub Actions "CI" (ci.yml)
     │
     ├─ changes            paths-filter → which app changed (backend / storefront)
     │                          │
-    ├─ image-smoke        builds + boots ONLY the changed app's image(s)   ◄ the gate
-    │                     (skips the backend build/boot for storefront-only pushes)
-    │                          │ green
-    │                          ▼
-    ├─ backend-image     build+push  (only if backend/** changed; bakes GIT_SHA)
-    ├─ storefront-image  build+push  (only if storefront/** changed; bakes GIT_SHA)
+    ├─ backend-image     build ONCE (load) → boot-smoke → push   ◄ the gate
+    ├─ storefront-image  build ONCE (load) → boot-smoke → push   ◄ the gate
+    │                     (each runs only if its app changed; the boot must pass
+    │                      before the push, and the push happens on master only;
+    │                      GIT_SHA is baked in)
     │                                                 │
     ├─ deploy ── railway redeploy ──► WAIT until prod reports the new commit
     │            (/version + /api/healthcheck report GIT_SHA)
@@ -23,10 +22,10 @@ push to master ──► GitHub Actions "CI" (ci.yml)
 
 **Path-filtered for fast iteration:** a `changes` job (dorny/paths-filter) detects
 whether `backend/**` or `storefront/**` changed; a change to `.github/workflows/ci.yml`
-counts as both. `image-smoke` ALWAYS runs (so the gate reports), but only
-builds/boots the changed app, and the image-push + `deploy` + `e2e-prod` jobs are
-per-app. So a storefront-only push skips the entire backend Docker build + migrate
-+ boot + redeploy (and vice-versa) — a much faster publish.
+counts as both. The `backend-image` / `storefront-image` jobs (and the downstream
+`deploy` + `e2e-prod`) run only for the app that changed. So a storefront-only push
+skips the entire backend Docker build + migrate + boot + redeploy (and vice-versa)
+— a much faster publish.
 
 GitHub Actions **builds, smoke-tests, and pushes the images**, then **nudges
 Railway to pull the new `:latest` immediately** (`deploy` job, `railway redeploy
@@ -35,16 +34,18 @@ Railway to pull the new `:latest` immediately** (`deploy` job, `railway redeploy
 storefront at `/api/healthcheck` — so we never test a half-rolled deploy. Railway
 services also have **GHCR image auto-updates** enabled as a fallback.
 
-**`image-smoke` is the only pre-push gate** — it boots the **pruned** production
-images, so a runtime dependency misfiled as a devDependency (e.g. storefront
-`ansi-colors`, backend `react`) is caught before publish. `e2e` is **no longer a
+**The boot-smoke is the only pre-push gate** — each `*-image` job boots the
+**pruned** production image it just built, so a runtime dependency misfiled as a
+devDependency (e.g. storefront `ansi-colors`, backend `react`) is caught before the
+image is pushed. `e2e` is **no longer a
 pre-merge gate**: it runs as `e2e-prod` *after* the deploy, validating the live
 site. It is strictly **read-only** (navigation/render assertions; never creates
 carts/accounts/orders) and authenticates through the pre-launch access gate with
 the `STOREFRONT_ACCESS_TOKEN` secret.
 
 `backend-image`, `storefront-image`, `deploy`, and `e2e-prod` only run on **push
-to master** (not on PRs). **PRs run only `image-smoke`** (build + boot).
+to master** (not on PRs). **On a PR**, `backend-image` / `storefront-image` build +
+boot the changed app but do not push, and the `coverage` job enforces patch coverage.
 
 ## Images
 
@@ -140,11 +141,10 @@ Postgres service.
 
 ## Iterating on CI
 
-- **Image build / boot failures** surface in the `image-smoke` job (and, on
-  master, the `backend-image` / `storefront-image` push jobs). `image-smoke`
-  builds the real Dockerfiles and boots them, so it catches both build breakage
-  and runtime crashes (e.g. a pruned runtime dep, or a `medusa db:migrate`
-  failure) — check its container-log step.
+- **Image build / boot failures** surface in the `backend-image` /
+  `storefront-image` jobs — they build the real Dockerfiles and boot them, so they
+  catch both build breakage and runtime crashes (e.g. a pruned runtime dep, or a
+  `medusa db:migrate` failure). Check the job's container-log step.
 - **e2e failures**: check the **playwright-report** artifact and the "Dump
   server logs" step. Likely tweaks: the seeded `NEXT_PUBLIC_DEFAULT_REGION`,
   seed data expectations, or specs that need a payment provider.

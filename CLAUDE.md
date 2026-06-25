@@ -97,13 +97,13 @@ Fix failures before committing — including pre-existing ones in files you touc
   image tag and redeploys itself when a new `:latest` is published. Railway no
   longer builds from the repo. `init-backend` + the start command run DB
   migrations on boot (backend image `CMD`).
-- **Pipeline order**: `image-smoke` → `backend-image` + `storefront-image` →
-  `deploy` → `e2e-prod`. `image-smoke` is the **only pre-push gate** (runs on PRs
-  + master): it builds the real Docker images and boots the **pruned** production
-  images, so a runtime dep misfiled as a devDependency (it has bitten us:
-  storefront `ansi-colors`, backend `react`) is caught before publish, on an
-  ephemeral CI Postgres (never prod; no secrets). The image-push + `deploy` +
-  `e2e-prod` jobs run on push to `master` only.
+- **Pipeline order**: `changes` → `backend-image` + `storefront-image` →
+  `deploy` → `e2e-prod`. Each `*-image` job **builds the image once, boots it, then
+  pushes** — the boot is the **only pre-push gate** (runs on PRs + master): it boots
+  the **pruned** production image, so a runtime dep misfiled as a devDependency (it
+  has bitten us: storefront `ansi-colors`, backend `react`) is caught before
+  publish, on an ephemeral CI Postgres (never prod; no secrets). The image **push**
+  + `deploy` + `e2e-prod` run on push to `master` only.
 - **e2e runs AFTER deploy, against LIVE prod** (not a pre-merge gate). Each image
   bakes the commit into `GIT_SHA`; the `deploy` job force-redeploys then **waits
   until prod reports the new commit** (`/version` on the backend,
