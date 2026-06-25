@@ -46,7 +46,10 @@ export async function runCompetitorMatch(
       }
 
   const mappings: any[] = await svc.listCompetitorProducts(filters, {
-    take: opts.limit ?? 500,
+    // When explicit mappingIds are given, match ALL of them (the caller wants
+    // exactly those resolved); a catalog crawl can ingest >500 at once. The
+    // status-filter mode keeps a 500-row batch default.
+    take: opts.limit ?? (opts.mappingIds?.length || 500),
   })
 
   const report: MatchReport = {

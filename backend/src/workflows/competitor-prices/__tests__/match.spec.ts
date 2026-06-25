@@ -55,8 +55,9 @@ describe("runCompetitorMatch", () => {
     const query = { graph: jest.fn().mockResolvedValue({ data: [] }) }
     const c = makeContainer(svc, query) as any
 
-    await runCompetitorMatch(c, { mappingIds: ["x"] })
-    expect(svc.listCompetitorProducts.mock.calls[0][0]).toEqual({ id: ["x"] })
+    await runCompetitorMatch(c, { mappingIds: ["x", "y", "z"] })
+    expect(svc.listCompetitorProducts.mock.calls[0][0]).toEqual({ id: ["x", "y", "z"] })
+    expect(svc.listCompetitorProducts.mock.calls[0][1].take).toBe(3) // matches ALL given ids, not capped at 500
 
     await runCompetitorMatch(c, {})
     expect(svc.listCompetitorProducts.mock.calls[1][0]).toEqual({ match_status: "unmatched" })
