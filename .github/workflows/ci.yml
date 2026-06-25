@@ -160,11 +160,12 @@ jobs:
         id: buildx
 
       # Persist the pnpm store across runs. The image's layer cache (type=gha)
-      # skips the root install when the lockfile is unchanged — but postBuild then
-      # `pnpm i --prod`s a fresh .medusa/server tree inside the same RUN, so on a
-      # cold runner that re-downloads every prod dep (the bulk of the 7-min build).
-      # cache-dance restores /pnpm/store before the build so postBuild hardlinks
-      # from a warm store instead of downloading.
+      # skips the root install when the lockfile is unchanged; when the lockfile
+      # DOES change the install layer busts, and cache-dance restores /pnpm/store
+      # first so that install hardlinks from a warm store instead of re-downloading
+      # every dep. (postBuild no longer runs a second `pnpm i --prod` — it symlinks
+      # .medusa/server/node_modules at the root tree — so this now only cushions
+      # lockfile-bump builds; it can be dropped if those stay rare.)
       - name: pnpm store cache
         id: pnpm-store
         uses: actions/cache@v4
