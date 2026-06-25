@@ -1,9 +1,11 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { CurrencyDollar } from "@medusajs/icons"
-import { Badge, Container, Heading, Input, Text } from "@medusajs/ui"
-import { useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { Badge, Button, Container, Heading, Input, Text } from "@medusajs/ui"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useState } from "react"
 import { sdk } from "../../lib/sdk"
+
+const PAGE = 50 // product groups per page
 
 type Price = {
   price?: number | null
@@ -71,13 +73,30 @@ type Group = { product_id: string; product?: Product; rows: Row[]; ourPrice: num
 
 const CompetitorPricesPage = () => {
   const [search, setSearch] = useState("")
-  const { data, isLoading } = useQuery({
-    queryKey: ["competitor-products"],
-    queryFn: () =>
-      sdk.client.fetch<{ competitor_products: Row[]; products: Record<string, Product> }>(
-        "/admin/competitor-products",
-        { method: "GET" }
-      ),
+  const [q, setQ] = useState("") // debounced, server-side
+  const [offset, setOffset] = useState(0)
+
+  // Debounce the search box → server query; reset to the first page on change.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQ(search.trim())
+      setOffset(0)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ["competitor-products", q, offset],
+    queryFn: () => {
+      const params = new URLSearchParams({ limit: String(PAGE), offset: String(offset) })
+      if (q) params.set("q", q)
+      return sdk.client.fetch<{
+        competitor_products: Row[]
+        products: Record<string, Product>
+        count: number
+      }>(`/admin/competitor-products?${params.toString()}`, { method: "GET" })
+    },
+    placeholderData: keepPreviousData,
   })
 
   const { data: hist } = useQuery({
@@ -89,6 +108,7 @@ const CompetitorPricesPage = () => {
       ),
   })
 
+  const count = data?.count ?? 0
   const groups = useMemo<Group[]>(() => {
     const rows = data?.competitor_products ?? []
     const products = data?.products ?? {}
@@ -98,22 +118,14 @@ const CompetitorPricesPage = () => {
       if (!byProduct.has(key)) byProduct.set(key, [])
       byProduct.get(key)!.push(r)
     }
-    let gs: Group[] = [...byProduct.entries()].map(([product_id, rs]) => {
+    const gs: Group[] = [...byProduct.entries()].map(([product_id, rs]) => {
       const product = products[product_id]
-      const fallback = rs.find((r) => r.latest_price?.our_price != null)?.latest_price
-        ?.our_price
+      const fallback = rs.find((r) => r.latest_price?.our_price != null)?.latest_price?.our_price
       return { product_id, product, rows: rs, ourPrice: deltaBasis(product, fallback) }
     })
-    const q = search.trim().toLowerCase()
-    if (q) {
-      gs = gs.filter((g) =>
-        [g.product?.title, g.product?.sku, ...g.rows.map((r) => r.competitor?.name), ...g.rows.map((r) => r.title)]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(q))
-      )
-    }
+    // The server already filtered + paginated by group; preserve its title order.
     return gs.sort((a, b) => (a.product?.title ?? "").localeCompare(b.product?.title ?? ""))
-  }, [data, search])
+  }, [data])
 
   return (
     <Container className="divide-y p-0">
@@ -133,6 +145,35 @@ const CompetitorPricesPage = () => {
         />
       </div>
 
+      {/* Pagination bar: pages BY PRODUCT GROUP so a product's competitors never split. */}
+      <div className="flex items-center justify-between px-4 py-2 md:px-6">
+        <Text size="small" className="text-ui-fg-subtle">
+          {count.toLocaleString()} matched product{count === 1 ? "" : "s"}
+          {isFetching ? " · updating…" : ""}
+        </Text>
+        <div className="flex items-center gap-x-2">
+          <Text size="small" className="text-ui-fg-subtle">
+            {count === 0 ? "0" : `${offset + 1}–${Math.min(offset + PAGE, count)}`}
+          </Text>
+          <Button
+            size="small"
+            variant="secondary"
+            disabled={offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - PAGE))}
+          >
+            Prev
+          </Button>
+          <Button
+            size="small"
+            variant="secondary"
+            disabled={offset + PAGE >= count}
+            onClick={() => setOffset(offset + PAGE)}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+
       {isLoading && (
         <div className="px-4 py-6 md:px-6">
           <Text size="small">Loading…</Text>
@@ -141,7 +182,7 @@ const CompetitorPricesPage = () => {
       {!isLoading && groups.length === 0 && (
         <div className="px-4 py-6 md:px-6">
           <Text size="small" className="text-ui-fg-subtle">
-            No competitor mappings yet.
+            {q ? "No products match your search." : "No matched competitor prices yet."}
           </Text>
         </div>
       )}

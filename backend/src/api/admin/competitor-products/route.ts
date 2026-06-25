@@ -5,39 +5,80 @@ import { readProductPrices } from "../../../modules/competitor-prices/pricing"
 import { normalizedUnitPrice } from "../../../modules/competitor-prices/normalize"
 
 /**
- * GET /admin/competitor-products — list competitor mappings with their latest
- * observed price, plus a `products` map (our title + current EUR price per
- * product) so the admin can group competitor rows under each of our products.
- * Optional filters: ?product_id=, ?competitor_id=, ?match_status=.
+ * GET /admin/competitor-products — competitor listings grouped by OUR product,
+ * paginated BY PRODUCT GROUP so a product's competitors are never split across a
+ * page. Returns the current page's rows (with latest price) + the page's product
+ * map + `count` = total matching product groups.
+ *
+ * Query: ?offset=&limit= (in product groups, default 50) · ?q= (search over
+ * product title/sku + competitor name/listing title) · ?product_id=
+ * ?competitor_id= ?match_status= (filters; default view is matched-only).
  */
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const svc: any = req.scope.resolve(COMPETITOR_PRICES_MODULE)
-  const { product_id, competitor_id, match_status } = req.query as Record<
-    string,
-    string
-  >
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const { product_id, competitor_id, match_status, q } = req.query as Record<string, string>
+  const offset = Math.max(0, Number(req.query.offset) || 0)
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200)
 
   const filters: Record<string, any> = {}
   if (product_id) filters.product_id = product_id
   if (competitor_id) filters.competitor_id = competitor_id
   if (match_status) filters.match_status = match_status
+  // The product-grouped price view defaults to MATCHED mappings (those resolved to
+  // one of our products); the 14k+ `catalog_only` rows belong to the Catalog tab.
+  if (!product_id && !match_status) filters.product_id = { $ne: null }
 
-  const mappings = await svc.listCompetitorProducts(filters, {
-    relations: ["competitor", "prices"],
-    take: 200,
+  // Light pass: all matching mappings (competitor name only, no price history) —
+  // enough to group, search, sort, and count BEFORE paging. Prices are loaded only
+  // for the page's mappings below, so the payload stays small even at 10k+ matches.
+  const all: any[] = await svc.listCompetitorProducts(filters, {
+    relations: ["competitor"],
+    take: 50000,
   })
 
-  // Attach the most recent price observation to each mapping.
-  const items = mappings.map((m: any) => {
+  const allPids = [...new Set(all.map((m) => m.product_id).filter(Boolean))] as string[]
+  const products = await readProductPrices(query, allPids)
+
+  const byProduct = new Map<string, any[]>()
+  for (const m of all) {
+    if (!m.product_id) continue
+    const arr = byProduct.get(m.product_id) ?? byProduct.set(m.product_id, []).get(m.product_id)!
+    arr.push(m)
+  }
+
+  // Search across our product title/sku + the competitor name / listing title.
+  let pids = [...byProduct.keys()]
+  const term = (q ?? "").trim().toLowerCase()
+  if (term) {
+    pids = pids.filter((pid) => {
+      const p = products[pid]
+      const rows = byProduct.get(pid)!
+      return [p?.title, p?.sku, ...rows.map((r) => r.competitor?.name), ...rows.map((r) => r.title)]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(term))
+    })
+  }
+  pids.sort((a, b) => (products[a]?.title ?? "").localeCompare(products[b]?.title ?? ""))
+
+  const count = pids.length // total product groups → drives pagination
+  const pagePids = pids.slice(offset, offset + limit)
+  const pageMappingIds = pagePids.flatMap((pid) => byProduct.get(pid)!.map((m) => m.id))
+
+  // Load price history only for the page's mappings, then keep the latest.
+  const priced: any[] = pageMappingIds.length
+    ? await svc.listCompetitorProducts(
+        { id: pageMappingIds },
+        { relations: ["competitor", "prices"], take: pageMappingIds.length }
+      )
+    : []
+
+  const items = priced.map((m: any) => {
     const latest = (m.prices ?? []).reduce(
-      (acc: any, p: any) =>
-        !acc || new Date(p.scraped_at) > new Date(acc.scraped_at) ? p : acc,
+      (acc: any, p: any) => (!acc || new Date(p.scraped_at) > new Date(acc.scraped_at) ? p : acc),
       null
     )
     const { prices, ...rest } = m
-    // Canonical €/base-unit for this listing (parsed from its own title), so the
-    // UI can compare to our product on a common €/L·kg·un basis even when the
-    // pack sizes differ.
     const norm = normalizedUnitPrice(latest?.price, m.title)
     return {
       ...rest,
@@ -47,14 +88,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
   })
 
-  // Resolve OUR product title + PVP1/PVP2/cost for grouping headings.
-  const productIds = [
-    ...new Set(items.map((i: any) => i.product_id).filter(Boolean)),
-  ] as string[]
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const products = await readProductPrices(query, productIds)
+  const pageProducts: Record<string, any> = {}
+  for (const pid of pagePids) if (products[pid]) pageProducts[pid] = products[pid]
 
-  res.json({ competitor_products: items, products, count: items.length })
+  res.json({ competitor_products: items, products: pageProducts, count, offset, limit })
 }
 
 interface CreateMappingBody {
