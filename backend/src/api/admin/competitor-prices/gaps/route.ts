@@ -16,7 +16,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
   const mappings = await svc.listCompetitorProducts(
     { match_status: ["confirmed", "fuzzy"] },
-    { relations: ["prices", "competitor"], take: 2000 }
+    // Cover every matched mapping (8k+) — the €/unit gaps aggregate per product, so
+    // a low cap would silently drop competitors from the market distribution.
+    { relations: ["prices", "competitor"], take: 20000 }
   )
 
   const items = mappings.map((m: any) => {
