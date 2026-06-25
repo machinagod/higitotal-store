@@ -25,10 +25,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   if (product_id) filters.product_id = product_id
   if (competitor_id) filters.competitor_id = competitor_id
   if (match_status) filters.match_status = match_status
-  // The price view defaults to CONFIRMED matches only — `fuzzy` proposals are
-  // unreviewed (mostly wrong) and live in the Match Review queue; `catalog_only`
-  // lives in the Catalog tab. An explicit ?match_status overrides this.
-  if (!product_id && !match_status) filters.match_status = "confirmed"
+  // The price view shows CONFIRMED matches (live) plus FUZZY proposals (reviewed
+  // inline, confirm/reject) — but never `catalog_only` (that's the Catalog tab). An
+  // explicit ?match_status (e.g. "fuzzy" for a review-only focus) overrides this.
+  if (!product_id && !match_status) filters.match_status = ["confirmed", "fuzzy"]
 
   // Light pass: all matching mappings (competitor name only, no price history) —
   // enough to group, search, sort, and count BEFORE paging. Prices are loaded only
