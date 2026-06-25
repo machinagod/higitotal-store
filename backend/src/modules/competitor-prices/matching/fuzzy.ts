@@ -19,6 +19,16 @@ export type CatalogItem = {
   title: string
 }
 
+/**
+ * Minimum RAW title similarity (Dice, pre-size-discount) for a fuzzy title match
+ * to count at all. Below this the listing is a *different product* and must not
+ * be force-matched to its nearest neighbour — it stays `catalog_only`. Gating on
+ * the raw similarity (not the size-discounted score) keeps a legitimate
+ * different-pack-size match of the SAME product (high similarity, low score) as a
+ * reviewable fuzzy, while rejecting dissimilar products outright.
+ */
+export const MIN_FUZZY_TITLE_SIM = 0.5
+
 export type Listing = {
   title?: string | null
   brand?: string | null
@@ -194,16 +204,22 @@ export function matchListing(
     const wantBrand = normalizeText(listing.brand)
     let best: CatalogItem | null = null
     let bestScore = 0
+    let bestTitleSim = 0
     for (const c of catalog) {
       if (wantBrand && c.brand && normalizeText(c.brand) !== wantBrand) continue
-      const score =
-        diceCoefficient(listing.title, c.title) * sizeFactor(listing.title, c.title)
+      const titleSim = diceCoefficient(listing.title, c.title)
+      const score = titleSim * sizeFactor(listing.title, c.title)
       if (score > bestScore) {
         bestScore = score
+        bestTitleSim = titleSim
         best = c
       }
     }
-    if (best && bestScore > 0) {
+    // Reject when the best candidate's titles aren't actually similar — that's a
+    // different product, not a low-confidence match. Critical for bulk catalog
+    // enumeration, where every competitor product would otherwise be force-matched
+    // to its nearest neighbour.
+    if (best && bestTitleSim >= MIN_FUZZY_TITLE_SIM) {
       return toCandidate(best, Math.round(bestScore * 100), "fuzzy")
     }
   }
