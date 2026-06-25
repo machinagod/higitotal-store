@@ -4,12 +4,13 @@ import { COMPETITOR_PRICES_MODULE } from "../../../../../modules/competitor-pric
 import { readProductPrices } from "../../../../../modules/competitor-prices/pricing"
 
 /**
- * GET /admin/competitor-prices/match/review?limit=&offset=&competitor_id=
+ * GET /admin/competitor-prices/match/review?limit=&offset=&competitor_id=&status=
  *
- * The match-review queue: fuzzy PROPOSALS (a title-fuzzy candidate the matcher
- * found but did not auto-confirm) awaiting agent/human resolution. Each item pairs
- * the competitor listing with OUR proposed product so a reviewer can confirm /
- * reject / reassign via /match/resolve. Highest-confidence proposals first.
+ * The match-review queue. By default the unreviewed fuzzy PROPOSALS (title-fuzzy
+ * candidates the matcher couldn't auto-confirm), but `?status=confirmed` audits the
+ * live matches and `?status=all` covers every match — overrides apply to ANY match,
+ * not just fuzzy. Each item pairs the competitor listing with OUR matched product so
+ * a reviewer can confirm / reject / reassign via /match/resolve. Highest score first.
  */
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const svc: any = req.scope.resolve(COMPETITOR_PRICES_MODULE)
@@ -17,7 +18,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200)
   const offset = Math.max(0, Number(req.query.offset) || 0)
 
-  const filters: Record<string, any> = { match_status: "fuzzy" }
+  const status = (req.query.status as string) || "fuzzy"
+  const filters: Record<string, any> = {
+    match_status: status === "all" ? ["confirmed", "fuzzy"] : status === "confirmed" ? "confirmed" : "fuzzy",
+  }
   if (req.query.competitor_id) filters.competitor_id = req.query.competitor_id as string
 
   const [rows, count] = await svc.listAndCountCompetitorProducts(filters, {

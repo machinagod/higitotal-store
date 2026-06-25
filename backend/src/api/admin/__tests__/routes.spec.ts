@@ -257,8 +257,8 @@ describe("admin routes", () => {
     }
     const res = makeRes()
     await cpGET({ scope: { resolve: () => svc }, body: {}, query: {} } as any, res)
-    // no explicit filters → defaults to matched-only (product_id present)
-    expect(svc.listCompetitorProducts).toHaveBeenNthCalledWith(1, { match_status: "confirmed" }, expect.anything())
+    // no explicit filters → defaults to live (confirmed) + review proposals (fuzzy)
+    expect(svc.listCompetitorProducts).toHaveBeenNthCalledWith(1, { match_status: ["confirmed", "fuzzy"] }, expect.anything())
     expect(res.json.mock.calls[0][0].competitor_products[0].latest_price.price).toBe(2)
   })
 })
@@ -539,6 +539,14 @@ describe("match review + resolve", () => {
     expect(payload).toMatchObject({ count: 2 })
     expect(payload.items[0]).toMatchObject({ id: "m1", theirs_title: "Rival X", proposed_product_id: "p1", match_score: 72 })
     expect(payload.items[1]).toMatchObject({ id: "m2", competitor_handle: null, proposed_product_id: null, proposed_title: null })
+  })
+
+  it("GET /match/review ?status widens the queue (audit all / confirmed)", async () => {
+    const svc = { listAndCountCompetitorProducts: jest.fn().mockResolvedValue([[], 0]) }
+    await reviewGET(req(svc, {}, { status: "all" }) as any, makeRes())
+    expect(svc.listAndCountCompetitorProducts.mock.calls[0][0]).toEqual({ match_status: ["confirmed", "fuzzy"] })
+    await reviewGET(req(svc, {}, { status: "confirmed" }) as any, makeRes())
+    expect(svc.listAndCountCompetitorProducts.mock.calls[1][0]).toEqual({ match_status: "confirmed" })
   })
 
   it("POST /match/resolve confirms a proposal (goes live)", async () => {
