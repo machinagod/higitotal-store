@@ -65,15 +65,19 @@ describe("admin routes", () => {
     query: q,
   })
 
-  it("GET /admin/competitor-products attaches latest price + our product map", async () => {
+  it("GET /admin/competitor-products groups matched mappings by product with latest price", async () => {
     const svc = {
-      listCompetitorProducts: jest.fn().mockResolvedValue([
-        { id: "m1", product_id: "p1", title: "Rival Item (2L)", competitor: {}, prices: [
-          { price: 1, scraped_at: "2024-01-01" },
-          { price: 2, scraped_at: "2024-02-01" },
-        ] },
-        { id: "m2", competitor: {}, prices: [] },
-      ]),
+      listCompetitorProducts: jest
+        .fn()
+        // light pass (group/sort/count) — no prices
+        .mockResolvedValueOnce([{ id: "m1", product_id: "p1", title: "Rival Item (2L)", competitor: { name: "Rival" } }])
+        // priced pass (page mappings)
+        .mockResolvedValueOnce([
+          { id: "m1", product_id: "p1", title: "Rival Item (2L)", competitor: { name: "Rival" }, prices: [
+            { price: 1, scraped_at: "2024-01-01" },
+            { price: 2, scraped_at: "2024-02-01" },
+          ] },
+        ]),
     }
     const query = {
       graph: jest
@@ -90,19 +94,40 @@ describe("admin routes", () => {
     }
     const res = makeRes()
     await cpGET(cpReq(svc, query, { product_id: "p", competitor_id: "c", match_status: "confirmed" }) as any, res)
-    expect(svc.listCompetitorProducts).toHaveBeenCalledWith(
+    // first (light) pass groups/counts; relations is competitor-only
+    expect(svc.listCompetitorProducts).toHaveBeenNthCalledWith(
+      1,
       { product_id: "p", competitor_id: "c", match_status: "confirmed" },
-      expect.objectContaining({ relations: ["competitor", "prices"] })
+      expect.objectContaining({ relations: ["competitor"] })
     )
     const payload = res.json.mock.calls[0][0]
-    expect(payload.count).toBe(2)
+    expect(payload.count).toBe(1) // one product GROUP, not row count
+    expect(payload).toMatchObject({ offset: 0, limit: 50 })
     expect(payload.competitor_products[0].latest_price.price).toBe(2)
-    expect(payload.competitor_products[1].latest_price).toBeNull()
     expect(payload.competitor_products[0].prices).toBeUndefined()
     // canonical €/base from the listing's own title: 2 ÷ 2L → 1 per L
     expect(payload.competitor_products[0]).toMatchObject({ base_unit: "L", unit_price: 1 })
-    expect(payload.competitor_products[1]).toMatchObject({ base_unit: null, unit_price: null })
     expect(payload.products.p1).toMatchObject({ title: "Our Prod", sku: "S1", pvp1: 8217, pvp2: 7000, cost: 5500 })
+  })
+
+  it("GET /admin/competitor-products paginates by product group with ?q + ?offset", async () => {
+    const light = [
+      { id: "a", product_id: "p1", title: "Alpha", competitor: { name: "RivalA" } },
+      { id: "b", product_id: "p2", title: "Beta", competitor: { name: "RivalB" } },
+    ]
+    const svc = {
+      listCompetitorProducts: jest
+        .fn()
+        .mockResolvedValueOnce(light) // light pass
+        .mockResolvedValueOnce([{ id: "b", product_id: "p2", title: "Beta", competitor: { name: "RivalB" }, prices: [] }]),
+    }
+    const query = { graph: jest.fn().mockRejectedValue(new Error("no pricing")) } // products → {}
+    const res = makeRes()
+    // q matches the listing title "Beta" only → 1 group; offset 0 returns it
+    await cpGET(cpReq(svc, query, { q: "beta", limit: "1" }) as any, res)
+    const payload = res.json.mock.calls[0][0]
+    expect(payload.count).toBe(1) // only p2 matched the search
+    expect(payload.competitor_products.map((r: any) => r.id)).toEqual(["b"])
   })
 
   it("GET /admin/competitor-products tolerates a product-price lookup failure", async () => {
@@ -182,18 +207,22 @@ describe("admin routes", () => {
     expect(svc.createCompetitors).toHaveBeenCalledWith({})
   })
 
-  it("competitor-products GET with no filters + descending price order", async () => {
+  it("competitor-products GET defaults to matched mappings + keeps the latest price", async () => {
     const svc = {
-      listCompetitorProducts: jest.fn().mockResolvedValue([
-        { id: "m1", competitor: {}, prices: [
-          { price: 2, scraped_at: "2024-02-01" },
-          { price: 1, scraped_at: "2024-01-01" }, // older — reduce keeps the newer
-        ] },
-      ]),
+      listCompetitorProducts: jest
+        .fn()
+        .mockResolvedValueOnce([{ id: "m1", product_id: "p1", competitor: {} }]) // light pass
+        .mockResolvedValueOnce([
+          { id: "m1", product_id: "p1", competitor: {}, prices: [
+            { price: 2, scraped_at: "2024-02-01" },
+            { price: 1, scraped_at: "2024-01-01" }, // older — reduce keeps the newer
+          ] },
+        ]),
     }
     const res = makeRes()
     await cpGET({ scope: { resolve: () => svc }, body: {}, query: {} } as any, res)
-    expect(svc.listCompetitorProducts).toHaveBeenCalledWith({}, expect.anything())
+    // no explicit filters → defaults to matched-only (product_id present)
+    expect(svc.listCompetitorProducts).toHaveBeenNthCalledWith(1, { product_id: { $ne: null } }, expect.anything())
     expect(res.json.mock.calls[0][0].competitor_products[0].latest_price.price).toBe(2)
   })
 })
