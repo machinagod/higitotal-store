@@ -48,8 +48,13 @@ export function titleFromSlug(url: string): string {
   }
 }
 
+// Extract <loc> URLs, tolerating CDATA wrappers (`<loc><![CDATA[url]]></loc>`,
+// common in PrestaShop/WooCommerce sitemaps) and surrounding whitespace. Matches
+// only the `<loc>` element, never `<image:loc>`.
 const locs = (xml: string): string[] =>
-  [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1])
+  [...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)]
+    .map((m) => m[1].replace(/<!\[CDATA\[/gi, "").replace(/\]\]>/g, "").trim())
+    .filter(Boolean)
 
 async function enumShopify(
   base: string,
