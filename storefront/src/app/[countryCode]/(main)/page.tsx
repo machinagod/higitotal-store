@@ -12,13 +12,25 @@ import { getProductsList } from "@lib/data/products"
 import { getCollectionByHandle } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { SLIDES } from "@modules/home/components/hero/featured-slides"
+import { canonicalUrl, SITE_DESCRIPTION, SITE_NAME } from "@lib/util/seo"
 
 const FEATURED_COLLECTION = "fornos-profissionais"
 
-export const metadata: Metadata = {
-  title: "Higitotal · Higiene profissional & assistência técnica",
-  description:
-    "Higiene profissional e equipamento para hotelaria, restauração e indústria, com assistência técnica nacional. Especialistas desde 1999.",
+export async function generateMetadata(): Promise<Metadata> {
+  const canonical = await canonicalUrl("")
+  const title = `${SITE_NAME} · Higiene profissional & assistência técnica`
+
+  return {
+    title: { absolute: title },
+    description: SITE_DESCRIPTION,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description: SITE_DESCRIPTION,
+      url: canonical,
+    },
+  }
 }
 
 export default async function Home({

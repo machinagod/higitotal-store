@@ -5,7 +5,10 @@ import { getCategoryByHandle, listCategories } from "@lib/data/categories"
 import { listRegions } from "@lib/data/regions"
 import { StoreProductCategory, StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
+import JsonLd from "@modules/common/components/json-ld"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
+import { breadcrumbSchema } from "@lib/util/structured-data"
 
 type Props = {
   params: { category: string[]; countryCode: string }
@@ -50,9 +53,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { product_categories } = await getCategoryByHandle(
-      params.category
-    )
+    const { product_categories } = await getCategoryByHandle(params.category)
 
     const title = product_categories
       .map((category: StoreProductCategory) => category.name)
@@ -60,13 +61,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const description =
       product_categories[product_categories.length - 1].description ??
-      `${title} category.`
+      `Explore ${title} — ${SITE_NAME}.`
+
+    const canonical = await canonicalUrl(
+      `categories/${params.category.join("/")}`
+    )
 
     return {
-      title: `${title} | Higitotal`,
+      title,
       description,
-      alternates: {
-        canonical: `${params.category.join("/")}`,
+      alternates: { canonical },
+      openGraph: {
+        type: "website",
+        title: `${title} · ${SITE_NAME}`,
+        description,
+        url: canonical,
       },
     }
   } catch (error) {
@@ -77,20 +86,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { sortBy, page } = searchParams
 
-  const { product_categories } = await getCategoryByHandle(
-    params.category
-  )
+  const { product_categories } = await getCategoryByHandle(params.category)
 
   if (!product_categories) {
     notFound()
   }
 
+  const trail = [
+    { name: SITE_NAME, url: await canonicalUrl("") },
+    ...(await Promise.all(
+      (product_categories as StoreProductCategory[]).map(async (c) => ({
+        name: c.name,
+        url: await canonicalUrl(`categories/${c.handle}`),
+      }))
+    )),
+  ]
+
   return (
-    <CategoryTemplate
-      categories={product_categories}
-      sortBy={sortBy}
-      page={page}
-      countryCode={params.countryCode}
-    />
+    <>
+      <JsonLd data={breadcrumbSchema(trail)} />
+      <CategoryTemplate
+        categories={product_categories}
+        sortBy={sortBy}
+        page={page}
+        countryCode={params.countryCode}
+      />
+    </>
   )
 }
