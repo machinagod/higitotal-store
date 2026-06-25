@@ -48,12 +48,22 @@ export function titleFromSlug(url: string): string {
   }
 }
 
+/** Decode the XML entities that appear in sitemap URLs (esp. `&amp;` in
+ *  query-param child-sitemap links like `sitemap.xml?m=products&amp;lang=pt`). */
+const decodeXmlEntities = (s: string): string =>
+  s
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+
 // Extract <loc> URLs, tolerating CDATA wrappers (`<loc><![CDATA[url]]></loc>`,
-// common in PrestaShop/WooCommerce sitemaps) and surrounding whitespace. Matches
-// only the `<loc>` element, never `<image:loc>`.
+// common in PrestaShop/WooCommerce sitemaps), XML entities, and surrounding
+// whitespace. Matches only the `<loc>` element, never `<image:loc>`.
 const locs = (xml: string): string[] =>
   [...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)]
-    .map((m) => m[1].replace(/<!\[CDATA\[/gi, "").replace(/\]\]>/g, "").trim())
+    .map((m) => decodeXmlEntities(m[1].replace(/<!\[CDATA\[/gi, "").replace(/\]\]>/g, "").trim()))
     .filter(Boolean)
 
 async function enumShopify(

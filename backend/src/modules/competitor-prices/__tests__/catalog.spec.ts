@@ -79,6 +79,23 @@ describe("enumerateCatalog — sitemap", () => {
     ])
   })
 
+  it("decodes XML entities in child-sitemap URLs before following them", async () => {
+    // PrestaShop/Magento often link query-param children with `&amp;`.
+    const index = `<sitemapindex><sitemap><loc>${base}/sitemap.xml?m=products&amp;lang=pt</loc></sitemap></sitemapindex>`
+    const items = await enumerateCatalog(
+      base,
+      { type: "sitemap", product_url_match: "/producto/" },
+      fetcher({
+        [`${base}/sitemap.xml`]: index,
+        [`${base}/sitemap.xml?m=products&lang=pt`]: sitemap, // fetched only if `&amp;` was decoded
+      })
+    )
+    expect(items.map((i) => i.url)).toEqual([
+      `${base}/producto/suma-chlor-5l`,
+      `${base}/producto/clax-build-20l`,
+    ])
+  })
+
   it("follows a sitemap index", async () => {
     const index = `<sitemapindex><sitemap><loc>${base}/sm-products.xml</loc></sitemap></sitemapindex>`
     const items = await enumerateCatalog(
