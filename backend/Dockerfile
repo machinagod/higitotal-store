@@ -34,9 +34,9 @@ ARG BACKEND_PUBLIC_URL
 # DATABASE_URL/JWT_SECRET/COOKIE_SECRET. The build only compiles (no DB
 # connection), so satisfy the asserts with throwaway values scoped to this RUN
 # (they never persist in the image). Real values come from Railway at runtime.
-# Mount the SAME pnpm store the root install populated, so postBuild.js's
-# `pnpm i --prod` inside .medusa/server hardlinks from the warm store instead of
-# re-downloading every prod dep — the bulk of the backend image build time.
+# Mount the pnpm store the root install populated. postBuild.js no longer runs a
+# second `pnpm i --prod` — it symlinks .medusa/server/node_modules at the root
+# tree — but `medusa build` may still touch the store, so keep it mounted.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     DATABASE_URL="postgres://build:build@localhost:5432/build" \
     JWT_SECRET="build" \
