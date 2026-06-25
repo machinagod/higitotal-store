@@ -9,6 +9,7 @@ import { listRegions } from "@lib/data/regions"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
 
 type Props = {
   params: { handle: string; countryCode: string }
@@ -64,12 +65,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
-  const metadata = {
-    title: `${collection.title} | Higitotal`,
-    description: `${collection.title} collection`,
-  } as Metadata
+  const description = `Descubra a gama ${collection.title} — ${SITE_NAME}.`
+  const canonical = await canonicalUrl(`collections/${collection.handle}`)
 
-  return metadata
+  return {
+    title: collection.title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: `${collection.title} · ${SITE_NAME}`,
+      description,
+      url: canonical,
+    },
+  }
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {
