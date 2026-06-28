@@ -93,6 +93,9 @@ jobs:
       - name: Backend coverage (Jest)
         if: needs.changes.outputs.backend == 'true'
         working-directory: backend
+        # GHCR_NPM_TOKEN lets pnpm install the private competitor-prices plugin.
+        env:
+          GHCR_NPM_TOKEN: ${{ secrets.GHCR_NPM_TOKEN }}
         run: |
           pnpm install --frozen-lockfile
           pnpm test:coverage
@@ -206,6 +209,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+          # GHCR npm read token for the private @machinagod competitor-prices
+          # plugin (consumed by `pnpm install`); never baked into a layer.
+          secrets: |
+            ghcr_npm_token=${{ secrets.GHCR_NPM_TOKEN }}
           # Bakes the admin dashboard's API base URL; GIT_SHA powers /version.
           build-args: |
             BACKEND_PUBLIC_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
