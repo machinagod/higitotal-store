@@ -23,6 +23,7 @@
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
   },
   "dependencies": {
+    "@machinagod/medusa-extensions": "^0.0.2",
     "@machinagod/medusa-plugin-competitor-prices": "^1.0.1",
     "@machinagod/moloni-client-ts": "npm:@jsr/machinagod__moloni-client-ts@0.1.1",
     "@medusajs/admin-sdk": "2.13.6",

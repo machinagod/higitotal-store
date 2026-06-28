@@ -12,6 +12,9 @@ importers:
 
   .:
     dependencies:
+      '@machinagod/medusa-extensions':
+        specifier: ^0.0.2
+        version: 0.0.2(fi7obypomvguus5cxmvwtyzyna)
       '@machinagod/medusa-plugin-competitor-prices':
         specifier: ^1.0.1
         version: 1.0.1(@medusajs/admin-sdk@2.13.6)(@medusajs/admin-shared@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -1704,6 +1707,17 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
+  '@machinagod/medusa-extensions@0.0.2':
+    resolution: {integrity: sha512-KcJ2dIjzdD/vZtvU+2UOKl0V1wOTyHAJ5XFnKSYOdPyhon+/e8oPUhlI7X/N/8lzHYBtUOhX33POPfy+kzD5/A==, tarball: https://npm.pkg.github.com/download/@machinagod/medusa-extensions/0.0.2/c32aeeac891fecc12f6f8c0992978bc988fb63fb}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@medusajs/admin-sdk': ^2.13
+      '@medusajs/cli': ^2.13
+      '@medusajs/framework': ^2.13
+      '@medusajs/icons': ^2.13
+      '@medusajs/medusa': ^2.13
+      '@medusajs/ui': ^4
+
   '@machinagod/medusa-plugin-competitor-prices@1.0.1':
     resolution: {integrity: sha512-lly9JeMlHYcLSkbh0GJVaMEOnvCbC+vh/PJRDwzKKmZybaPuYoEBjYBCLihhGmqvc3cYFUGU2Rl3PDRllz8r8w==, tarball: https://npm.pkg.github.com/download/@machinagod/medusa-plugin-competitor-prices/1.0.1/a6a1527164caf3c79421e1e96a0f8081ba2d7dc2}
     engines: {node: '>=20'}
@@ -1717,6 +1731,23 @@ packages:
       react: ^18.3.1
       react-dom: ^18.3.1
       react-router-dom: 6.30.3
+    peerDependenciesMeta:
+      '@medusajs/admin-sdk':
+        optional: true
+      '@medusajs/admin-shared':
+        optional: true
+      '@medusajs/cli':
+        optional: true
+      '@medusajs/icons':
+        optional: true
+      '@medusajs/ui':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      react-router-dom:
+        optional: true
 
   '@medusajs/admin-bundler@2.13.6':
     resolution: {integrity: sha512-BcTWzKfaJBrxHFGD7HRuDP79BLSbbHXXnfDOd6Q3U/H8Vi9Z/roiqpSKMixQTcklTFDEucMKXV8UzCUR9xsQmA==}
@@ -10961,17 +10992,27 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@machinagod/medusa-plugin-competitor-prices@1.0.1(@medusajs/admin-sdk@2.13.6)(@medusajs/admin-shared@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
+  '@machinagod/medusa-extensions@0.0.2(fi7obypomvguus5cxmvwtyzyna)':
     dependencies:
       '@medusajs/admin-sdk': 2.13.6
-      '@medusajs/admin-shared': 2.13.6
       '@medusajs/cli': 2.13.6(@types/node@20.19.25)
       '@medusajs/framework': 2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76)
       '@medusajs/icons': 2.13.6(react@18.3.1)
-      '@medusajs/js-sdk': 2.13.6
+      '@medusajs/medusa': 2.13.6(@medusajs/admin-sdk@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/test-utils@2.13.6)(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@swc/core@1.5.7(@swc/helpers@0.5.17))(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(awilix@8.0.1)(picomatch@4.0.3)(posthog-node@4.18.0)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(yaml@2.8.0)
       '@medusajs/ui': 4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
+
+  '@machinagod/medusa-plugin-competitor-prices@1.0.1(@medusajs/admin-sdk@2.13.6)(@medusajs/admin-shared@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@medusajs/framework': 2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76)
+      '@medusajs/js-sdk': 2.13.6
       '@tanstack/react-query': 5.64.2(react@18.3.1)
       crawlee: 3.17.0(@types/node@20.19.25)
+    optionalDependencies:
+      '@medusajs/admin-sdk': 2.13.6
+      '@medusajs/admin-shared': 2.13.6
+      '@medusajs/cli': 2.13.6(@types/node@20.19.25)
+      '@medusajs/icons': 2.13.6(react@18.3.1)
+      '@medusajs/ui': 4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       react-router-dom: 6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

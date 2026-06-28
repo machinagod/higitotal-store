@@ -10,10 +10,14 @@ export class OverviewPage extends AccountPage {
   ordersWrapper: Locator
   orderWrapper: Locator
   overviewWrapper: Locator
+  recommendedForYou: Locator
+  recommendationItems: Locator
 
   constructor(page: Page) {
     super(page)
     this.overviewWrapper = this.container.getByTestId("overview-page-wrapper")
+    this.recommendedForYou = this.container.getByTestId("recommended-for-you")
+    this.recommendationItems = this.container.getByTestId("recommendation-item")
     this.welcomeMessage = this.container.getByTestId("welcome-message")
     this.customerEmail = this.container.getByTestId("customer-email")
     this.profileCompletion = this.container.getByTestId(
