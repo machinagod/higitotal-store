@@ -195,6 +195,14 @@ const medusaConfig = {
       resolve: '@rsc-labs/medusa-products-bought-together-v2',
       options: {}
     },
+    {
+      // Higitotal extensions: reorder-recommendation consumption (Twenty CRM),
+      // customer↔Moloni linkage, admin + store recommendation APIs. Sources from
+      // Twenty when TWENTY_API_URL/TWENTY_API_KEY are set; otherwise the admin page
+      // serves the bundled offline snapshot and the store endpoint returns empty.
+      resolve: '@machinagod/medusa-extensions',
+      options: {}
+    },
   ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
       resolve: '@rokmohar/medusa-plugin-meilisearch',
       options: {
