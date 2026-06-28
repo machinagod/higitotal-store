@@ -15,9 +15,14 @@ RUN corepack enable && corepack prepare pnpm@9.10.0 --activate
 WORKDIR /app
 
 # Install deps first so the layer caches independently of source changes.
-# .npmrc carries the JSR registry (@machinagod/moloni-client-ts) and peer flags.
+# .npmrc carries the JSR registry (@machinagod/moloni-client-ts), the GHCR npm
+# registry for the private @machinagod/medusa-plugin-competitor-prices package,
+# and peer flags. The GHCR read token is provided as a BuildKit secret (never
+# baked into a layer) and exported so .npmrc's ${GHCR_NPM_TOKEN} resolves.
 COPY package.json pnpm-lock.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    --mount=type=secret,id=ghcr_npm_token \
+    GHCR_NPM_TOKEN="$(cat /run/secrets/ghcr_npm_token 2>/dev/null)" \
     pnpm install --frozen-lockfile
 
 # `pnpm build` = `medusa build` + postBuild.js. postBuild installs prod deps

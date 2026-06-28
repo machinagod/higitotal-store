@@ -162,28 +162,31 @@ const medusaConfig = {
         sandbox: MOLONI_SANDBOX,
       }
     }] : []),
-    {
-      // Competitor price intelligence: stores competitor prices, refreshes them
-      // on an adaptive schedule (faster on change, backoff on error), fuzzy-
-      // matches listings to our catalog, and uses pluggable per-competitor
-      // scraper strategies. Inert until competitors/mappings are configured.
-      resolve: './src/modules/competitor-prices',
-      options: {
-        baseIntervalSeconds: 86400,   // default refresh cadence (1 day)
-        minIntervalSeconds: 3600,     // never faster than hourly
-        maxIntervalSeconds: 1209600,  // never slower than ~14 days
-        backoffFactor: 2,             // x2 interval per consecutive failure
-        stableFactor: 1.5,            // ease off while price is unchanged
-        jitterRatio: 0.1,             // ±10% jitter to de-sync ticks
-        batchSize: 50,                // mappings processed per tick
-        concurrency: 4,               // concurrent in-flight requests per crawl
-        autoConfirmScore: 90,         // fuzzy score to auto-confirm a match
-        productDiscoveryIntervalSeconds: 2592000,  // find new stores per product (30d)
-        catalogDiscoveryIntervalSeconds: 604800,   // detect competitor new products (7d)
-      }
-    }
   ],
   plugins: [
+    {
+      // Competitor price intelligence — extracted to its own repo
+      // (@machinagod/medusa-plugin-competitor-prices) and consumed as a prebuilt
+      // plugin. Adaptive scrape scheduler, fuzzy matching, our-price snapshots,
+      // discovery queue, competitiveness gaps. The module name (competitor_prices)
+      // and its migrations are preserved from the former in-repo module, so the
+      // existing tables are recognized as already migrated. Options are optional —
+      // the module's DEFAULTS already encode this exact cadence.
+      resolve: '@machinagod/medusa-plugin-competitor-prices',
+      options: {
+        baseIntervalSeconds: 86400,
+        minIntervalSeconds: 3600,
+        maxIntervalSeconds: 1209600,
+        backoffFactor: 2,
+        stableFactor: 1.5,
+        jitterRatio: 0.1,
+        batchSize: 50,
+        concurrency: 4,
+        autoConfirmScore: 90,
+        productDiscoveryIntervalSeconds: 2592000,
+        catalogDiscoveryIntervalSeconds: 604800,
+      }
+    },
     {
       // Frequently-bought-together. Subscribes to placed orders and serves
       // GET /store/products-bought-together/:product_id. Historical co-purchase

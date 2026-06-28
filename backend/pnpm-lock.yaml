@@ -12,6 +12,9 @@ importers:
 
   .:
     dependencies:
+      '@machinagod/medusa-plugin-competitor-prices':
+        specifier: ^1.0.1
+        version: 1.0.1(@medusajs/admin-sdk@2.13.6)(@medusajs/admin-shared@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@machinagod/moloni-client-ts':
         specifier: npm:@jsr/machinagod__moloni-client-ts@0.1.1
         version: '@jsr/machinagod__moloni-client-ts@0.1.1'
@@ -66,9 +69,6 @@ importers:
       '@tanstack/react-query':
         specifier: 5.64.2
         version: 5.64.2(react@18.3.1)
-      crawlee:
-        specifier: ^3.17.0
-        version: 3.17.0(@types/node@20.19.25)
       lucide-react:
         specifier: ^1.21.0
         version: 1.21.0(react@18.3.1)
@@ -1703,6 +1703,20 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@machinagod/medusa-plugin-competitor-prices@1.0.1':
+    resolution: {integrity: sha512-lly9JeMlHYcLSkbh0GJVaMEOnvCbC+vh/PJRDwzKKmZybaPuYoEBjYBCLihhGmqvc3cYFUGU2Rl3PDRllz8r8w==, tarball: https://npm.pkg.github.com/download/@machinagod/medusa-plugin-competitor-prices/1.0.1/a6a1527164caf3c79421e1e96a0f8081ba2d7dc2}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@medusajs/admin-sdk': 2.13.6
+      '@medusajs/admin-shared': 2.13.6
+      '@medusajs/cli': 2.13.6
+      '@medusajs/framework': 2.13.6
+      '@medusajs/icons': 2.13.6
+      '@medusajs/ui': 4.1.6
+      react: ^18.3.1
+      react-dom: ^18.3.1
+      react-router-dom: 6.30.3
 
   '@medusajs/admin-bundler@2.13.6':
     resolution: {integrity: sha512-BcTWzKfaJBrxHFGD7HRuDP79BLSbbHXXnfDOd6Q3U/H8Vi9Z/roiqpSKMixQTcklTFDEucMKXV8UzCUR9xsQmA==}
@@ -10946,6 +10960,30 @@ snapshots:
   '@jsr/machinagod__moloni-client-ts@0.1.1': {}
 
   '@keyv/serialize@1.1.1': {}
+
+  '@machinagod/medusa-plugin-competitor-prices@1.0.1(@medusajs/admin-sdk@2.13.6)(@medusajs/admin-shared@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@medusajs/admin-sdk': 2.13.6
+      '@medusajs/admin-shared': 2.13.6
+      '@medusajs/cli': 2.13.6(@types/node@20.19.25)
+      '@medusajs/framework': 2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76)
+      '@medusajs/icons': 2.13.6(react@18.3.1)
+      '@medusajs/js-sdk': 2.13.6
+      '@medusajs/ui': 4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
+      '@tanstack/react-query': 5.64.2(react@18.3.1)
+      crawlee: 3.17.0(@types/node@20.19.25)
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      react-router-dom: 6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - canvas
+      - idcac-playwright
+      - playwright
+      - puppeteer
+      - supports-color
+      - utf-8-validate
 
   '@medusajs/admin-bundler@2.13.6(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(picomatch@4.0.3)(typescript@5.9.3)(yaml@2.8.0)':
     dependencies:
