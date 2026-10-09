@@ -4,8 +4,8 @@
 # GHCR, deployed by Railway. Mirrors what `pnpm build` / `pnpm start` do on the
 # Nixpacks path so runtime behaviour is unchanged (init-backend migrates on boot).
 
-# Pinned to the repo's Node (.nvmrc = v22.11.0) and pnpm (packageManager = 9.10.0).
-ARG NODE_IMAGE=node:22.11.0-bookworm-slim
+# Pinned to Node 22 (Medusa >= 2.19 needs >= 22.12) and pnpm (packageManager = 9.10.0).
+ARG NODE_IMAGE=node:22.22.0-bookworm-slim
 
 # ── Builder ─────────────────────────────────────────────────────────────────
 FROM ${NODE_IMAGE} AS builder

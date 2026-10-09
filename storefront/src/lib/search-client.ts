@@ -1,25 +1,26 @@
-import { instantMeiliSearch } from "@meilisearch/instant-meilisearch"
+import { createInstantSearchAdapter } from "@medusajs/instantsearch-adapter"
+import type { InstantSearchProps } from "react-instantsearch"
 
-const endpoint =
-  process.env.NEXT_PUBLIC_SEARCH_ENDPOINT || "http://127.0.0.1:7700"
+import { MEDUSA_BACKEND_URL } from "@lib/config"
 
-const apiKey = process.env.NEXT_PUBLIC_SEARCH_API_KEY || "test_key"
+// Search goes through the backend's `POST /store/search` (Medusa's Search
+// Module, Meilisearch as its provider) rather than straight to Meilisearch.
+// The module serves versioned physical indexes (`products_v1`, `products_v2`,
+// ...) behind the logical name, and scopes hits to published products in the
+// publishable key's sales channels.
+export const { searchClient } = createInstantSearchAdapter({
+  baseUrl: MEDUSA_BACKEND_URL,
+  path: "/store/search",
+  publishableApiKey: process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY,
+})
 
-export const searchClient = instantMeiliSearch(endpoint, apiKey)
+// The adapter implements InstantSearch's search-client protocol, which is what
+// Medusa ships it for. Its declared type is structural, while InstantSearch
+// types `searchClient` from the installed algoliasearch v5 client, so the two
+// cannot be related by the checker. This is the single boundary cast.
+export const instantSearchClient =
+  searchClient as unknown as InstantSearchProps["searchClient"]
 
-export const SEARCH_INDEX_NAME =
-  process.env.NEXT_PUBLIC_INDEX_NAME || "products"
-
-// If you want to use Algolia instead then uncomment the following lines, and delete the above lines
-// you should also install algoliasearch - yarn add algoliasearch
-
-// import algoliasearch from "algoliasearch/lite"
-
-// const appId = process.env.NEXT_PUBLIC_SEARCH_APP_ID || "test_app_id"
-
-// const apiKey = process.env.NEXT_PUBLIC_SEARCH_API_KEY || "test_key"
-
-// export const searchClient = algoliasearch(appId, apiKey)
-
-// export const SEARCH_INDEX_NAME =
-//   process.env.NEXT_PUBLIC_INDEX_NAME || "products"
+// Logical index name, as declared in backend/src/search/products.ts and
+// allowed by the `/store/search` middleware.
+export const SEARCH_INDEX_NAME = "products"

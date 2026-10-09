@@ -137,7 +137,7 @@ export async function deleteLineItem(lineId: string) {
   }
 
   await sdk.store.cart
-    .deleteLineItem(cartId, lineId, await getAuthHeaders())
+    .deleteLineItem(cartId, lineId, {}, await getAuthHeaders())
     .then(() => {
       revalidateTag("cart")
     })

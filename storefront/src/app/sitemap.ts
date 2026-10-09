@@ -23,7 +23,7 @@ async function getAllProducts(countryCode: string) {
     } = await getProductsList({
       pageParam: page,
       countryCode,
-      queryParams: { limit: PAGE_SIZE, fields: "handle,updated_at" } as any,
+      queryParams: { limit: PAGE_SIZE, fields: "handle,updated_at" },
     })
 
     products.push(...batch)
@@ -39,15 +39,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
   // Static, indexable marketing/content routes.
-  const staticEntries: MetadataRoute.Sitemap = [
-    { url: absoluteUrl(`/${countryCode}`), changeFrequency: "daily", priority: 1 },
-    { url: prefix("store"), changeFrequency: "daily", priority: 0.9 },
-    { url: prefix("assistencia-tecnica"), changeFrequency: "monthly", priority: 0.7 },
-    { url: prefix("contact"), changeFrequency: "yearly", priority: 0.5 },
-    { url: prefix("customer-service"), changeFrequency: "yearly", priority: 0.4 },
-    { url: prefix("content/privacy-policy"), changeFrequency: "yearly", priority: 0.2 },
-    { url: prefix("content/terms-of-use"), changeFrequency: "yearly", priority: 0.2 },
-  ].map((e) => ({ lastModified: now, ...e }))
+  const staticEntries: MetadataRoute.Sitemap = (
+    [
+      { url: absoluteUrl(`/${countryCode}`), changeFrequency: "daily", priority: 1 },
+      { url: prefix("store"), changeFrequency: "daily", priority: 0.9 },
+      { url: prefix("assistencia-tecnica"), changeFrequency: "monthly", priority: 0.7 },
+      { url: prefix("contact"), changeFrequency: "yearly", priority: 0.5 },
+      { url: prefix("customer-service"), changeFrequency: "yearly", priority: 0.4 },
+      { url: prefix("content/privacy-policy"), changeFrequency: "yearly", priority: 0.2 },
+      { url: prefix("content/terms-of-use"), changeFrequency: "yearly", priority: 0.2 },
+    ] satisfies MetadataRoute.Sitemap
+  ).map((e) => ({ lastModified: now, ...e }))
 
   // Catalog routes — fail soft so a backend hiccup never empties the sitemap.
   let products: MetadataRoute.Sitemap = []

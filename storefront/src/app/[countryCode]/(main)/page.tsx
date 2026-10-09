@@ -56,7 +56,7 @@ export default async function Home({
     const {
       response: { products },
     } = await getProductsList({
-      queryParams: { collection_id: [collection.id], limit: 8 } as any,
+      queryParams: { collection_id: [collection.id], limit: 8 },
       countryCode,
     })
     featured = products
@@ -85,12 +85,12 @@ export default async function Home({
         const {
           response: { products: slideProducts },
         } = await getProductsList({
-          queryParams: { collection_id: [slideCollection.id], limit: 1 } as any,
+          queryParams: { collection_id: [slideCollection.id], limit: 1 },
           countryCode,
         })
         return [
           slide.handle,
-          slideProducts.find((p) => p.thumbnail)?.thumbnail,
+          slideProducts.find((p) => p.thumbnail)?.thumbnail ?? undefined,
         ] as const
       })
     )

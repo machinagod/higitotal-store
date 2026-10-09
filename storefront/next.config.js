@@ -13,9 +13,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     // Next/image optimization is ON: the runner (`next start`) resizes source
     // images and serves modern formats via /_next/image, backed by `sharp`
