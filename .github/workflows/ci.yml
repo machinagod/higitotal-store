@@ -241,7 +241,9 @@ jobs:
       # e.g. a link-table change that makes `db:migrate` wait on an interactive
       # prompt (hangs the non-TTY container). Pre-migrating also makes
       # init-backend's checkIfSeeded SKIP seeding, mirroring prod. Falls back to
-      # the freshly built image when nothing is published yet.
+      # the freshly built image when nothing is published yet. Plain `db:migrate`
+      # on purpose: this DB is empty (nothing to prompt about), and the published
+      # image is the PREVIOUS version, which may not know newer CLI flags.
       - name: Pre-migrate the smoke database (published image)
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
@@ -256,7 +258,7 @@ jobs:
             -e MOLONI_CLIENT_ID=dummy -e MOLONI_CLIENT_SECRET=dummy \
             -e MOLONI_USER=dummy -e MOLONI_PASSWORD=dummy -e MOLONI_COMPANY_ID=1 \
             -w /app/.medusa/server --entrypoint sh "$image" \
-            -c "./node_modules/.bin/medusa db:migrate --execute-safe-links --execute-safe-search"
+            -c "./node_modules/.bin/medusa db:migrate"
 
       - name: Boot backend image and assert /health
         env:
