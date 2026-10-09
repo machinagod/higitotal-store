@@ -9,6 +9,12 @@ import { defineConfig } from "vitest/config"
  * tests — add React Testing Library here to bring them under the unit gate.
  */
 export default defineConfig({
+  // tsconfig keeps JSX as-is (`jsx: "preserve"`) for Next's own compiler, so
+  // tell vitest's transformer to compile it — otherwise any .tsx under test
+  // (or measured by coverage) reaches the parser as raw JSX and fails.
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
   // Mirror the tsconfig path aliases so lib modules that import via `@lib/*`
   // (e.g. seo.ts → @lib/data/regions) resolve under vitest.
   resolve: {

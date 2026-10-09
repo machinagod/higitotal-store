@@ -4,7 +4,7 @@ Project-specific operating guide for AI agents. Read this before running anythin
 
 ## What this is
 
-A **Medusa 2.13.6** e-commerce monorepo (Railway boilerplate), two apps:
+A **Medusa 2.21.2** e-commerce monorepo (Railway boilerplate), two apps:
 
 - **`backend/`** — Medusa server + admin dashboard. Dev server on `:9000`, admin at `/app`.
 - **`storefront/`** — Next.js 15 storefront. Dev server on `:8000`. Needs the backend up.
@@ -40,7 +40,8 @@ To run against a throwaway local DB instead, repoint `backend/.env`
 
 ## Node version (required)
 
-The repo pins Node **22.x** (`engines`, `.nvmrc` = v22.11.0). If the machine's
+The repo pins Node **22.x** (`engines`; Docker images use `node:22.22.0`). Medusa
+≥ 2.19 needs Node **≥ 22.12**, so an older 22.x will not run it. If the machine's
 default `node` is a different major (e.g. 25), use the Homebrew keg explicitly —
 prefix commands so they resolve Node 22:
 
@@ -96,13 +97,25 @@ Fix failures before committing — including pre-existing ones in files you touc
   Railway service has **GHCR image auto-updates** enabled, so Railway polls the
   image tag and redeploys itself when a new `:latest` is published. Railway no
   longer builds from the repo. `init-backend` + the start command run DB
-  migrations on boot (backend image `CMD`).
+  migrations on boot (backend image `CMD`). The boot runs `db:migrate
+  --execute-safe-links --execute-safe-search`: without those flags a link-table
+  change makes `db:migrate` wait on an interactive prompt, which hangs the
+  non-TTY container forever. Link **updates/deletes** are therefore never
+  applied on boot — run `medusa db:sync-links` deliberately when one is pending.
+- **Search**: Meilisearch is a provider of Medusa's Search Module (index
+  declarations in `backend/src/search/`). Physical indexes are versioned
+  (`products_v1`, …), so the storefront must search via `POST /store/search`
+  (InstantSearch adapter), never Meilisearch directly by index name.
 - **Pipeline order**: `changes` → `backend-image` + `storefront-image` →
   `deploy` → `e2e-prod`. Each `*-image` job **builds the image once, boots it, then
   pushes** — the boot is the **only pre-push gate** (runs on PRs + master): it boots
   the **pruned** production image, so a runtime dep misfiled as a devDependency (it
   has bitten us: storefront `ansi-colors`, backend `react`) is caught before
-  publish, on an ephemeral CI Postgres (never prod; no secrets). The image **push**
+  publish, on an ephemeral CI Postgres (never prod; no secrets). The backend boot
+  first migrates that DB with the **currently published** image, so the new
+  image's migrations run on the previous schema — the real upgrade path. It
+  migrates schema only (no data): data-dependent migrations (e.g. the 2.15
+  product-dimension `text → real` cast) still need a prod data check. The image **push**
   + `deploy` + `e2e-prod` run on push to `master` only.
 - **e2e runs AFTER deploy, against LIVE prod** (not a pre-merge gate). Each image
   bakes the commit into `GIT_SHA`; the `deploy` job force-redeploys then **waits

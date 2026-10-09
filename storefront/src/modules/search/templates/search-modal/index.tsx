@@ -1,10 +1,10 @@
 "use client"
 
-import { InstantSearch } from "react-instantsearch-hooks-web"
+import { InstantSearch } from "react-instantsearch"
 import { useRouter } from "next/navigation"
 import { MagnifyingGlassMini } from "@medusajs/icons"
 
-import { SEARCH_INDEX_NAME, searchClient } from "@lib/search-client"
+import { SEARCH_INDEX_NAME, instantSearchClient } from "@lib/search-client"
 import Hit from "@modules/search/components/hit"
 import Hits from "@modules/search/components/hits"
 import SearchBox from "@modules/search/components/search-box"
@@ -61,7 +61,7 @@ export default function SearchModal() {
         <div className="flex flex-col justify-start w-full h-fit transform p-5 items-center text-left align-middle transition-all max-h-[75vh] bg-transparent shadow-none">
           <InstantSearch
             indexName={SEARCH_INDEX_NAME}
-            searchClient={searchClient}
+            searchClient={instantSearchClient}
           >
             <div
               className="flex absolute flex-col h-fit w-full sm:w-fit"

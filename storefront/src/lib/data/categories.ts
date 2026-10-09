@@ -30,7 +30,7 @@ export const getCategoryByHandle = cache(async function (
       // from all of its sub-categories (most products live on the leaves).
       include_descendants_tree: true,
       fields: "id,name,handle,description,*category_children",
-    } as any,
+    },
     { next: { tags: ["categories"] } }
   )
 })
@@ -259,7 +259,7 @@ async function getCategoryThumbnails(
   const {
     response: { products },
   } = await getProductsList({
-    queryParams: { category_id: ids, limit: 12, fields: "id,thumbnail" } as any,
+    queryParams: { category_id: ids, limit: 12, fields: "id,thumbnail" },
     countryCode,
   })
 

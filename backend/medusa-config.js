@@ -1,4 +1,4 @@
-import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
+import { loadEnv, Modules, defineConfig } from '@medusajs/framework/utils';
 import {
   ADMIN_CORS,
   AUTH_CORS,
@@ -151,6 +151,26 @@ const medusaConfig = {
         ],
       },
     }] : []),
+    ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
+      // Medusa's Search Module creates/migrates the Meilisearch indexes on
+      // `db:migrate`, seeds them on boot and keeps them current from catalog
+      // events. Meilisearch itself is the provider.
+      resolve: '@medusajs/medusa/search',
+      options: {
+        providers: [
+          {
+            resolve: '@rokmohar/medusa-plugin-meilisearch/providers/meilisearch',
+            id: 'meilisearch',
+            options: {
+              config: {
+                host: MEILISEARCH_HOST,
+                apiKey: MEILISEARCH_ADMIN_KEY
+              }
+            }
+          }
+        ]
+      }
+    }] : []),
     ...(IS_MOLONI_ENABLED ? [{
       resolve: './src/modules/moloni',
       options: {
@@ -204,41 +224,12 @@ const medusaConfig = {
       options: {}
     },
   ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
+      // v2 of the plugin is a provider for Medusa's Search Module (registered
+      // under `modules` below). The plugin entry only serves its store routes
+      // and admin page, so it takes no options. Index declarations live in
+      // src/search/.
       resolve: '@rokmohar/medusa-plugin-meilisearch',
-      options: {
-        config: {
-          host: MEILISEARCH_HOST,
-          apiKey: MEILISEARCH_ADMIN_KEY
-        },
-        settings: {
-          products: {
-            type: 'products',
-            enabled: true,
-            // `fields` drives the admin graph query, so the SKU must be fetched
-            // via the real relation path `variants.sku` (the flat `variant_sku`
-            // is not a graph field and is silently dropped). The transformer
-            // below flattens it into the indexed `variant_sku` attribute.
-            fields: ['id', 'title', 'description', 'handle', 'variants.sku', 'thumbnail'],
-            transformer: (product) => ({
-              id: product.id,
-              title: product.title,
-              description: product.description,
-              handle: product.handle,
-              thumbnail: product.thumbnail,
-              // Moloni reference(s) — the identifier the company/customers use.
-              variant_sku: Array.isArray(product.variants)
-                ? product.variants.map((v) => v?.sku).filter(Boolean)
-                : [],
-            }),
-            indexSettings: {
-              searchableAttributes: ['title', 'description', 'variant_sku'],
-              displayedAttributes: ['id', 'handle', 'title', 'description', 'variant_sku', 'thumbnail'],
-              filterableAttributes: ['id', 'handle'],
-            },
-            primaryKey: 'id',
-          }
-        }
-      }
+      options: {}
     }] : [])
   ]
 };

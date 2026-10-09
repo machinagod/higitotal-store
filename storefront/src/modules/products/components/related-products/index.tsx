@@ -8,37 +8,25 @@ type RelatedProductsProps = {
   countryCode: string
 }
 
-type StoreProductParamsWithTags = HttpTypes.StoreProductParams & {
-  tags?: string[]
-}
-
-type StoreProductWithTags = HttpTypes.StoreProduct & {
-  tags?: { value: string }[]
-}
-
 export default async function RelatedProducts({
   product,
   countryCode,
 }: RelatedProductsProps) {
   const region = await getRegion(countryCode)
 
-  if (!region) {
-  const queryParams: StoreProductParamsWithTags = {}
-  }
-
-  // edit this function to define your related products logic
-  const queryParams: StoreProductParamsWithTags = {}
+  // Related = same collection and/or sharing a tag with this product.
+  const queryParams: HttpTypes.StoreProductListParams = {}
   if (region?.id) {
     queryParams.region_id = region.id
   }
   if (product.collection_id) {
     queryParams.collection_id = [product.collection_id]
   }
-  const productWithTags = product as StoreProductWithTags
-  if (productWithTags.tags) {
-    queryParams.tags = productWithTags.tags
-      .map((t) => t.value)
-      .filter(Boolean) as string[]
+  // The Store API filters tags by id (`tag_id`); the list endpoint is strict,
+  // so an unknown `tags` param would fail the whole request with a 400.
+  const tagIds = (product.tags ?? []).map((t) => t.id).filter(Boolean)
+  if (tagIds.length) {
+    queryParams.tag_id = tagIds
   }
   queryParams.is_giftcard = false
   // Keep the rail short (the mock shows a single row). Fetch a small window and

@@ -227,19 +227,36 @@ jobs:
           psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -c "CREATE DATABASE smoke_db;"
 
-      # Pre-migrate so init-backend's checkIfSeeded sees the schema and SKIPS
-      # seeding — mirroring production's already-seeded boot path.
-      - name: Pre-migrate the smoke database
+      - name: Log in to GHCR (pull the published image for the upgrade path)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pre-migrate with the CURRENTLY PUBLISHED image (what prod runs today), so
+      # the boot below exercises the real upgrade path: the new image's
+      # `db:migrate` runs against the previous version's schema, exactly like a
+      # prod deploy. A fresh-schema boot cannot catch upgrade-only failures —
+      # e.g. a link-table change that makes `db:migrate` wait on an interactive
+      # prompt (hangs the non-TTY container). Pre-migrating also makes
+      # init-backend's checkIfSeeded SKIP seeding, mirroring prod. Falls back to
+      # the freshly built image when nothing is published yet.
+      - name: Pre-migrate the smoke database (published image)
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
+          PUBLISHED_IMAGE: ghcr.io/${{ github.repository }}/backend:latest
         run: |
+          image=backend:ci
+          if docker pull "$PUBLISHED_IMAGE"; then image="$PUBLISHED_IMAGE"; fi
+          echo "Pre-migrating with $image"
           docker run --rm --network host \
             -e DATABASE_URL="$SMOKE_DB_URL" \
             -e JWT_SECRET=smoke -e COOKIE_SECRET=smoke \
             -e MOLONI_CLIENT_ID=dummy -e MOLONI_CLIENT_SECRET=dummy \
             -e MOLONI_USER=dummy -e MOLONI_PASSWORD=dummy -e MOLONI_COMPANY_ID=1 \
-            -w /app/.medusa/server --entrypoint sh backend:ci \
-            -c "./node_modules/.bin/medusa db:migrate"
+            -w /app/.medusa/server --entrypoint sh "$image" \
+            -c "./node_modules/.bin/medusa db:migrate --execute-safe-links --execute-safe-search"
 
       - name: Boot backend image and assert /health
         env:
@@ -264,14 +281,7 @@ jobs:
         run: docker logs backend-smoke 2>&1 | tail -n 200 || true
 
       # Push the already-built image (master push only, after the boot passed).
-      - name: Log in to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
+      # GHCR login happened before the pre-migrate step.
       - name: Push backend image
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: docker push --all-tags ghcr.io/${{ github.repository }}/backend
