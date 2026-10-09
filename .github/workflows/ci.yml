@@ -244,13 +244,17 @@ jobs:
       # the freshly built image when nothing is published yet. Plain `db:migrate`
       # on purpose: this DB is empty (nothing to prompt about), and the published
       # image is the PREVIOUS version, which may not know newer CLI flags.
+      # The published image is pulled BY DIGEST: `docker pull <repo>:latest` would
+      # re-point the local `:latest` tag at the OLD image, and the push step's
+      # `--all-tags` would then republish the old image as `:latest` (it did).
       - name: Pre-migrate the smoke database (published image)
         env:
           SMOKE_DB_URL: postgres://postgres:postgres@localhost:5432/smoke_db?sslmode=disable
-          PUBLISHED_IMAGE: ghcr.io/${{ github.repository }}/backend:latest
+          PUBLISHED_REPO: ghcr.io/${{ github.repository }}/backend
         run: |
           image=backend:ci
-          if docker pull "$PUBLISHED_IMAGE"; then image="$PUBLISHED_IMAGE"; fi
+          digest=$(docker buildx imagetools inspect "$PUBLISHED_REPO:latest" --format '{{json .Manifest}}' 2>/dev/null | jq -r '.digest // empty' || true)
+          if [ -n "$digest" ] && docker pull "$PUBLISHED_REPO@$digest"; then image="$PUBLISHED_REPO@$digest"; fi
           echo "Pre-migrating with $image"
           docker run --rm --network host \
             -e DATABASE_URL="$SMOKE_DB_URL" \
@@ -284,9 +288,19 @@ jobs:
 
       # Push the already-built image (master push only, after the boot passed).
       # GHCR login happened before the pre-migrate step.
+      # Guard: every local tag of the repo must be THIS build (backend:ci), so
+      # `--all-tags` can never publish a stale image as `:latest`.
       - name: Push backend image
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: docker push --all-tags ghcr.io/${{ github.repository }}/backend
+        env:
+          REPO: ghcr.io/${{ github.repository }}/backend
+        run: |
+          built=$(docker image inspect --format '{{.Id}}' backend:ci)
+          for tag in $(docker image ls "$REPO" --format '{{.Repository}}:{{.Tag}}' | grep -v ':<none>$'); do
+            id=$(docker image inspect --format '{{.Id}}' "$tag")
+            [ "$id" = "$built" ] || { echo "::error::$tag is not this build ($id != $built)"; exit 1; }
+          done
+          docker push --all-tags "$REPO"
 
   # ── Storefront image: build once → boot-smoke → push ───────────────────────
   storefront-image:
