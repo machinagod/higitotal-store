@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Info, X } from "lucide-react"
+import { ClipboardCheck, Info, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { useQuoteList } from "@lib/quote-list/context"
@@ -63,7 +63,7 @@ export default function QuoteToast() {
               }`}
               aria-hidden="true"
             >
-              {full ? <Info className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+              {full ? <Info className="h-4 w-4" /> : <ClipboardCheck className="h-4 w-4" />}
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-brand-ink">

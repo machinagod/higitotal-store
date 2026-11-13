@@ -4,6 +4,7 @@ import { clx } from "@medusajs/ui"
 import {
   ArrowRight,
   Check,
+  ClipboardCheck,
   ClipboardList,
   ImageIcon,
   Phone,
@@ -494,7 +495,7 @@ function QuoteSent({
       data-testid="quote-sent"
     >
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-cyan-50 text-brand-cyan">
-        <Check className="h-6 w-6" aria-hidden="true" />
+        <ClipboardCheck className="h-6 w-6" aria-hidden="true" />
       </span>
       <h2
         id="quote-sent-title"

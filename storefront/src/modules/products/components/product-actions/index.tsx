@@ -36,6 +36,7 @@ import {
   ArrowRight,
   Check,
   Clock,
+  ClipboardCheck,
   ClipboardPlus,
   FileText,
 } from "lucide-react"
@@ -323,7 +324,7 @@ export default function ProductActions({
                     className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-btn bg-brand-cyan-50 px-3.5 py-2 text-sm font-semibold text-brand-ink"
                     data-testid="pdp-quote-state"
                   >
-                    <Check
+                    <ClipboardCheck
                       className="h-4 w-4 flex-none text-brand-cyan"
                       aria-hidden="true"
                     />

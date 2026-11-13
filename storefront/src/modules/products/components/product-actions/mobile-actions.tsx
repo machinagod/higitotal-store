@@ -1,6 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react"
 import { clx } from "@medusajs/ui"
-import { ArrowRight, ClipboardList, Phone } from "lucide-react"
+import { ArrowRight, ClipboardList, ClipboardPlus, Phone } from "lucide-react"
 import React, { Fragment } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
@@ -130,6 +130,10 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                     <span className="truncate">Selecione uma opção</span>
                   ) : (
                     <>
+                      <ClipboardPlus
+                        className="mr-1.5 hidden h-4 w-4 flex-none min-[360px]:block"
+                        aria-hidden="true"
+                      />
                       {/* Full label from 390px (iPhone 12+); "Adicionar" below. */}
                       <span className="whitespace-nowrap min-[390px]:hidden">
                         Adicionar
