@@ -38,9 +38,9 @@ export default function CheckoutLayout({
           </div>
         </nav>
       </header>
-      <div className="relative" data-testid="checkout-container">
+      <main id="conteudo" className="relative" data-testid="checkout-container">
         {children}
-      </div>
+      </main>
       <footer className="border-t border-hairline">
         <div className="content-container py-5 text-center text-xs text-grey-50">
           Todos os preços apresentados não incluem IVA à taxa legal em vigor.

@@ -366,7 +366,7 @@ const SearchBox = ({
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder="Pesquisar produtos ou marcas…"
-          className="min-w-0 flex-1 bg-transparent text-sm font-medium text-brand-ink outline-none placeholder:text-[#7a838c] [&::-webkit-search-cancel-button]:appearance-none"
+          className="min-w-0 flex-1 bg-transparent text-sm font-medium text-brand-ink outline-none placeholder:text-[#646d79] [&::-webkit-search-cancel-button]:appearance-none"
         />
         <button
           type="submit"
