@@ -25,6 +25,13 @@ type FooterLink = { label: string; href: string }
 const SERVICE_FORM = "/assistencia-tecnica#pedir"
 const SERVICE_LINKS = ["Instalação", "Reparação", "Contratos de manutenção"]
 
+const COMPANY_LINKS: FooterLink[] = [
+  { label: "Sobre nós", href: "/sobre-nos" },
+  { label: "A nossa loja", href: "/a-nossa-loja" },
+  { label: "Assistência técnica", href: "/assistencia-tecnica" },
+  { label: "Contactos", href: "/contact" },
+]
+
 const LEGAL_LINKS: FooterLink[] = [
   { label: "Política de Privacidade", href: "/content/privacy-policy" },
   { label: "Termos de Utilização", href: "/content/terms-of-use" },
@@ -76,7 +83,7 @@ function ServiceColumn() {
       </ul>
       <LocalizedClientLink
         href={SERVICE_FORM}
-        className="inline-flex items-center justify-center gap-2 rounded-pill bg-svc-signal px-[18px] py-[11px] text-[12px] font-bold uppercase leading-none tracking-[0.04em] text-white transition-colors hover:bg-svc-signal-ink"
+        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-pill bg-svc-signal px-[18px] py-[11px] text-[12px] font-bold uppercase leading-none tracking-[0.04em] text-white transition-colors hover:bg-svc-signal-ink"
       >
         <Wrench className="h-3.5 w-3.5" aria-hidden />
         Pedir assistência
@@ -184,8 +191,8 @@ export default async function Footer() {
     <footer className="w-full bg-svc-ground text-svc-fg-muted font-sans">
       <div className="content-container">
         {/* Desktop / tablet: balanced columns */}
-        <div className="hidden small:grid small:grid-cols-4 small:gap-x-8 small:gap-y-10 small:py-14 medium:grid-cols-[1.25fr_1fr_0.8fr_1fr_1.15fr] medium:gap-x-10">
-          <div className="small:col-span-4 medium:col-span-1">{brandBlock}</div>
+        <div className="hidden small:grid small:grid-cols-[1fr_0.7fr_1.15fr_0.85fr_1.1fr] small:gap-x-8 small:gap-y-10 small:py-14 medium:grid-cols-[1.05fr_1fr_0.65fr_1.1fr_0.8fr_1.1fr] medium:gap-x-9">
+          <div className="small:col-span-5 medium:col-span-1">{brandBlock}</div>
 
           {categories.length > 0 && (
             <div>
@@ -211,6 +218,11 @@ export default async function Footer() {
           </div>
 
           <div>
+            <h2 className={`mb-4 ${headingClass}`}>Empresa</h2>
+            <LinkList links={COMPANY_LINKS} testId="footer-company" />
+          </div>
+
+          <div>
             <h2 className={`mb-4 ${headingClass}`}>Contactos</h2>
             <ContactColumn />
           </div>
@@ -232,6 +244,9 @@ export default async function Footer() {
             )}
             <MobileSection title="Assistência Técnica">
               <ServiceColumn />
+            </MobileSection>
+            <MobileSection title="Empresa">
+              <LinkList links={COMPANY_LINKS} testId="footer-company-mobile" />
             </MobileSection>
             <MobileSection title="Contactos" open>
               <ContactColumn />

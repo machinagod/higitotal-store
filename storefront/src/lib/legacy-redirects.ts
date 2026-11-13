@@ -16,8 +16,9 @@ const product = (id: number) => (LEGACY_PRODUCTS[id] ? at(LEGACY_PRODUCTS[id]) :
 const category = (id: number) =>
   LEGACY_CATEGORIES[id] ? at(`/categories/${LEGACY_CATEGORIES[id]}`) : at("/store")
 
-// PrestaShop CMS pages: 4 = about us; 1/2/3/5 = delivery, legal notice, terms, secure payment.
-const cms = (id: number) => (id === 4 ? at("") : at("/content/terms-of-use"))
+// PrestaShop CMS pages: 4 = about us → "Sobre nós"; 1/2/3/5 = delivery, legal
+// notice, terms, secure payment → the terms of use.
+const cms = (id: number) => (id === 4 ? at("/sobre-nos") : at("/content/terms-of-use"))
 
 // Controller / friendly-URL names → new pages.
 const PAGES: Record<string, string> = {
@@ -28,8 +29,9 @@ const PAGES: Record<string, string> = {
   contactos: "/contact",
   contacte_nos: "/contact",
   contact: "/contact",
-  stores: "/contact",
-  lojas: "/contact",
+  // The old "A Nossa Loja" store locator → the shop location page.
+  stores: "/a-nossa-loja",
+  lojas: "/a-nossa-loja",
   sitemap: "/store",
   "mapa-do-site": "/store",
   "new-products": "/store",

@@ -112,14 +112,24 @@ export default async function Nav() {
                 {COMPANY.email}
               </a>
             </div>
-            <LocalizedClientLink
-              href="/assistencia-tecnica"
-              className="inline-flex shrink-0 items-center gap-x-1.5 rounded-pill bg-svc-signal px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-svc-signal-ink max-[359px]:ml-auto"
-              data-testid="util-assistencia-link"
-            >
-              <Wrench className="h-3 w-3" />
-              Assistência Técnica
-            </LocalizedClientLink>
+            <div className="flex shrink-0 items-center gap-x-5 max-[359px]:ml-auto">
+              {/* Desktop only — on mobile the side menu carries it. */}
+              <LocalizedClientLink
+                href="/sobre-nos"
+                className="hidden h-9 items-center hover:text-white transition-colors small:inline-flex"
+                data-testid="util-about-link"
+              >
+                Sobre nós
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/assistencia-tecnica"
+                className="inline-flex shrink-0 items-center gap-x-1.5 rounded-pill bg-svc-signal px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-svc-signal-ink"
+                data-testid="util-assistencia-link"
+              >
+                <Wrench className="h-3 w-3" />
+                Assistência Técnica
+              </LocalizedClientLink>
+            </div>
           </div>
         </div>
 

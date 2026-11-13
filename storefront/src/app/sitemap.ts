@@ -45,6 +45,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: absoluteUrl(`/${countryCode}`), changeFrequency: "daily", priority: 1 },
       { url: prefix("store"), changeFrequency: "daily", priority: 0.9 },
       { url: prefix("assistencia-tecnica"), changeFrequency: "monthly", priority: 0.7 },
+      { url: prefix("sobre-nos"), changeFrequency: "yearly", priority: 0.5 },
+      { url: prefix("a-nossa-loja"), changeFrequency: "yearly", priority: 0.5 },
       { url: prefix("contact"), changeFrequency: "yearly", priority: 0.5 },
       { url: prefix("customer-service"), changeFrequency: "yearly", priority: 0.4 },
       { url: prefix("content/privacy-policy"), changeFrequency: "yearly", priority: 0.2 },

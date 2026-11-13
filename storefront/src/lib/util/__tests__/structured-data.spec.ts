@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import {
+  aboutPageSchema,
   breadcrumbSchema,
+  localBusinessSchema,
   organizationSchema,
   productSchema,
   websiteSchema,
@@ -160,5 +162,70 @@ describe("productSchema", () => {
     expect(schema.sku).toBeUndefined()
     // falls back to subtitle for the description
     expect(schema.description).toBe("Subtítulo")
+  })
+})
+
+describe("company pages (AboutPage / LocalBusiness)", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_BASE_URL = "https://higitotal.test"
+  })
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_BASE_URL
+  })
+
+  it("gives the Organization a stable @id and the company's identifiers", () => {
+    const org = organizationSchema()
+    expect(org["@id"]).toBe("https://higitotal.test/#organization")
+    expect(org.foundingDate).toBe("1999")
+    expect(org.taxID).toBe("504297040")
+    expect(org.telephone).toBe("+351278262913")
+    expect(org.address).toMatchObject({
+      "@type": "PostalAddress",
+      postalCode: "5370-565",
+      addressLocality: "Mirandela",
+      addressCountry: "PT",
+    })
+  })
+
+  it("emits an AboutPage about the Organization (nested, no @context)", () => {
+    const page = aboutPageSchema({
+      url: "https://higitotal.test/pt/sobre-nos",
+      name: "Sobre nós",
+      description: "d",
+    })
+    expect(page["@type"]).toBe("AboutPage")
+    expect(page.url).toBe("https://higitotal.test/pt/sobre-nos")
+    expect(page.about["@type"]).toBe("Organization")
+    expect(page.about["@context"]).toBeUndefined()
+    // The site-wide Organization keeps its own @context.
+    expect(organizationSchema()["@context"]).toBe("https://schema.org")
+  })
+
+  it("emits a LocalBusiness with geo and opening hours from COMPANY", () => {
+    const shop = localBusinessSchema({
+      url: "https://higitotal.test/pt/a-nossa-loja",
+    })
+    expect(shop["@type"]).toBe("LocalBusiness")
+    expect(shop.geo).toEqual({
+      "@type": "GeoCoordinates",
+      latitude: 41.5008095,
+      longitude: -7.164659,
+    })
+    expect(shop.openingHoursSpecification).toHaveLength(2)
+    expect(shop.openingHoursSpecification[0]).toMatchObject({
+      "@type": "OpeningHoursSpecification",
+      opens: "09:00",
+      closes: "12:30",
+    })
+    expect(shop.openingHoursSpecification[1].dayOfWeek).toEqual([
+      "https://schema.org/Monday",
+      "https://schema.org/Tuesday",
+      "https://schema.org/Wednesday",
+      "https://schema.org/Thursday",
+      "https://schema.org/Friday",
+    ])
+    expect(shop.parentOrganization).toEqual({
+      "@id": "https://higitotal.test/#organization",
+    })
   })
 })

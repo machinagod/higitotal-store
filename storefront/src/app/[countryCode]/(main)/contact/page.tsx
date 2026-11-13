@@ -9,7 +9,7 @@ import {
   Phone,
 } from "lucide-react"
 
-import { COMPANY } from "@lib/company"
+import { COMPANY, MAPS_URL as MAP_URL } from "@lib/company"
 import ContactRequestForm from "@modules/common/components/contact-request-form"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -19,9 +19,6 @@ export const metadata: Metadata = {
   description:
     "Contacte a Higitotal — produtos de higiene profissional, equipamento hoteleiro e assistência técnica. Mirandela, Portugal.",
 }
-
-const MAP_URL =
-  "https://www.google.com/maps/search/?api=1&query=41.5008095%2C-7.164659"
 
 const iconTile =
   "flex h-10 w-10 flex-none items-center justify-center rounded-btn bg-[#eef6fa] text-brand-cyan"
@@ -132,6 +129,15 @@ export default function ContactPage() {
               </div>
             </li>
           </ul>
+
+          <LocalizedClientLink
+            href="/a-nossa-loja"
+            className="mt-4 inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-brand-cyan-ink hover:underline"
+            data-testid="contact-store-link"
+          >
+            Como chegar à nossa loja
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </LocalizedClientLink>
 
           <div className="mt-8 rounded-large border border-hairline bg-[#f7f9fa] p-5">
             <p className="text-sm font-extrabold text-brand-ink">
