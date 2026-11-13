@@ -37,6 +37,10 @@ export interface ContactRequestEmailProps {
   quantity?: number
   /** Absolute URL of the page the request was sent from */
   productUrl?: string
+  /** Assistência: equipment model / serial number */
+  modelo?: string
+  /** Assistência: equipment stopped — highlighted at the top */
+  urgente?: boolean
   preview?: string
 }
 
@@ -66,6 +70,8 @@ export const ContactRequestEmail = ({
   sku,
   quantity,
   productUrl,
+  modelo,
+  urgente,
   preview,
 }: ContactRequestEmailProps) => {
   const k = inferContactKind({ kind, productTitle, sku })
@@ -75,6 +81,13 @@ export const ContactRequestEmail = ({
       <Section className="mt-[24px]">
         <Text className="text-black text-[18px] font-semibold">{heading}</Text>
         <Text className="text-[#666666] text-[13px] leading-[22px]">{STAFF_INTROS[k]}</Text>
+        {urgente ? (
+          <Text
+            className="text-[#9a3412] bg-[#fff1e6] border border-solid border-[#ff7a1a] rounded-[6px] text-[14px] leading-[22px] px-[12px] py-[6px] my-[8px]"
+          >
+            <strong>Urgente:</strong> Sim — equipamento parado
+          </Text>
+        ) : null}
       </Section>
       <Divider />
       <Section>
@@ -85,6 +98,14 @@ export const ContactRequestEmail = ({
         <Row label="Localidade" value={localidade} />
         <Row label="Contacto preferido" value={contactPrefLabel(contactPref)} />
       </Section>
+      {modelo ? (
+        <>
+          <Divider />
+          <Section>
+            <Row label="Modelo / n.º de série" value={modelo} />
+          </Section>
+        </>
+      ) : null}
       {k === 'produto' ? (
         <>
           <Divider />
