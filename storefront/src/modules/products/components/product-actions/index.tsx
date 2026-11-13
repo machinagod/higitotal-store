@@ -1,8 +1,8 @@
 "use client"
 
 import { isEqual } from "lodash"
-import { useParams } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useParams, usePathname, useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { useIntersection } from "@lib/hooks/use-in-view"
 import Divider from "@modules/common/components/divider"
@@ -11,19 +11,21 @@ import OptionSelect from "@modules/products/components/product-actions/option-se
 import MobileActions from "./mobile-actions"
 import ProductPrice from "../product-price"
 import ContactModal from "../contact-modal"
+import ProductSpecSheet from "../product-spec-sheet"
 import { addToCart } from "@lib/data/cart"
+import { COMPANY } from "@lib/company"
+import { ENQUIRY_PARAM, wantsEnquiryOpen } from "@lib/util/contact-request"
 import { getProductPrice } from "@lib/util/get-product-price"
+import { specSheetUrl } from "@lib/util/product-specs"
 import { HttpTypes } from "@medusajs/types"
-import { Phone, ArrowRight, Clock, MessageCircle } from "lucide-react"
-
-// Pre-filled enquiry text in catalog mode (same wording as the legacy site).
-const INFO_REQUEST_MESSAGE = "Estou interessado neste produto. Contactem-me!"
+import { clx } from "@medusajs/ui"
+import { Phone, ArrowRight, Clock, FileText } from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   disabled?: boolean
-  /** No prices / cart: the CTA becomes "Pedir informação". */
+  /** No prices / cart: the CTA becomes "Pedir orçamento". */
   catalogMode?: boolean
 }
 
@@ -36,6 +38,12 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
+const primaryCta =
+  "flex h-[52px] w-full items-center justify-center gap-2 rounded-pill bg-brand-cyan px-6 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:-translate-y-0.5 hover:bg-brand-cyan-ink disabled:opacity-50 disabled:hover:translate-y-0"
+
+const outlineCta =
+  "flex h-12 w-full items-center justify-center gap-2 rounded-pill border-[1.5px] border-hairline bg-white px-5 text-[13px] font-bold text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan"
+
 export default function ProductActions({
   product,
   region,
@@ -47,6 +55,8 @@ export default function ProductActions({
   const [quantity, setQuantity] = useState(1)
   const [contactOpen, setContactOpen] = useState(false)
   const countryCode = useParams().countryCode as string
+  const router = useRouter()
+  const pathname = usePathname()
 
   // If there is only 1 variant, preselect the options
   useEffect(() => {
@@ -55,6 +65,22 @@ export default function ProductActions({
       setOptions(variantOptions ?? {})
     }
   }, [product.variants])
+
+  // Deep link: /products/<handle>?pedido=1 opens the enquiry form, then the
+  // param is dropped so a refresh doesn't reopen it. Skipped for the disabled
+  // Suspense fallback so only the live instance reacts.
+  useEffect(() => {
+    if (disabled || typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    if (!wantsEnquiryOpen(params)) return
+    setContactOpen(true)
+    params.delete(ENQUIRY_PARAM)
+    const qs = params.toString()
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false })
+  }, [disabled, pathname, router])
+
+  const openEnquiry = useCallback(() => setContactOpen(true), [])
+  const closeEnquiry = useCallback(() => setContactOpen(false), [])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
@@ -120,6 +146,33 @@ export default function ProductActions({
         )
       : null
 
+  const hasSpecSheet = !!specSheetUrl(product.metadata as Record<string, unknown> | null)
+
+  /** Secondary row: call + spec sheet. */
+  const secondaryRow = (
+    <div
+      className={clx(
+        "grid grid-cols-1 gap-3",
+        hasSpecSheet && "xsmall:grid-cols-2"
+      )}
+    >
+      <div>
+        <a
+          href={COMPANY.phone.href}
+          className={outlineCta}
+          data-testid="product-call-cta"
+        >
+          <Phone className="h-4 w-4" aria-hidden="true" />
+          Ligar {COMPANY.phone.display}
+        </a>
+        <p className="mt-1.5 text-center text-[11px] leading-4 text-grey-50">
+          {COMPANY.phone.costNote}
+        </p>
+      </div>
+      {hasSpecSheet && <ProductSpecSheet product={product} className="w-full" />}
+    </div>
+  )
+
   return (
     <>
       <div className="flex flex-col gap-y-2" ref={actionsRef}>
@@ -147,143 +200,120 @@ export default function ProductActions({
 
         {catalogMode ? (
           <>
-            {/* Catalog mode: no price / cart — single enquiry CTA */}
-            <div className="border-y border-hairline py-5 my-2">
+            {/* Catalog mode: no price / cart — enquiry CTA */}
+            <div className="my-2 border-y border-hairline py-5">
               <p
-                className="text-lg font-bold text-brand-ink"
+                className="text-xl font-extrabold tracking-[-0.01em] text-brand-ink"
                 data-testid="price-on-request"
               >
                 Preço sob consulta
               </p>
-              <p className="mt-1 text-small-regular text-grey-50">
-                Peça-nos informação sobre preço, disponibilidade e condições para a
-                sua empresa — respondemos rapidamente.
+              <p className="mt-1 text-sm leading-relaxed text-grey-60">
+                Indique quantidades e condições — enviamos uma proposta para a
+                sua empresa.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setContactOpen(true)}
-              disabled={!!disabled}
-              data-testid="request-info-cta"
-              className="w-full h-[52px] mt-2 rounded-btn bg-brand-ink text-white font-bold uppercase tracking-wide text-small-regular flex items-center justify-center gap-2 transition hover:bg-brand-cyan hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-brand-ink"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Pedir informação
-            </button>
-
-            <a
-              href="tel:+351278262913"
-              className="flex items-center justify-center gap-1.5 mt-3 text-small-regular text-grey-60 hover:text-brand-cyan"
-            >
-              <Phone className="h-4 w-4" />
-              Ou ligue-nos: <b className="text-grey-70">+351 278 262 913</b>
-            </a>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={openEnquiry}
+                disabled={!!disabled}
+                data-testid="request-info-cta"
+                className={primaryCta}
+              >
+                Pedir orçamento
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+              {secondaryRow}
+            </div>
           </>
         ) : (
           <>
-        {/* Price box */}
-        <div className="flex items-end gap-3 border-y border-hairline py-5 my-2">
-          <ProductPrice product={product} variant={selectedVariant} />
-          {grossLabel && (
-            <span className="ml-auto text-right text-xsmall-regular text-grey-50 leading-snug">
-              <b className="block text-grey-70 text-small-regular">
-                {grossLabel} c/ IVA
-              </b>
-            </span>
-          )}
-        </div>
-        <p className="-mt-1 text-xsmall-regular text-grey-50">
-          Preço sem IVA — IVA à taxa legal em vigor.
-        </p>
-
-        {/* Buy row: quantity + add to cart */}
-        <div className="flex items-stretch gap-3 mt-2">
-          <div className="flex items-center border-[1.5px] border-hairline rounded-btn overflow-hidden">
-            <button
-              type="button"
-              aria-label="Diminuir quantidade"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-11 h-[52px] text-lg text-brand-ink hover:bg-grey-10"
-            >
-              −
-            </button>
-            <input
-              value={quantity}
-              onChange={(e) => {
-                const n = parseInt(e.target.value, 10)
-                setQuantity(Number.isFinite(n) && n > 0 ? n : 1)
-              }}
-              inputMode="numeric"
-              aria-label="Quantidade"
-              className="w-12 h-[52px] text-center font-bold text-brand-ink outline-none"
-            />
-            <button
-              type="button"
-              aria-label="Aumentar quantidade"
-              onClick={() => setQuantity((q) => q + 1)}
-              className="w-11 h-[52px] text-lg text-brand-ink hover:bg-grey-10"
-            >
-              +
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={!selectedVariant || !!disabled || isAdding}
-            data-testid="add-product-button"
-            className="flex-1 h-[52px] rounded-btn bg-brand-ink text-white font-bold uppercase tracking-wide text-small-regular flex items-center justify-center gap-2 transition hover:bg-brand-cyan hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-brand-ink"
-          >
-            {!selectedVariant ? (
-              "Selecionar variante"
-            ) : isAdding ? (
-              "A adicionar…"
-            ) : !hasStock ? (
-              <>
-                <Clock className="h-4 w-4" />
-                Adicionar (sob encomenda)
-              </>
-            ) : (
-              <>
-                Adicionar ao carrinho
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Secondary CTA: request a salesperson contact */}
-        <button
-          type="button"
-          onClick={() => setContactOpen(true)}
-          data-testid="contact-cta"
-          className="w-full h-[52px] mt-3 rounded-btn bg-white text-brand-cyan border-[1.5px] border-brand-cyan font-bold uppercase tracking-wide text-small-regular flex items-center justify-center gap-2 transition hover:bg-brand-cyan hover:text-white hover:-translate-y-0.5"
-        >
-          <Phone className="h-4 w-4" />
-          Pedir contacto a um comercial
-        </button>
-
-        <p className="flex items-center justify-center gap-1.5 mt-3 text-xsmall-regular text-grey-50 text-center">
-          Compra em quantidade?&nbsp;
-          <span>
-            Peça um <b className="text-grey-70">orçamento profissional</b> ao seu comercial.
-          </span>
-        </p>
-
-        {/* Assurance strip — NOTE: placeholder claims, confirm before launch */}
-        <div className="grid grid-cols-3 gap-2 mt-5 text-center">
-          {[
-            ["Entrega 72h", "Portugal Continental"],
-            ["Devolução", "30 dias"],
-            ["Em stock", "Envio imediato"],
-          ].map(([t, s]) => (
-            <div key={t} className="rounded-large border border-hairline py-3 px-1">
-              <b className="block text-xsmall-regular text-grey-70">{t}</b>
-              <span className="hidden small:block text-[11px] text-grey-50">{s}</span>
+            {/* Price box */}
+            <div className="my-2 flex items-end gap-3 border-y border-hairline py-5">
+              <ProductPrice product={product} variant={selectedVariant} />
+              {grossLabel && (
+                <span className="ml-auto text-right text-xsmall-regular leading-snug text-grey-50">
+                  <b className="block text-small-regular text-grey-70">
+                    {grossLabel} c/ IVA
+                  </b>
+                </span>
+              )}
             </div>
-          ))}
-        </div>
+            <p className="-mt-1 text-xs text-grey-50">
+              Preço sem IVA — IVA à taxa legal em vigor.
+            </p>
+
+            {/* Buy row: quantity + add to cart */}
+            <div className="mt-2 flex items-stretch gap-3">
+              <div className="flex items-center overflow-hidden rounded-pill border-[1.5px] border-hairline">
+                <button
+                  type="button"
+                  aria-label="Diminuir quantidade"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="h-[52px] w-11 text-lg text-brand-ink hover:bg-grey-10"
+                >
+                  −
+                </button>
+                <input
+                  value={quantity}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10)
+                    setQuantity(Number.isFinite(n) && n > 0 ? n : 1)
+                  }}
+                  inputMode="numeric"
+                  aria-label="Quantidade"
+                  className="h-[52px] w-12 text-center text-base font-bold text-brand-ink outline-none"
+                />
+                <button
+                  type="button"
+                  aria-label="Aumentar quantidade"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="h-[52px] w-11 text-lg text-brand-ink hover:bg-grey-10"
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!selectedVariant || !!disabled || isAdding}
+                data-testid="add-product-button"
+                className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-pill bg-brand-ink text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:-translate-y-0.5 hover:bg-brand-cyan disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-brand-ink"
+              >
+                {!selectedVariant ? (
+                  "Selecionar variante"
+                ) : isAdding ? (
+                  "A adicionar…"
+                ) : !hasStock ? (
+                  <>
+                    <Clock className="h-4 w-4" aria-hidden="true" />
+                    Adicionar (sob encomenda)
+                  </>
+                ) : (
+                  <>
+                    Adicionar ao carrinho
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Secondary: quote request for larger / business quantities */}
+            <div className="mt-3 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={openEnquiry}
+                data-testid="contact-cta"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-pill border-[1.5px] border-brand-cyan bg-white text-[13px] font-bold uppercase tracking-[0.04em] text-brand-cyan transition hover:bg-brand-cyan hover:text-white"
+              >
+                <FileText className="h-4 w-4" aria-hidden="true" />
+                Pedir orçamento
+              </button>
+              {secondaryRow}
+            </div>
           </>
         )}
 
@@ -295,21 +325,22 @@ export default function ProductActions({
           inStock={hasStock}
           handleAddToCart={handleAddToCart}
           isAdding={isAdding}
-          show={!inView}
+          show={!inView && !contactOpen}
           optionsDisabled={!!disabled || isAdding}
           catalogMode={catalogMode}
-          onRequestInfo={() => setContactOpen(true)}
+          onRequestInfo={openEnquiry}
         />
       </div>
 
       <ContactModal
         open={contactOpen}
-        onClose={() => setContactOpen(false)}
-        productTitle={product.title}
-        sku={selectedVariant?.sku ?? product.variants?.[0]?.sku ?? undefined}
-        quantity={catalogMode ? undefined : quantity}
-        heading={catalogMode ? "Pedir informação" : undefined}
-        defaultMessage={catalogMode ? INFO_REQUEST_MESSAGE : undefined}
+        onClose={closeEnquiry}
+        product={{
+          title: product.title,
+          sku: selectedVariant?.sku ?? product.variants?.[0]?.sku ?? undefined,
+          thumbnail: product.thumbnail,
+          quantity: catalogMode ? undefined : quantity,
+        }}
       />
     </>
   )

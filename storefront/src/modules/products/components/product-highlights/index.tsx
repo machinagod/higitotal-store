@@ -1,10 +1,11 @@
-import { Heading, Text } from "@medusajs/ui"
+import { Check } from "lucide-react"
+
 import { getProductAttributes } from "@lib/data/products"
 
 /**
- * "About this item" — the Amazon-style bullet list from the product_attributes
- * module. Async server component: fetches its own data and renders nothing when
- * a product has no highlights.
+ * "Destaques" — key product points from the product_attributes module. Async
+ * server component: fetches its own data and renders nothing when a product
+ * has no highlights.
  */
 const ProductHighlights = async ({ productId }: { productId: string }) => {
   const { highlights } = await getProductAttributes(productId)
@@ -15,20 +16,21 @@ const ProductHighlights = async ({ productId }: { productId: string }) => {
 
   return (
     <div className="flex flex-col gap-y-3" data-testid="product-highlights">
-      <Heading level="h3" className="text-base-semi text-ui-fg-base">
-        Sobre este artigo
-      </Heading>
-      <ul className="flex flex-col gap-y-2 list-disc pl-5">
-        {highlights.map((h) => (
-          <li key={h.id} className="text-ui-fg-subtle pl-1">
-            <Text
-              as="span"
-              className="text-medium text-ui-fg-subtle whitespace-pre-line"
-            >
-              {h.value}
-            </Text>
-          </li>
-        ))}
+      <h2 className="text-base font-extrabold tracking-[-0.01em] text-brand-ink">
+        Destaques
+      </h2>
+      <ul className="flex flex-col gap-y-2.5">
+        {[...highlights]
+          .sort((a, b) => a.rank - b.rank)
+          .map((h) => (
+            <li key={h.id} className="flex gap-2.5 text-sm leading-relaxed text-grey-60">
+              <Check
+                className="mt-[3px] h-4 w-4 flex-none text-brand-cyan"
+                aria-hidden="true"
+              />
+              <span className="whitespace-pre-line">{h.value}</span>
+            </li>
+          ))}
       </ul>
     </div>
   )

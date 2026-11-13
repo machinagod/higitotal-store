@@ -1,3 +1,5 @@
+"use client"
+
 import { Text, clx } from "@medusajs/ui"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import React from "react"
@@ -49,7 +51,7 @@ const Item: React.FC<AccordionItemProps> = ({
     <AccordionPrimitive.Item
       {...props}
       className={clx(
-        "border-grey-20 group border-t last:mb-0 last:border-b",
+        "border-hairline group border-t last:mb-0 last:border-b",
         "py-3",
         className
       )}
@@ -59,7 +61,7 @@ const Item: React.FC<AccordionItemProps> = ({
         <div className="flex flex-col">
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-4">
-              <Text className="text-ui-fg-subtle text-sm">{title}</Text>
+              <Text className="text-base font-bold text-brand-ink">{title}</Text>
             </div>
             {/* x@ts-expect-error */}
             <AccordionPrimitive.Trigger>

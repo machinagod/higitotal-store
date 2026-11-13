@@ -1,30 +1,21 @@
 import { HttpTypes } from "@medusajs/types"
-import { DocumentText } from "@medusajs/icons"
-import { Text } from "@medusajs/ui"
+import { clx } from "@medusajs/ui"
+import { FileText } from "lucide-react"
+
+import { specSheetUrl } from "@lib/util/product-specs"
 
 /**
- * Download link for the product's spec sheet (ficha técnica), stored at
- * product.metadata.spec_pdf_url (uploaded to the file store). Renders nothing
- * when the product has no spec sheet.
+ * "Ficha técnica (PDF)" secondary button for the product's spec sheet, stored
+ * at product.metadata.spec_pdf_url. Renders nothing when there is none.
  */
-const ProductSpecSheet = ({ product }: { product: HttpTypes.StoreProduct }) => {
-  const raw = (product.metadata as Record<string, unknown> | null)?.[
-    "spec_pdf_url"
-  ]
-
-  // metadata is admin-settable, so only render an href for an http(s) URL —
-  // rejects javascript:/data:/vbscript: etc.
-  let url: string | undefined
-  if (typeof raw === "string") {
-    try {
-      const parsed = new URL(raw)
-      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-        url = parsed.toString()
-      }
-    } catch {
-      // not a valid absolute URL — leave undefined
-    }
-  }
+const ProductSpecSheet = ({
+  product,
+  className,
+}: {
+  product: HttpTypes.StoreProduct
+  className?: string
+}) => {
+  const url = specSheetUrl(product.metadata as Record<string, unknown> | null)
 
   if (!url) {
     return null
@@ -35,13 +26,15 @@ const ProductSpecSheet = ({ product }: { product: HttpTypes.StoreProduct }) => {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-x-2 text-ui-fg-interactive hover:text-ui-fg-interactive-hover w-fit"
+      className={clx(
+        "inline-flex h-12 items-center justify-center gap-2 rounded-pill border-[1.5px] border-hairline bg-white px-5 text-[13px] font-bold text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan",
+        className
+      )}
       data-testid="product-spec-sheet"
     >
-      <DocumentText />
-      <Text as="span" className="text-medium">
-        Ficha técnica (PDF)
-      </Text>
+      <FileText className="h-4 w-4" aria-hidden="true" />
+      Ficha técnica (PDF)
+      <span className="sr-only"> (abre num novo separador)</span>
     </a>
   )
 }

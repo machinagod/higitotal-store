@@ -7,6 +7,10 @@ import { getRegion, listRegions } from "@lib/data/regions"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
 import { breadcrumbSchema, productSchema } from "@lib/util/structured-data"
+import {
+  displayCategoryName,
+  isInternalCategory,
+} from "@lib/util/category-display"
 
 type Props = {
   params: { countryCode: string; handle: string }
@@ -111,20 +115,20 @@ export default async function ProductPage({ params }: Props) {
   const canonical = await canonicalUrl(`products/${pricedProduct.handle}`)
 
   // Home > deepest category (with its parent, if any) > product.
+  // Internal bookkeeping groups (EQ_/ML_…) are skipped; others use their
+  // customer-facing names (same rules as the visible breadcrumb).
   const leaf = pricedProduct.categories?.[0]
+  const categoryCrumbs = [leaf?.parent_category, leaf].filter(
+    (c): c is NonNullable<typeof c> => !!c && !isInternalCategory(c.name)
+  )
   const trail = [
     { name: SITE_NAME, url: await canonicalUrl("") },
-    ...(leaf?.parent_category
-      ? [
-          {
-            name: leaf.parent_category.name,
-            url: await canonicalUrl(`categories/${leaf.parent_category.handle}`),
-          },
-        ]
-      : []),
-    ...(leaf
-      ? [{ name: leaf.name, url: await canonicalUrl(`categories/${leaf.handle}`) }]
-      : []),
+    ...(await Promise.all(
+      categoryCrumbs.map(async (c) => ({
+        name: displayCategoryName(c.name),
+        url: await canonicalUrl(`categories/${c.handle}`),
+      }))
+    )),
     { name: pricedProduct.title, url: canonical },
   ]
 

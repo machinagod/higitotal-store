@@ -1,5 +1,9 @@
 import { HttpTypes } from "@medusajs/types"
 import { getCategoryById } from "@lib/data/categories"
+import {
+  displayCategoryName,
+  isInternalCategory,
+} from "@lib/util/category-display"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type PathBarWrapperProps = {
@@ -52,8 +56,17 @@ const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
       guard++
     }
     const path = chain.length ? chain : [deepest]
+    // Internal bookkeeping groups (EQ_/ML_…) are skipped; the rest use their
+    // customer-facing names.
     for (const cat of path) {
-      crumbs.push({ label: cat.name, href: `/categories/${cat.handle}` })
+      if (isInternalCategory(cat.name)) continue
+      crumbs.push({
+        label: displayCategoryName(cat.name),
+        href: `/categories/${cat.handle}`,
+      })
+    }
+    if (crumbs.length === 1) {
+      crumbs.push({ label: "Produtos", href: "/store" })
     }
   }
 

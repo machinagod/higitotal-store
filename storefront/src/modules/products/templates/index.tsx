@@ -6,13 +6,14 @@ import ProductTabs from "@modules/products/components/product-tabs"
 import BoughtTogether from "@modules/products/components/bought-together"
 import ProductInfo from "@modules/products/templates/product-info"
 import ProductHighlights from "@modules/products/components/product-highlights"
-import ProductSpecSheet from "@modules/products/components/product-spec-sheet"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
+import EquipmentServicePanel from "./equipment-service-panel"
 import PathBar from "@modules/products/components/path-bar"
 import { HttpTypes } from "@medusajs/types"
 import { isCatalogMode } from "@lib/util/catalog-mode"
+import { isEquipmentProduct } from "@lib/util/product-specs"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -30,6 +31,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   }
 
   const catalogMode = isCatalogMode()
+  const isEquipment = isEquipmentProduct(product)
 
   return (
     <>
@@ -37,16 +39,16 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         <PathBar product={product} countryCode={countryCode} />
       </Suspense>
 
-      {/* Two-column: gallery (sticky) | info + buy box */}
+      {/* Two-column: gallery (sticky) | info + actions */}
       <div
-        className="content-container grid grid-cols-1 small:grid-cols-2 small:items-start small:gap-x-10 py-6"
+        className="content-container grid grid-cols-1 py-4 small:grid-cols-2 small:items-start small:gap-x-12 small:py-6"
         data-testid="product-container"
       >
         <div className="w-full small:sticky small:top-32">
-          <ImageGallery images={product?.images || []} />
+          <ImageGallery images={product?.images || []} title={product.title} />
         </div>
 
-        <div className="flex flex-col gap-y-6 py-6 small:py-0 w-full">
+        <div className="flex w-full flex-col gap-y-6 py-6 small:py-0">
           <ProductInfo product={product} />
           <Suspense
             fallback={
@@ -62,18 +64,21 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
               id={product.id}
               region={region}
               catalogMode={catalogMode}
+              metadata={product.metadata}
             />
           </Suspense>
+          {isEquipment && <EquipmentServicePanel />}
           <Suspense fallback={null}>
             <ProductHighlights productId={product.id} />
           </Suspense>
         </div>
       </div>
 
-      {/* Full-width details: spec sheet + tabs */}
-      <div className="content-container flex flex-col gap-y-6 pb-6">
-        <ProductSpecSheet product={product} />
-        <ProductTabs product={product} />
+      {/* Full-width details: characteristics */}
+      <div className="content-container pb-6">
+        <Suspense fallback={null}>
+          <ProductTabs product={product} />
+        </Suspense>
       </div>
 
       <div

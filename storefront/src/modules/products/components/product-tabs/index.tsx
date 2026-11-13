@@ -1,112 +1,34 @@
-"use client"
-
-import Accordion from "./accordion"
 import { HttpTypes } from "@medusajs/types"
+
+import { getProductAttributes } from "@lib/data/products"
+import { buildSpecRows } from "@lib/util/product-specs"
+
+import SpecsAccordion from "./specs-accordion"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
 }
 
-const ProductTabs = ({ product }: ProductTabsProps) => {
-  const specs = getProductSpecs(product)
+/**
+ * "Características" — curated specs (product_attributes module) plus the core
+ * product fields (weight in kg/g, dimensions in mm). The description is shown
+ * once, under the title (ProductInfo), so there is no "Descrição" tab.
+ * Async server component; renders nothing without specs.
+ */
+const ProductTabs = async ({ product }: ProductTabsProps) => {
+  const { specs: attributeSpecs } = await getProductAttributes(product.id)
+  const rows = buildSpecRows(
+    product as Parameters<typeof buildSpecRows>[0],
+    [...(attributeSpecs ?? [])].sort((a, b) => a.rank - b.rank)
+  )
 
-  const tabs = [
-    product.description
-      ? {
-          label: "Descrição",
-          component: <DescriptionTab product={product} />,
-        }
-      : null,
-    specs.length > 0
-      ? {
-          label: "Características",
-          component: <SpecsTab specs={specs} />,
-        }
-      : null,
-  ].filter(Boolean) as { label: string; component: JSX.Element }[]
-
-  if (tabs.length === 0) {
+  if (rows.length === 0) {
     return null
   }
 
   return (
-    <div className="w-full">
-      <Accordion type="multiple">
-        {tabs.map((tab, i) => (
-          <Accordion.Item
-            key={i}
-            title={tab.label}
-            headingSize="medium"
-            value={tab.label}
-          >
-            {tab.component}
-          </Accordion.Item>
-        ))}
-      </Accordion>
-    </div>
-  )
-}
-
-const DescriptionTab = ({ product }: ProductTabsProps) => {
-  return (
-    <div className="text-small-regular py-8">
-      <p className="whitespace-pre-line">{product.description}</p>
-    </div>
-  )
-}
-
-type Spec = {
-  label: string
-  value: string
-}
-
-const getProductSpecs = (product: HttpTypes.StoreProduct): Spec[] => {
-  const specs: Spec[] = []
-
-  if (product.material) {
-    specs.push({ label: "Material", value: product.material })
-  }
-
-  if (product.weight) {
-    specs.push({ label: "Peso", value: `${product.weight} g` })
-  }
-
-  if (product.origin_country) {
-    specs.push({ label: "País de origem", value: product.origin_country })
-  }
-
-  if (product.type?.value) {
-    specs.push({ label: "Tipo", value: product.type.value })
-  }
-
-  if (product.length && product.width && product.height) {
-    specs.push({
-      label: "Dimensões",
-      value: `${product.length} x ${product.width} x ${product.height}`,
-    })
-  }
-
-  return specs
-}
-
-const SpecsTab = ({ specs }: { specs: Spec[] }) => {
-  return (
-    <div className="text-small-regular py-8">
-      <table className="w-full">
-        <tbody>
-          {specs.map((spec) => (
-            <tr
-              key={spec.label}
-              className="border-b border-ui-border-base last:border-b-0"
-            >
-              <th className="py-2 pr-4 text-left font-semibold align-top whitespace-nowrap">
-                {spec.label}
-              </th>
-              <td className="py-2 text-ui-fg-subtle">{spec.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="w-full" data-testid="product-specs">
+      <SpecsAccordion rows={rows} />
     </div>
   )
 }
