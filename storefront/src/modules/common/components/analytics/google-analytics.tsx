@@ -7,7 +7,7 @@ import Script from "next/script"
  *
  * Consent Mode v2 defaults (everything non-essential denied, as Portuguese law
  * requires consent first) are set earlier, in <head>, by ConsentModeDefaults;
- * the CMP inside GTM flips them with gtag('consent','update').
+ * the first-party cookie banner flips them with gtag('consent','update').
  */
 export default function GoogleAnalytics() {
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID

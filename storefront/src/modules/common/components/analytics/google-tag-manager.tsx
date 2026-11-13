@@ -2,11 +2,11 @@ import Script from "next/script"
 import { resolveGtmId } from "@lib/util/gtm"
 
 /**
- * Google Tag Manager container (standard snippet). The cookie banner is a CMP
- * template inside the GTM container; the Consent Mode v2 defaults (all
- * non-essential storage denied) are pushed earlier, from <head>, by
- * ConsentModeDefaults — Portuguese law requires consent before
- * analytics/marketing cookies.
+ * Google Tag Manager container (standard snippet). The Consent Mode v2
+ * defaults (all non-essential storage denied, plus any stored "statistics"
+ * consent) are pushed earlier, from <head>, by ConsentModeDefaults; the
+ * first-party cookie banner sends later updates — Portuguese law requires
+ * consent before analytics/marketing cookies.
  */
 export function GoogleTagManagerScript() {
   const id = resolveGtmId()

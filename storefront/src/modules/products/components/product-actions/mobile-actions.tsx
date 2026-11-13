@@ -74,8 +74,9 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   return (
     <>
       {/* Reserve room at the end of the page so the fixed bar never hides the
-          footer's last lines. Mobile/tablet only (bar is lg:hidden). */}
-      <style>{`@media (max-width: 1023.98px){body{padding-bottom:calc(${BAR_SPACE} + env(safe-area-inset-bottom))}}`}</style>
+          footer's last lines. Mobile/tablet only (bar is lg:hidden).
+          --ht-bottom-bar lifts the cookie banner above the bar. */}
+      <style>{`@media (max-width: 1023.98px){:root{--ht-bottom-bar:calc(${BAR_SPACE} + env(safe-area-inset-bottom))}body{padding-bottom:calc(${BAR_SPACE} + env(safe-area-inset-bottom))}}`}</style>
       <div
         className={clx("fixed inset-x-0 bottom-0 z-[60] lg:hidden", {
           "pointer-events-none": !show,
