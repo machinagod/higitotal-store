@@ -49,7 +49,9 @@ const Hero = ({
             aconselhamento técnico.
           </p>
 
-          <div className="mt-6 grid grid-cols-2 gap-2.5 small:mt-8 small:flex small:flex-wrap small:gap-3">
+          {/* Two columns from 360px; below that (320px phones) the uppercase
+              labels no longer fit side by side, so the buttons stack. */}
+          <div className="mt-6 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 small:mt-8 small:flex small:flex-wrap small:gap-3">
             <LocalizedClientLink
               href="/store"
               className="inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-pill bg-white px-4 py-3.5 text-[12px] font-bold uppercase tracking-[0.04em] text-brand-navy shadow-lg transition-transform hover:-translate-y-0.5 small:px-6 small:text-[13px]"
@@ -115,7 +117,7 @@ const Hero = ({
               prioritária no Norte.
             </p>
             <LocalizedClientLink
-              href="/assistencia-tecnica"
+              href="/assistencia-tecnica#pedir"
               className="mt-4 inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.04em] text-white"
             >
               Pedir assistência

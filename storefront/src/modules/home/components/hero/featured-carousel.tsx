@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Pause, Play } from "lucide-react"
 import { SLIDES } from "@modules/home/components/hero/featured-slides"
 
 const SLIDE_MS = 5000
@@ -16,52 +16,92 @@ type FeaturedCarouselProps = {
 }
 
 /**
- * Hero side card: an auto-rotating carousel over a few product ranges
- * (collections).
- * Slides are stacked + cross-faded (fixed height, no layout shift); auto-advance
- * pauses on hover, and the dots let you jump. Each slide shows a product image
- * (when available) on all breakpoints, so mobile gets imagery the desktop-only
- * hero shot doesn't provide.
+ * Hero side card: an auto-rotating carousel over a few product ranges.
+ *
+ * Accessibility (APG carousel pattern):
+ * - slides are stacked + cross-faded (fixed height, no layout shift); hidden
+ *   slides are `inert`, so their links can't take focus;
+ * - auto-advance pauses while hovered or while focus is inside, stops for
+ *   good once the visitor touches it or uses the pause button, and never
+ *   starts when `prefers-reduced-motion: reduce`;
+ * - a visible pause/play button, and dot buttons with a ≥24×24 hit area;
+ * - slide changes are announced (aria-live) only when not auto-rotating.
  */
 const FeaturedCarousel = ({ images }: FeaturedCarouselProps) => {
   const [active, setActive] = useState(0)
-  const [paused, setPaused] = useState(false)
+  // Transient pauses (pointer over / focus inside).
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  // Stopped by the visitor (button, touch) or by reduced-motion preference.
+  const [stopped, setStopped] = useState(false)
+  // Restarts the progress animation in step with the restarted timer.
+  const [cycle, setCycle] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const paused = stopped || hovered || focused
+  const count = SLIDES.length
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
+    if (mq.matches) setStopped(true)
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setStopped(true)
+    }
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
 
   // setTimeout keyed on [paused, active] so the timer restarts whenever the slide
-  // changes (auto-advance or manual), keeping it in sync with the progress bar.
+  // changes (auto-advance or manual) or rotation resumes.
   useEffect(() => {
     if (paused) return
-    const t = setTimeout(
-      () => setActive((i) => (i + 1) % SLIDES.length),
-      SLIDE_MS
-    )
+    setCycle((c) => c + 1)
+    const t = setTimeout(() => setActive((i) => (i + 1) % count), SLIDE_MS)
     return () => clearTimeout(t)
-  }, [paused, active])
+  }, [paused, active, count])
 
   return (
-    <div
+    <section
+      ref={rootRef}
+      aria-roledescription="carrossel"
+      aria-label="Gamas em destaque"
       className="relative flex flex-col overflow-hidden rounded-card border border-hairline bg-white p-5 small:p-7"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!rootRef.current?.contains(e.relatedTarget as Node | null)) {
+          setFocused(false)
+        }
+      }}
+      onTouchStart={() => setStopped(true)}
     >
       <span
         aria-hidden
         className="pointer-events-none absolute -bottom-8 -right-8 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(0,173,239,0.18),transparent_70%)]"
       />
 
-      <div className="relative z-[2] min-h-[160px] small:min-h-[170px]">
+      <div
+        className="relative z-[2] min-h-[160px] small:min-h-[170px]"
+        aria-live={paused ? "polite" : "off"}
+      >
         {SLIDES.map((s, idx) => {
           const image = images?.[s.handle]
+          const isActive = idx === active
           return (
             <div
               key={s.href}
-              aria-hidden={idx !== active}
-              className={`absolute inset-0 flex items-center gap-4 transition-opacity duration-500 ${
-                idx === active ? "opacity-100" : "pointer-events-none opacity-0"
+              role="group"
+              aria-roledescription="diapositivo"
+              aria-label={`${idx + 1} de ${count}: ${s.title}`}
+              aria-hidden={!isActive}
+              inert={!isActive || undefined}
+              className={`absolute inset-0 flex items-center gap-4 transition-opacity duration-500 motion-reduce:transition-none ${
+                isActive ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
             >
               <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-cyan">
+                <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-cyan-ink">
                   <span className="ind" />
                   {s.eyebrow}
                 </span>
@@ -73,11 +113,12 @@ const FeaturedCarousel = ({ images }: FeaturedCarouselProps) => {
                 </p>
                 <LocalizedClientLink
                   href={s.href}
-                  className="mt-4 inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.04em] text-brand-ink"
+                  className="mt-4 inline-flex items-center gap-2.5 rounded-pill text-xs font-bold uppercase tracking-[0.04em] text-brand-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2"
                 >
                   Ver gama
+                  <span className="sr-only">: {s.title}</span>
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-cyan text-white">
-                    <ArrowRight className="h-3.5 w-3.5" />
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </span>
                 </LocalizedClientLink>
               </div>
@@ -98,33 +139,63 @@ const FeaturedCarousel = ({ images }: FeaturedCarouselProps) => {
         })}
       </div>
 
-      <div className="relative z-[2] mt-4 flex items-center gap-1.5">
-        {SLIDES.map((s, idx) => (
-          <button
-            key={s.href}
-            type="button"
-            onClick={() => setActive(idx)}
-            aria-label={`Ver ${s.title}`}
-            aria-current={idx === active}
-            className={`relative h-1.5 overflow-hidden rounded-full bg-hairline transition-all ${
-              idx === active ? "w-7" : "w-1.5"
-            }`}
-          >
-            {idx === active && (
-              // Fills left→right over the auto-advance interval to show progress
-              // to the next slide; freezes while the carousel is paused (hover).
+      <div className="relative z-[2] mt-3 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setStopped((s) => !s)}
+          aria-label={
+            stopped ? "Retomar rotação automática" : "Pausar rotação automática"
+          }
+          className="-ml-2 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[#5a636c] transition-colors hover:bg-[#f1f4f7] hover:text-brand-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+          data-testid="carousel-toggle"
+        >
+          {stopped ? (
+            <Play className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <Pause className="h-3.5 w-3.5" aria-hidden />
+          )}
+        </button>
+
+        {SLIDES.map((s, idx) => {
+          const isActive = idx === active
+          return (
+            <button
+              key={s.href}
+              type="button"
+              onClick={() => setActive(idx)}
+              aria-label={`Ver ${s.title} (${idx + 1} de ${count})`}
+              aria-current={isActive ? "true" : undefined}
+              // 24×24 hit area around the small visual dot.
+              className="group flex h-6 min-w-6 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+            >
               <span
-                className="absolute inset-0 origin-left rounded-full bg-brand-cyan"
-                style={{
-                  animation: `carousel-progress ${SLIDE_MS}ms linear forwards`,
-                  animationPlayState: paused ? "paused" : "running",
-                }}
-              />
-            )}
-          </button>
-        ))}
+                aria-hidden
+                className={`relative block h-1.5 overflow-hidden rounded-full transition-all motion-reduce:transition-none ${
+                  isActive ? "w-7 bg-hairline" : "w-1.5 bg-[#c9d0d6] group-hover:bg-[#98a0a8]"
+                }`}
+              >
+                {isActive && (
+                  // Fills left→right over the auto-advance interval; frozen
+                  // while paused, full when rotation is stopped.
+                  <span
+                    key={cycle}
+                    className="absolute inset-0 origin-left rounded-full bg-brand-cyan"
+                    style={
+                      stopped
+                        ? undefined
+                        : {
+                            animation: `carousel-progress ${SLIDE_MS}ms linear forwards`,
+                            animationPlayState: paused ? "paused" : "running",
+                          }
+                    }
+                  />
+                )}
+              </span>
+            </button>
+          )
+        })}
       </div>
-    </div>
+    </section>
   )
 }
 

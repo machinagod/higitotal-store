@@ -29,7 +29,10 @@ export const SLIDES: Slide[] = [
     eyebrow: "Química profissional",
     title: "Diversey",
     blurb: "Suma, Taski, Clax e outras marcas profissionais Diversey.",
-    href: "/collections/diversey",
+    // The Diversey category holds the full range (232 products) with
+    // Lavandaria/Clax, Cozinha, Taski… sub-ranges; the collection is a subset.
+    // The collection still supplies the slide image.
+    href: "/categories/diversey",
     handle: "diversey",
   },
   {
