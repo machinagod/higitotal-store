@@ -140,7 +140,7 @@ Fix failures before committing — including pre-existing ones in files you touc
 
 ## Catalog mode (no prices) — ON in production
 The storefront **runtime** variable `STOREFRONT_CATALOG_MODE` hides every price and
-the cart: cards/PDP show "Preço sob consulta", the CTA becomes **"Pedir informação"**
+the cart: cards/PDP show "Preço sob consulta", the CTA becomes **"Pedir orçamento"**
 (the `/store/contact-request` form, pre-filled), `/cart` and `/checkout` redirect home,
 sorting drops the price options and defaults to A–Z, and prices are stripped from the page payload (incl. JSON-LD
 offers). The production image defaults it to `true` (`storefront/Dockerfile`); set
