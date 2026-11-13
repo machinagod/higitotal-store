@@ -37,6 +37,7 @@ describe("legacyRedirect", () => {
     expect(r("/base/")).toBe("/pt")
     expect(r("/base")).toBe("/pt")
     expect(r("/base/index.php?controller=contact")).toBe("/pt/contact")
+    expect(r("/base/module/productcontact/interest")).toBe("/pt/contact")
   })
   it("maps searches and falls back to the catalogue", () => {
     expect(r("/base/search?search_query=luvas+nitrilo")).toBe("/pt/results/luvas%20nitrilo")

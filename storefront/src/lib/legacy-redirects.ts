@@ -75,6 +75,8 @@ export function legacyRedirect(pathname: string, search: URLSearchParams): strin
   m = rest.match(/^content\/(\d+)-/) // content/{id}-{slug}
   if (m) return cms(Number(m[1]))
   if (rest.startsWith("content/category")) return at("")
+  // Old "Interessado neste produto?" / contact-form modules → contact page.
+  if (rest.startsWith("module/productcontact") || rest.startsWith("module/contactform")) return at("/contact")
   m = rest.match(/^(\d+)-[^/]*$/) // {id}-{category-slug}
   if (m) return category(Number(m[1]))
   if (PAGES[rest] !== undefined) return at(PAGES[rest])
