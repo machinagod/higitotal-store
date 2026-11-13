@@ -6,6 +6,7 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import { sortProducts } from "@lib/util/sort-products"
 import { isCatalogMode } from "@lib/util/catalog-mode"
 import { stripVariantPrices } from "@lib/util/strip-variant-prices"
+import { stripSensitiveMetadata } from "@lib/util/strip-sensitive-metadata"
 
 /**
  * In catalog mode, drop the computed prices from product payloads before they
@@ -16,7 +17,9 @@ import { stripVariantPrices } from "@lib/util/strip-variant-prices"
 function withoutPricesInCatalogMode<T extends HttpTypes.StoreProduct>(
   products: T[]
 ): T[] {
-  return isCatalogMode() ? stripVariantPrices(products) : products
+  // Cost/supplier metadata is never for shoppers, catalog mode or not.
+  const safe = stripSensitiveMetadata(products)
+  return isCatalogMode() ? stripVariantPrices(safe) : safe
 }
 
 export const getProductsById = cache(async function ({

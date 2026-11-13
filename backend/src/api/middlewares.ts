@@ -3,9 +3,16 @@ import {
   configureStoreSearch,
   defineMiddlewares,
 } from "@medusajs/framework/http"
+import { stripSensitiveMetadata } from "./utils/strip-sensitive-metadata"
 
 export default defineMiddlewares({
   routes: [
+    {
+      // Never expose internal cost/supplier data (Moloni sync writes it to
+      // variant metadata) through the public Store API — products, carts, etc.
+      matcher: "/store/*",
+      middlewares: [stripSensitiveMetadata],
+    },
     {
       // Medusa 2.21 enforces a strict allow-list on Store `fields`. The product
       // page requests `*categories.parent_category` for its breadcrumbs (path
