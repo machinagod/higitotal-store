@@ -47,7 +47,7 @@ type ProductActionsProps = {
   disabled?: boolean
   /**
    * No prices / cart: the CTA becomes "Adicionar ao orçamento" (quote list),
-   * with "Pedir só este produto" for a single-product request.
+   * with "Estou interessado neste produto" for a single-product request.
    */
   catalogMode?: boolean
 }
@@ -354,7 +354,7 @@ export default function ProductActions({
                   className="mx-auto inline-flex min-h-[44px] items-center gap-2 rounded-pill px-3 text-sm font-bold text-brand-cyan underline-offset-4 transition-colors hover:text-brand-cyan-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan disabled:opacity-50"
                 >
                   <FileText className="h-4 w-4" aria-hidden="true" />
-                  Pedir só este produto
+                  Estou interessado neste produto
                 </button>
                 {secondaryRow}
               </div>
