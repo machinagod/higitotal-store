@@ -2,8 +2,14 @@ import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { cache } from "react"
 import { getRegion } from "./regions"
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import { sortProducts } from "@lib/util/sort-products"
+import { SortOptions, isPriceSort, resolveSort } from "@lib/util/sort-products"
+import {
+  ListingIndexEntry,
+  chunkCount,
+  inIdOrder,
+  orderListing,
+  pageIds,
+} from "@lib/util/listing-order"
 import { isCatalogMode } from "@lib/util/catalog-mode"
 import { stripVariantPrices } from "@lib/util/strip-variant-prices"
 import { stripSensitiveMetadata } from "@lib/util/strip-sensitive-metadata"
@@ -153,13 +159,87 @@ export const getProductsList = cache(async function ({
 })
 
 /**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
+ * Fields a product card needs: prices + stock for the non-catalog footer,
+ * categories (+ parent) for the card eyebrow. Cards rendered from these rows
+ * don't need a per-card re-fetch.
+ */
+export const LISTING_FIELDS =
+  "*variants.calculated_price,+variants.inventory_quantity,*categories,*categories.parent_category"
+
+/** Rows per lightweight index request, and the most rows we will index. */
+const INDEX_CHUNK = 1000
+const INDEX_MAX = 5000
+
+/**
+ * Lightweight index (id, thumbnail, sort keys) of EVERY product matching the
+ * filters, so listings can be ordered globally — images first, then the chosen
+ * sort — before a page is cut. One request covers up to {@link INDEX_CHUNK}
+ * products (the whole catalogue is ~1k); larger sets fetch the remaining chunks
+ * in parallel, capped at {@link INDEX_MAX} rows.
+ */
+const getListingIndex = cache(async function ({
+  filters,
+  regionId,
+  withPrices,
+}: {
+  filters: HttpTypes.StoreProductListParams
+  regionId: string
+  withPrices: boolean
+}): Promise<{ entries: ListingIndexEntry[]; count: number }> {
+  const fields = [
+    "id",
+    "thumbnail",
+    "title",
+    "created_at",
+    withPrices ? "*variants.calculated_price" : null,
+  ]
+    .filter(Boolean)
+    .join(",")
+
+  const fetchChunk = (offset: number) =>
+    sdk.store.product.list(
+      {
+        ...filters,
+        region_id: regionId,
+        fields,
+        // A stable order so chunks don't overlap or skip rows.
+        order: "-created_at",
+        limit: INDEX_CHUNK,
+        offset,
+      },
+      { next: { tags: ["products"] } }
+    )
+
+  const first = await fetchChunk(0)
+  const chunks = chunkCount(first.count, INDEX_CHUNK, INDEX_MAX)
+  const rest = await Promise.all(
+    Array.from({ length: chunks - 1 }, (_, i) => fetchChunk((i + 1) * INDEX_CHUNK))
+  )
+
+  const seen = new Set<string>()
+  const entries: ListingIndexEntry[] = []
+  for (const row of [first, ...rest].flatMap((r) => r.products)) {
+    if (!row.id || seen.has(row.id)) continue
+    seen.add(row.id)
+    entries.push(row as ListingIndexEntry)
+  }
+
+  return { entries, count: first.count }
+})
+
+/**
+ * A page of a product listing (store, category, collection, search results).
+ *
+ * Order: the requested sort (`created_at`, `name_asc`, price, or search
+ * `relevance`), then products WITH an image ahead of those without — applied
+ * to the whole filter set via {@link getListingIndex}, so page 2 continues
+ * page 1's order. The page's ids are then hydrated in one request with the
+ * card fields ({@link LISTING_FIELDS}). Price sorts are ignored in catalog mode.
  */
 export const getProductsListWithSort = cache(async function ({
-  page = 0,
+  page = 1,
   queryParams,
-  sortBy = "created_at",
+  sortBy,
   countryCode,
 }: {
   page?: number
@@ -172,36 +252,59 @@ export const getProductsListWithSort = cache(async function ({
   queryParams?: HttpTypes.StoreProductListParams
 }> {
   const limit = queryParams?.limit || 12
+  const region = await getRegion(countryCode)
+
+  if (!region) {
+    return { response: { products: [], count: 0 }, nextPage: null }
+  }
 
   const {
-    response: { products, count },
-  } = await getProductsList({
-    pageParam: 0,
-    queryParams: {
-      ...queryParams,
-      limit: 100,
-    },
-    countryCode,
+    limit: _limit,
+    offset: _offset,
+    order: _order,
+    fields: _fields,
+    ...filters
+  } = queryParams ?? {}
+
+  const searchIds = Array.isArray(filters.id)
+    ? (filters.id as string[])
+    : undefined
+  const sort = resolveSort(sortBy, {
+    catalogMode: isCatalogMode(),
+    hasIds: Boolean(searchIds?.length),
   })
 
-  // No prices in catalog mode → price sorts are meaningless; keep newest-first.
-  const sortedProducts = sortProducts(
-    products,
-    isCatalogMode() ? "created_at" : sortBy
+  const { entries, count } = await getListingIndex({
+    filters,
+    regionId: region.id,
+    withPrices: isPriceSort(sort),
+  })
+
+  const ordered = orderListing(entries, sort, searchIds)
+  const ids = pageIds(ordered, page, limit)
+  const nextPage = ordered.length > page * limit ? page + 1 : null
+
+  if (!ids.length) {
+    return { response: { products: [], count }, nextPage, queryParams }
+  }
+
+  const { products } = await sdk.store.product.list(
+    {
+      id: ids,
+      region_id: region.id,
+      fields: LISTING_FIELDS,
+      limit: ids.length,
+    },
+    { next: { tags: ["products"] } }
   )
-
-  const pageParam = (page - 1) * limit
-
-  const nextPage = count > pageParam + limit ? pageParam + limit : null
-
-  const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit)
 
   return {
     response: {
-      products: paginatedProducts,
+      products: inIdOrder(withoutPricesInCatalogMode(products), ids),
       count,
     },
     nextPage,
     queryParams,
   }
 })
+

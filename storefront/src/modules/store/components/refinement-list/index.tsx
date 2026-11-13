@@ -8,10 +8,16 @@ import SortProducts, { SortOptions } from "./sort-products"
 type RefinementListProps = {
   sortBy: SortOptions
   search?: boolean
+  catalogMode?: boolean
   'data-testid'?: string
 }
 
-const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListProps) => {
+const RefinementList = ({
+  sortBy,
+  search,
+  catalogMode,
+  'data-testid': dataTestId,
+}: RefinementListProps) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -20,6 +26,8 @@ const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListPro
     (name: string, value: string) => {
       const params = new URLSearchParams(searchParams)
       params.set(name, value)
+      // A new order starts from the first page.
+      params.delete("page")
 
       return params.toString()
     },
@@ -35,6 +43,8 @@ const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListPro
     <SortProducts
       sortBy={sortBy}
       setQueryParams={setQueryParams}
+      catalogMode={catalogMode}
+      search={search}
       data-testid={dataTestId}
     />
   )

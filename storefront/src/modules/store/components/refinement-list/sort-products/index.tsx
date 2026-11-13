@@ -1,15 +1,23 @@
 "use client"
 
-export type SortOptions = "price_asc" | "price_desc" | "created_at"
+import type { SortOptions } from "@lib/util/sort-products"
+
+export type { SortOptions }
 
 type SortProductsProps = {
   sortBy: SortOptions
   setQueryParams: (name: string, value: SortOptions) => void
+  /** Catalog mode: no prices, so no price sorts. */
+  catalogMode?: boolean
+  /** Search results: offer (and default to) relevance. */
+  search?: boolean
   "data-testid"?: string
 }
 
-const sortOptions = [
+const ALL_OPTIONS: { value: SortOptions; label: string }[] = [
+  { value: "relevance", label: "Relevância" },
   { value: "created_at", label: "Mais recentes" },
+  { value: "name_asc", label: "Nome (A–Z)" },
   { value: "price_asc", label: "Preço: mais baixo" },
   { value: "price_desc", label: "Preço: mais alto" },
 ]
@@ -22,7 +30,15 @@ const SortProducts = ({
   "data-testid": dataTestId,
   sortBy,
   setQueryParams,
+  catalogMode = false,
+  search = false,
 }: SortProductsProps) => {
+  const options = ALL_OPTIONS.filter(
+    (o) =>
+      (search || o.value !== "relevance") &&
+      (!catalogMode || (o.value !== "price_asc" && o.value !== "price_desc"))
+  )
+
   return (
     <label className="flex shrink-0 items-center gap-2 text-sm text-grey-60">
       <span className="hidden xsmall:inline">Ordenar por</span>
@@ -31,9 +47,9 @@ const SortProducts = ({
         onChange={(e) => setQueryParams("sortBy", e.target.value as SortOptions)}
         aria-label="Ordenar por"
         data-testid={dataTestId}
-        className="rounded-pill border-[1.5px] border-hairline bg-white px-4 py-2 text-sm font-medium text-brand-ink outline-none transition focus:border-brand-cyan"
+        className="h-11 rounded-pill border-[1.5px] border-hairline bg-white px-4 text-sm font-medium text-brand-ink outline-none transition focus:border-brand-cyan"
       >
-        {sortOptions.map((o) => (
+        {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
