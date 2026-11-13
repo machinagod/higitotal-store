@@ -7,6 +7,7 @@ import {
   isTruthyFlag,
   PRODUCT_ENQUIRY_MESSAGE,
   productEnquiryHref,
+  QUOTE_LIST_MESSAGE,
   searchWithoutEnquiryParam,
   shortHours,
   validateContactRequest,
@@ -211,6 +212,42 @@ describe("searchWithoutEnquiryParam", () => {
   it("drops pedido and keeps other params", () => {
     expect(searchWithoutEnquiryParam("?pedido=1")).toBe("")
     expect(searchWithoutEnquiryParam("?utm_source=x&pedido=1")).toBe("?utm_source=x")
+  })
+})
+
+describe("quote list request", () => {
+  const items = [
+    { sku: "DX1002", title: "Drip Floor (2L)", quantity: 3, url: "https://store.higitotal.pt/pt/products/dx" },
+    { title: "Suma Bac D10", quantity: 12, note: "caixas" },
+  ]
+
+  it("sends the items with a product request", () => {
+    const payload = buildContactRequestPayload(
+      { name: "Ana", email: "ana@empresa.pt", phone: "912345678", message: QUOTE_LIST_MESSAGE },
+      { kind: "produto", items }
+    )
+    expect(payload).toEqual({
+      kind: "produto",
+      name: "Ana",
+      email: "ana@empresa.pt",
+      phone: "912345678",
+      message: QUOTE_LIST_MESSAGE,
+      items,
+    })
+  })
+
+  it("omits an empty list", () => {
+    const payload = buildContactRequestPayload({ name: "Ana", email: "a@b.pt", message: "Olá" }, { kind: "geral", items: [] })
+    expect(payload).not.toHaveProperty("items")
+  })
+
+  it("does not count the unchanged quote message as a message", () => {
+    expect(
+      validateContactRequestAll(
+        { name: "Ana", email: "ana@empresa.pt", contactPref: "email", message: QUOTE_LIST_MESSAGE },
+        { prefilledMessage: QUOTE_LIST_MESSAGE }
+      )
+    ).toEqual([{ field: "message", message: "Indique um telefone ou escreva uma mensagem." }])
   })
 })
 

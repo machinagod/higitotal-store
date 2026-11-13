@@ -1,6 +1,13 @@
 import { Section, Text, Hr, Link } from '@react-email/components'
 import { Base } from './base'
-import { COMPANY_INFO, ContactRequestKind, buildAckParagraphs } from '../contact-request-copy'
+import {
+  COMPANY_INFO,
+  ContactRequestKind,
+  QuoteItem,
+  buildAckParagraphs,
+  quoteItemLabel,
+  unitsLabel,
+} from '../contact-request-copy'
 
 export const CONTACT_REQUEST_ACK = 'contact-request-ack'
 
@@ -10,6 +17,8 @@ export interface ContactRequestAckEmailProps {
   kind: ContactRequestKind
   /** Product the enquiry was about (product enquiries only) */
   productTitle?: string
+  /** Quote list lines the customer sent (no links) */
+  items?: Omit<QuoteItem, 'url'>[]
   preview?: string
 }
 
@@ -21,9 +30,17 @@ export const ContactRequestAckEmail = ({
   name,
   kind,
   productTitle,
+  items,
   preview = 'Recebemos o seu pedido',
 }: ContactRequestAckEmailProps) => {
-  const [greeting, ...body] = buildAckParagraphs({ name, kind, productTitle })
+  const quote = kind === 'produto' && items?.length ? items : undefined
+  const [greeting, ...body] = buildAckParagraphs({
+    name,
+    kind,
+    productTitle,
+    itemCount: quote?.length,
+  })
+  const [thanks, ...rest] = body
   return (
     <Base preview={preview}>
       <Section className="mt-[16px]">
@@ -32,7 +49,40 @@ export const ContactRequestAckEmail = ({
         </Text>
         <Text className="text-black text-[18px] font-semibold">Recebemos o seu pedido</Text>
         <Text className="text-black text-[14px] leading-[22px]">{greeting}</Text>
-        {body.map((p) => (
+        <Text className="text-black text-[14px] leading-[22px]">{thanks}</Text>
+        {quote ? (
+          <table
+            width="100%"
+            cellPadding={0}
+            cellSpacing={0}
+            role="presentation"
+            className="w-full border-collapse mb-[8px]"
+            data-testid="ack-items"
+          >
+            <tbody>
+              {quote.map((item, i) => (
+                <tr key={`${item.sku ?? ''}-${i}`}>
+                  <td className="align-top text-[14px] leading-[20px] text-black border-0 border-b border-solid border-[#eeeeee] py-[7px] pr-[8px]">
+                    <strong>{quoteItemLabel(item)}</strong>
+                    {item.sku ? (
+                      <span className="text-[#666666] text-[12px]"> · Ref.ª {item.sku}</span>
+                    ) : null}
+                    {item.note ? (
+                      <>
+                        <br />
+                        <span className="text-[#555555] text-[12px]">Nota: {item.note}</span>
+                      </>
+                    ) : null}
+                  </td>
+                  <td className="align-top text-right whitespace-nowrap text-[14px] leading-[20px] font-semibold text-black border-0 border-b border-solid border-[#eeeeee] py-[7px]">
+                    {unitsLabel(item.quantity)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+        {rest.map((p) => (
           <Text key={p} className="text-black text-[14px] leading-[22px]">
             {p}
           </Text>

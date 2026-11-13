@@ -40,6 +40,19 @@ export function searchWithoutEnquiryParam(search: string): string {
 export const PRODUCT_ENQUIRY_MESSAGE =
   "Gostaria de receber informação sobre preço, disponibilidade e condições deste produto."
 
+/** Prefilled message of the quote-list form (`/orcamento`); unchanged it counts as empty. */
+export const QUOTE_LIST_MESSAGE =
+  "Gostaria de receber uma proposta para os produtos e quantidades indicados."
+
+/** One line of a quote list in the request body (see lib/quote-list). */
+export type ContactRequestItem = {
+  sku?: string
+  title: string
+  quantity: number
+  note?: string
+  url?: string
+}
+
 export const CONTACT_SUCCESS_MESSAGE =
   "Obrigado. Recebemos o seu pedido e a nossa equipa comercial entrará em contacto consigo brevemente."
 
@@ -77,6 +90,8 @@ export type ContactRequestContext = {
   /** Cart quantity (non-catalog mode PDP). */
   quantity?: number
   productUrl?: string
+  /** Quote list lines (`/orcamento`); omitted when empty. */
+  items?: ContactRequestItem[]
   /**
    * Message actually sent, when it differs from what the user typed (the
    * assistência form prefixes the service type / equipment). Defaults to
@@ -103,6 +118,7 @@ export type ContactRequestPayload = {
   sku?: string
   quantity?: number
   productUrl?: string
+  items?: ContactRequestItem[]
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -239,6 +255,7 @@ export function buildContactRequestPayload(
         ? ctx.quantity
         : undefined,
     productUrl: clean(ctx.productUrl),
+    items: ctx.items?.length ? ctx.items : undefined,
   }
   // Drop undefined keys so the JSON body stays minimal.
   return Object.fromEntries(

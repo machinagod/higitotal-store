@@ -22,6 +22,8 @@ export default function robots(): MetadataRoute.Robots {
           "/*/checkout",
           "/*/cart",
           "/*/order/",
+          // Quote list (per-visitor, catalog mode) — also noindex.
+          "/*/orcamento",
         ],
       },
     ],

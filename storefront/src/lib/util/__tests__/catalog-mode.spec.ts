@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 vi.mock("next/cache", () => ({ unstable_noStore: vi.fn() }))
 
 import { unstable_noStore } from "next/cache"
-import { catalogModeFromEnv } from "../catalog-mode-flag"
+import {
+  catalogModeFromEnv,
+  catalogModeRedirectPath,
+} from "../catalog-mode-flag"
 import { isCatalogMode } from "../catalog-mode"
 import { stripVariantPrices } from "../strip-variant-prices"
 
@@ -30,6 +33,22 @@ describe("catalogModeFromEnv", () => {
   it.each(["false", "0", "no", "off", "nope"])("is off for %j", (v) => {
     process.env.STOREFRONT_CATALOG_MODE = v
     expect(catalogModeFromEnv()).toBe(false)
+  })
+})
+
+describe("catalogModeRedirectPath", () => {
+  it("sends cart and checkout to the country home", () => {
+    expect(catalogModeRedirectPath("/pt/cart")).toBe("/pt")
+    expect(catalogModeRedirectPath("/pt/checkout")).toBe("/pt")
+    expect(catalogModeRedirectPath("/dk/checkout/step")).toBe("/dk")
+  })
+
+  it("leaves the quote list and every other page alone", () => {
+    expect(catalogModeRedirectPath("/pt/orcamento")).toBeNull()
+    expect(catalogModeRedirectPath("/pt/products/x")).toBeNull()
+    expect(catalogModeRedirectPath("/pt")).toBeNull()
+    expect(catalogModeRedirectPath("/")).toBeNull()
+    expect(catalogModeRedirectPath("/pt/cartaz")).toBeNull()
   })
 })
 

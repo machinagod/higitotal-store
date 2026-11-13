@@ -22,18 +22,32 @@ import ContactModal from "../contact-modal"
 import ProductSpecSheet from "../product-spec-sheet"
 import { addToCart } from "@lib/data/cart"
 import { COMPANY } from "@lib/company"
+import { useQuoteList } from "@lib/quote-list/context"
+import { QuoteProductInput } from "@lib/quote-list/state"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import QuantityStepper from "@modules/quote/components/quantity-stepper"
 import { shortHours } from "@lib/util/contact-request"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { specSheetUrl } from "@lib/util/product-specs"
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
-import { Phone, ArrowRight, Clock, FileText } from "lucide-react"
+import {
+  Phone,
+  ArrowRight,
+  Check,
+  Clock,
+  ClipboardPlus,
+  FileText,
+} from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   disabled?: boolean
-  /** No prices / cart: the CTA becomes "Pedir orçamento". */
+  /**
+   * No prices / cart: the CTA becomes "Adicionar ao orçamento" (quote list),
+   * with "Pedir só este produto" for a single-product request.
+   */
   catalogMode?: boolean
 }
 
@@ -70,6 +84,9 @@ export default function ProductActions({
   const [quantity, setQuantity] = useState(1)
   const [contactOpen, setContactOpen] = useState(false)
   const countryCode = useParams().countryCode as string
+  // Quote list — only provided in catalog mode.
+  const quoteList = useQuoteList()
+  const quote = catalogMode ? quoteList : null
   /** Primary CTA ("Pedir orçamento" / add to cart) — drives the mobile bar. */
   const ctaRef = useRef<HTMLButtonElement>(null)
   /** Whatever opened the enquiry dialog — focused again when it closes. */
@@ -121,6 +138,34 @@ export default function ProductActions({
     if (!selectedVariant.manage_inventory) return true
     return (selectedVariant.inventory_quantity || 0) > 0
   }, [selectedVariant])
+
+  // Quote list line for this product (per variant when it has several).
+  const multiVariant = (product.variants?.length ?? 0) > 1
+  const needsVariant = multiVariant && !selectedVariant
+  const quoteProduct: QuoteProductInput | null =
+    product.id && product.handle && product.title
+      ? {
+          productId: product.id,
+          variantId: multiVariant ? selectedVariant?.id : undefined,
+          handle: product.handle,
+          title:
+            multiVariant && selectedVariant?.title
+              ? `${product.title} — ${selectedVariant.title}`
+              : product.title,
+          sku:
+            (multiVariant ? selectedVariant?.sku : product.variants?.[0]?.sku) ??
+            undefined,
+          thumbnail: product.thumbnail ?? undefined,
+        }
+      : null
+  const quoteLine =
+    quote && quoteProduct && !needsVariant ? quote.find(quoteProduct) : undefined
+
+  const addToQuote = () => {
+    if (!quote || !quoteProduct || needsVariant || disabled) return
+    const res = quote.add(quoteProduct, quantity)
+    if (res.status !== "full") setQuantity(1)
+  }
 
   // Show the mobile bar whenever the primary CTA itself is off-screen (under
   // the sticky header or behind the bar). null = not measured yet.
@@ -231,25 +276,103 @@ export default function ProductActions({
                 Preço sob consulta
               </p>
               <p className="mt-1 text-sm leading-relaxed text-grey-60">
-                Indique quantidades e condições — enviamos uma proposta para a
-                sua empresa.
+                {quote
+                  ? "Junte este e outros produtos ao seu orçamento — enviamos uma proposta para a sua empresa."
+                  : "Indique quantidades e condições — enviamos uma proposta para a sua empresa."}
               </p>
             </div>
 
-            <div className="flex flex-col gap-3">
-              <button
-                ref={ctaRef}
-                type="button"
-                onClick={openEnquiry}
-                disabled={!!disabled}
-                data-testid="request-info-cta"
-                className={primaryCta}
-              >
-                Pedir orçamento
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-              {secondaryRow}
-            </div>
+            {quote ? (
+              <div className="flex flex-col gap-3" data-testid="pdp-quote">
+                <div className="flex items-stretch gap-2 xsmall:gap-3">
+                  <QuantityStepper
+                    value={quantity}
+                    onChange={setQuantity}
+                    label="Quantidade"
+                    size="lg"
+                    disabled={!!disabled}
+                    data-testid="pdp-quote-quantity"
+                  />
+                  <button
+                    ref={ctaRef}
+                    type="button"
+                    onClick={addToQuote}
+                    disabled={!!disabled || needsVariant || !quoteProduct}
+                    data-testid="add-to-quote-cta"
+                    className={clx(
+                      primaryCta,
+                      "min-w-0 flex-1 px-3 normal-case tracking-normal text-[15px] xsmall:px-6"
+                    )}
+                  >
+                    {needsVariant ? (
+                      "Selecione uma opção"
+                    ) : (
+                      <>
+                        <ClipboardPlus
+                          className="hidden h-[18px] w-[18px] flex-none min-[400px]:block"
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">Adicionar ao orçamento</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {quoteLine && (
+                  <p
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-btn bg-brand-cyan-50 px-3.5 py-2 text-sm font-semibold text-brand-ink"
+                    data-testid="pdp-quote-state"
+                  >
+                    <Check
+                      className="h-4 w-4 flex-none text-brand-cyan"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      No seu orçamento ·{" "}
+                      <span data-testid="pdp-quote-state-qty">
+                        {quoteLine.quantity}
+                      </span>{" "}
+                      un.
+                    </span>
+                    <LocalizedClientLink
+                      href="/orcamento"
+                      className="ml-auto inline-flex min-h-[44px] items-center gap-1 font-bold text-brand-cyan underline-offset-2 hover:text-brand-cyan-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+                      data-testid="pdp-quote-view"
+                    >
+                      Ver orçamento ({quote.count})
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </LocalizedClientLink>
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={openEnquiry}
+                  disabled={!!disabled}
+                  data-testid="request-info-cta"
+                  className="mx-auto inline-flex min-h-[44px] items-center gap-2 rounded-pill px-3 text-sm font-bold text-brand-cyan underline-offset-4 transition-colors hover:text-brand-cyan-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan disabled:opacity-50"
+                >
+                  <FileText className="h-4 w-4" aria-hidden="true" />
+                  Pedir só este produto
+                </button>
+                {secondaryRow}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <button
+                  ref={ctaRef}
+                  type="button"
+                  onClick={openEnquiry}
+                  disabled={!!disabled}
+                  data-testid="request-info-cta"
+                  className={primaryCta}
+                >
+                  Pedir orçamento
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+                {secondaryRow}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -353,6 +476,16 @@ export default function ProductActions({
           optionsDisabled={!!disabled || isAdding}
           catalogMode={catalogMode}
           onRequestInfo={openEnquiry}
+          quote={
+            quote
+              ? {
+                  count: quote.count,
+                  onAdd: addToQuote,
+                  disabled: !!disabled || needsVariant || !quoteProduct,
+                  needsVariant,
+                }
+              : undefined
+          }
         />
       </div>
 

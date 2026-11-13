@@ -10,7 +10,9 @@ import {
   CONTACT_ERROR_MESSAGE,
   CONTACT_SUCCESS_MESSAGE,
   ContactRequestFields,
+  ContactRequestItem,
   ContactRequestKind,
+  ContactRequestPayload,
   PRODUCT_ENQUIRY_MESSAGE,
   validateContactRequestAll,
 } from "@lib/util/contact-request"
@@ -47,8 +49,20 @@ type Props = {
   messagePlaceholder?: string
   /** Rendered under the success message (e.g. a "Fechar" button). */
   successAction?: React.ReactNode
-  /** Called once the request was sent. */
-  onSuccess?: () => void
+  /** Called once the request was sent, with the body that was posted. */
+  onSuccess?: (payload: ContactRequestPayload) => void
+  /**
+   * Quote list (`/orcamento`): lines read at submit time and sent as `items`.
+   * An empty result sends a plain request.
+   */
+  getItems?: () => ContactRequestItem[]
+  /**
+   * Text the message box starts with; left unchanged it doesn't count as a
+   * message. Defaults to the product enquiry text when `product` is set.
+   */
+  prefilledMessage?: string
+  /** Submit button label (default "Enviar pedido"). */
+  submitLabel?: string
   /**
    * "sheet": inside a scrolling dialog — the submit button sticks to the
    * bottom of the dialog (safe-area aware) so it is always reachable.
@@ -92,6 +106,9 @@ export default function ContactRequestForm({
   messagePlaceholder = GENERAL_PLACEHOLDER,
   successAction,
   onSuccess,
+  getItems,
+  prefilledMessage: prefilledProp,
+  submitLabel = "Enviar pedido",
   layout = "inline",
   className,
 }: Props) {
@@ -101,7 +118,8 @@ export default function ContactRequestForm({
   const [pref, setPref] = useState("telefone")
   const firstRef = useRef<HTMLInputElement>(null)
   const id = (name: string) => `${idPrefix}-${name}`
-  const prefilledMessage = product ? PRODUCT_ENQUIRY_MESSAGE : undefined
+  const prefilledMessage =
+    prefilledProp ?? (product ? PRODUCT_ENQUIRY_MESSAGE : undefined)
 
   const errors = useFieldErrors(idPrefix, (form) =>
     validateContactRequestAll(readFields(form), { prefilledMessage })
@@ -124,18 +142,18 @@ export default function ContactRequestForm({
 
     setStatus("sending")
     try {
-      await submitContactRequest(
-        buildContactRequestPayload(readFields(form), {
-          kind,
-          productTitle: product?.title,
-          sku: product?.sku,
-          quantity: product?.quantity,
-          productUrl:
-            typeof window !== "undefined" ? window.location.href : undefined,
-        })
-      )
+      const payload = buildContactRequestPayload(readFields(form), {
+        kind,
+        productTitle: product?.title,
+        sku: product?.sku,
+        quantity: product?.quantity,
+        productUrl:
+          typeof window !== "undefined" ? window.location.href : undefined,
+        items: getItems?.(),
+      })
+      await submitContactRequest(payload)
       setStatus("done")
-      onSuccess?.()
+      onSuccess?.(payload)
     } catch {
       setStatus("error")
     }
@@ -298,9 +316,9 @@ export default function ContactRequestForm({
         <textarea
           id={id("message")}
           name="message"
-          rows={product ? 2 : 5}
+          rows={product ? 2 : prefilledMessage ? 3 : 5}
           defaultValue={prefilledMessage}
-          placeholder={product ? undefined : messagePlaceholder}
+          placeholder={prefilledMessage ? undefined : messagePlaceholder}
           className={clx(fieldClass, product ? "min-h-[72px]" : "min-h-[96px]", "resize-y")}
           {...errors.a11y("message")}
         />
@@ -329,7 +347,7 @@ export default function ContactRequestForm({
           data-testid="contact-request-submit"
           className="flex h-12 w-full items-center justify-center rounded-pill bg-brand-cyan px-6 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:bg-brand-cyan-ink disabled:opacity-60"
         >
-          {status === "sending" ? "A enviar…" : "Enviar pedido"}
+          {status === "sending" ? "A enviar…" : submitLabel}
         </button>
       </div>
 

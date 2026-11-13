@@ -18,7 +18,9 @@ module.exports = {
         jsc: {
           target: "es2022",
           parser: { syntax: "typescript", tsx: true, decorators: true },
-          transform: { decoratorMetadata: true },
+          // Same JSX runtime as tsconfig ("react-jsx"), so specs can render
+          // the React Email templates (they don't import React).
+          transform: { decoratorMetadata: true, react: { runtime: "automatic" } },
         },
       },
     ],
