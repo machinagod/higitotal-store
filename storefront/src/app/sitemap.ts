@@ -9,6 +9,11 @@ import { absoluteUrl, getCanonicalCountryCode } from "@lib/util/seo"
 // redeploy, while still serving a cached sitemap to crawlers.
 export const revalidate = 3600
 
+// Moloni bookkeeping groups (EQ_/ML_ prefixes, "Maquinas / Acessórios") are not
+// browsable categories — the nav and search hide them too.
+const isInternalCategory = (name: string) =>
+  /^(EQ_|ML_)/.test(name) || name.includes("Maquinas / Acessórios")
+
 const PAGE_SIZE = 100
 const MAX_PAGES = 100 // hard cap (~10k products) to bound build/crawl cost
 
@@ -73,7 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const cats = await listCategories()
     categories = (cats ?? [])
-      .filter((c: any) => c?.handle)
+      .filter((c: any) => c?.handle && !isInternalCategory(c.name ?? ""))
       .map((c: any) => ({
         url: prefix(`categories/${c.handle}`),
         lastModified: c.updated_at ? new Date(c.updated_at) : now,

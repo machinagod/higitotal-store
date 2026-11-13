@@ -132,6 +132,8 @@ function accessTokenGate(request: NextRequest): NextResponse | null {
   })
 }
 
+const ROOT_METADATA_FILES = new Set(["/sitemap.xml", "/robots.txt"])
+
 /**
  * Catalog mode (STOREFRONT_CATALOG_MODE): there is no cart, so send the cart
  * and checkout pages (/{country}/cart, /{country}/checkout) back to the home
@@ -158,6 +160,12 @@ export async function middleware(request: NextRequest) {
   const accessChallenge = accessTokenGate(request)
   if (accessChallenge) {
     return accessChallenge
+  }
+
+  // Root-level metadata files (app/sitemap.ts, app/robots.ts) have no country
+  // prefix — without this they were redirected to /{cc}/sitemap.xml → 404.
+  if (ROOT_METADATA_FILES.has(request.nextUrl.pathname)) {
+    return NextResponse.next()
   }
 
   const catalogRedirect = catalogModeRedirect(request)
