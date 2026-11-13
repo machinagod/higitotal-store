@@ -86,6 +86,12 @@ Before committing, from each app you changed:
 
 Fix failures before committing — including pre-existing ones in files you touch.
 
+The storefront Docker build context excludes `e2e/` (`.dockerignore`), and
+`next build` type-checks everything `tsconfig.json` includes. Test-only files
+(`e2e/`, `playwright*.config.ts`) are therefore excluded from `tsconfig.json`;
+app code must never import from `e2e/`. A local `next build` passes either way —
+to reproduce CI, type-check a copy of `storefront/` without `e2e/`.
+
 ## Deploy & CI
 - **Build & deploy**: GitHub Actions (`.github/workflows/ci.yml`) builds Docker
   images from `backend/Dockerfile` and `storefront/Dockerfile` and pushes them to
