@@ -4,6 +4,7 @@ import { useFormState } from "react-dom"
 
 import Input from "@modules/common/components/input"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
+import { ACCOUNT_SUBMIT_CLASS } from "@modules/account/components/login"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -17,19 +18,23 @@ const Register = ({ setCurrentView }: Props) => {
   const [message, formAction] = useFormState(signup, null)
 
   return (
-    <div
-      className="max-w-sm flex flex-col items-center"
-      data-testid="register-page"
-    >
-      <h1 className="text-large-semi uppercase mb-6">
-        Crie a sua conta
+    <div className="flex w-full flex-col" data-testid="register-page">
+      <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-brand-cyan">
+        <span className="ind" />
+        Área de cliente
+      </span>
+      <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-brand-ink">
+        Criar conta
       </h1>
-      <p className="text-center text-base-regular text-ui-fg-base mb-4">
-        Crie o seu perfil de cliente e tenha acesso a uma experiência de compra
-        melhorada.
+      <p className="mb-7 mt-2 text-[15px] leading-relaxed text-grey-60">
+        Registe-se para guardar os seus dados e agilizar os pedidos de
+        informação.
       </p>
-      <form className="w-full flex flex-col" action={formAction}>
-        <div className="flex flex-col w-full gap-y-2">
+      <form
+        className="flex w-full flex-col [&_input]:!font-sans [&_label]:!font-sans"
+        action={formAction}
+      >
+        <div className="flex w-full flex-col gap-y-3">
           <Input
             label="Nome próprio"
             name="first_name"
@@ -45,7 +50,7 @@ const Register = ({ setCurrentView }: Props) => {
             data-testid="last-name-input"
           />
           <Input
-            label="Email"
+            label="E-mail"
             name="email"
             required
             type="email"
@@ -68,38 +73,45 @@ const Register = ({ setCurrentView }: Props) => {
             data-testid="password-input"
           />
         </div>
-        <ErrorMessage error={message} data-testid="register-error" />
-        <span className="text-center text-ui-fg-base text-small-regular mt-6">
-          Ao criar uma conta, aceita a nossa{" "}
-          <LocalizedClientLink
-            href="/content/privacy-policy"
-            className="underline"
-          >
-            Política de Privacidade
-          </LocalizedClientLink>{" "}
-          e os{" "}
+        <ErrorMessage
+          error={typeof message === "string" ? message : null}
+          data-testid="register-error"
+        />
+        <p className="mt-5 text-xs leading-relaxed text-grey-60">
+          Ao criar uma conta, aceita os{" "}
           <LocalizedClientLink
             href="/content/terms-of-use"
-            className="underline"
+            className="font-semibold text-brand-ink underline underline-offset-2 hover:text-brand-cyan"
           >
             Termos de Utilização
+          </LocalizedClientLink>{" "}
+          e declara ter tomado conhecimento da{" "}
+          <LocalizedClientLink
+            href="/content/privacy-policy"
+            className="font-semibold text-brand-ink underline underline-offset-2 hover:text-brand-cyan"
+          >
+            Política de Privacidade
           </LocalizedClientLink>
           .
-        </span>
-        <SubmitButton className="w-full mt-6" data-testid="register-button">
+        </p>
+        <SubmitButton
+          variant="transparent"
+          className={ACCOUNT_SUBMIT_CLASS}
+          data-testid="register-button"
+        >
           Criar conta
         </SubmitButton>
       </form>
-      <span className="text-center text-ui-fg-base text-small-regular mt-6">
+      <p className="mt-6 border-t border-hairline pt-5 text-center text-sm text-grey-60">
         Já tem conta?{" "}
         <button
+          type="button"
           onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
-          className="underline"
+          className="font-semibold text-brand-cyan-ink underline-offset-2 hover:underline"
         >
           Iniciar sessão
         </button>
-        .
-      </span>
+      </p>
     </div>
   )
 }

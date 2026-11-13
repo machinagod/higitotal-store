@@ -9,11 +9,19 @@ const Help = () => {
       <div className="text-base-regular my-2">
         <ul className="gap-y-2 flex flex-col">
           <li>
-            <LocalizedClientLink href="/contact">Contacto</LocalizedClientLink>
+            <LocalizedClientLink
+              href="/contact"
+              className="hover:text-brand-cyan"
+            >
+              Contactos
+            </LocalizedClientLink>
           </li>
           <li>
-            <LocalizedClientLink href="/contact">
-              Devoluções e Trocas
+            <LocalizedClientLink
+              href="/customer-service"
+              className="hover:text-brand-cyan"
+            >
+              Devoluções e trocas
             </LocalizedClientLink>
           </li>
         </ul>

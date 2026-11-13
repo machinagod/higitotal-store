@@ -25,6 +25,8 @@ async function getOrder(id: string) {
   } as unknown as HttpTypes.StoreOrder
 }
 
+// Parallel-route slot pages don't receive the root " · Higitotal" title
+// template, so the account titles are absolute (never duplicated either way).
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const order = await getOrder(params.id).catch(() => null)
 
@@ -33,8 +35,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: `Order #${order.display_id}`,
-    description: `View your order`,
+    title: { absolute: `Encomenda n.º ${order.display_id} · Higitotal` },
+    description: "Detalhes da sua encomenda.",
   }
 }
 

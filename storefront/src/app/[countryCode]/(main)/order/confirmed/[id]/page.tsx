@@ -26,8 +26,8 @@ async function getOrder(id: string) {
 }
 
 export const metadata: Metadata = {
-  title: "Order Confirmed",
-  description: "You purchase was successful",
+  title: "Encomenda confirmada",
+  description: "A sua encomenda foi registada com sucesso.",
 }
 
 export default async function OrderConfirmedPage({ params }: Props) {

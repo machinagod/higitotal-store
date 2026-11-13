@@ -22,7 +22,7 @@ const AccountInfo = ({
   isSuccess,
   isError,
   clearState,
-  errorMessage = "Ocorreu um erro, por favor tente novamente",
+  errorMessage = "Ocorreu um erro. Tente novamente.",
   children,
   'data-testid': dataTestid
 }: AccountInfoProps) => {
@@ -82,7 +82,7 @@ const AccountInfo = ({
           data-testid="success-message"
         >
           <Badge className="p-2 my-4" color="green">
-            <span>{label} atualizado com sucesso</span>
+            <span>Alterações guardadas com sucesso.</span>
           </Badge>
         </Disclosure.Panel>
       </Disclosure>

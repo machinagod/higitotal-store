@@ -16,7 +16,7 @@ const Overview = ({ customer, orders }: OverviewProps) => {
       <div className="hidden small:block">
         <div className="text-xl-semi flex justify-between items-center mb-4">
           <span data-testid="welcome-message" data-value={customer?.first_name}>
-            Olá {customer?.first_name}
+            Olá, {customer?.first_name}
           </span>
           <span className="text-small-regular text-ui-fg-base">
             Sessão iniciada como:{" "}
@@ -94,7 +94,7 @@ const Overview = ({ customer, orders }: OverviewProps) => {
                                 Valor total
                               </span>
                               <span data-testid="order-created-date">
-                                {new Date(order.created_at).toDateString()}
+                                {new Date(order.created_at).toLocaleDateString("pt-PT")}
                               </span>
                               <span
                                 data-testid="order-id"

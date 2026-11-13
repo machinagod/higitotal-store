@@ -2,6 +2,7 @@
 
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
+import { customerErrorMessage } from "@lib/util/customer-error"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
@@ -72,8 +73,8 @@ export async function signup(_currentState: unknown, formData: FormData) {
 
     revalidateTag("customer")
     return createdCustomer
-  } catch (error: any) {
-    return error.toString()
+  } catch (error: unknown) {
+    return customerErrorMessage(error, "signup")
   }
 }
 
@@ -88,8 +89,8 @@ export async function login(_currentState: unknown, formData: FormData) {
     })
     await setAuthToken(toLoginToken(token))
     revalidateTag("customer")
-  } catch (error: any) {
-    return error.toString()
+  } catch (error: unknown) {
+    return customerErrorMessage(error, "login")
   }
 }
 
@@ -125,7 +126,7 @@ export const addCustomerAddress = async (
       return { success: true, error: null }
     })
     .catch((err) => {
-      return { success: false, error: err.toString() }
+      return { success: false, error: customerErrorMessage(err) }
     })
 }
 
@@ -139,7 +140,7 @@ export const deleteCustomerAddress = async (
       return { success: true, error: null }
     })
     .catch((err) => {
-      return { success: false, error: err.toString() }
+      return { success: false, error: customerErrorMessage(err) }
     })
 }
 
@@ -169,6 +170,6 @@ export const updateCustomerAddress = async (
       return { success: true, error: null }
     })
     .catch((err) => {
-      return { success: false, error: err.toString() }
+      return { success: false, error: customerErrorMessage(err) }
     })
 }

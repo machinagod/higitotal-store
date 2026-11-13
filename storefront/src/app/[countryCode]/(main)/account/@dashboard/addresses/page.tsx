@@ -7,9 +7,11 @@ import { headers } from "next/headers"
 import { getRegion } from "@lib/data/regions"
 import { getCustomer } from "@lib/data/customer"
 
+// Parallel-route slot pages don't receive the root " · Higitotal" title
+// template, so the account titles are absolute (never duplicated either way).
 export const metadata: Metadata = {
-  title: "Addresses",
-  description: "View your addresses",
+  title: { absolute: "Moradas · Higitotal" },
+  description: "Consulte e gira as suas moradas.",
 }
 
 export default async function Addresses({
@@ -28,10 +30,12 @@ export default async function Addresses({
   return (
     <div className="w-full" data-testid="addresses-page-wrapper">
       <div className="mb-8 flex flex-col gap-y-4">
-        <h1 className="text-2xl-semi">Shipping Addresses</h1>
-        <p className="text-base-regular">
-          View and update your shipping addresses, you can add as many as you
-          like. Saving your addresses will make them available during checkout.
+        <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink">
+          Moradas de entrega
+        </h1>
+        <p className="text-base-regular text-grey-60">
+          Consulte e atualize as suas moradas de entrega. Pode guardar as
+          moradas que precisar.
         </p>
       </div>
       <AddressBook customer={customer} region={region} />

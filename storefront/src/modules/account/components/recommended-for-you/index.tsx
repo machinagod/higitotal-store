@@ -36,7 +36,7 @@ const RecommendedForYou = ({ recommendations }: RecommendedForYouProps) => {
             >
               <Thumbnail thumbnail={rec.thumbnail} size="square" />
               <div className="flex flex-col">
-                <Text className="text-ui-fg-base line-clamp-2 group-hover:text-ui-fg-interactive">
+                <Text className="text-ui-fg-base line-clamp-2 group-hover:text-brand-cyan">
                   {rec.title}
                 </Text>
                 <Text className="text-small-regular text-ui-fg-subtle">

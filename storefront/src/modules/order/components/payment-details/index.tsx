@@ -47,7 +47,7 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
                         currency_code: order.currency_code,
                       })} pago em ${new Date(
                         payment.created_at ?? ""
-                      ).toLocaleString()}`}
+                      ).toLocaleString("pt-PT")}`}
                 </Text>
               </div>
             </div>

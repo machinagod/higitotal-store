@@ -183,7 +183,7 @@ const ShippingAddress = ({
       </div>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <Input
-          label="Email"
+          label="E-mail"
           name="email"
           type="email"
           title="Introduza um endereço de email válido."

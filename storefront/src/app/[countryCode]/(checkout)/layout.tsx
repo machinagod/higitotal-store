@@ -45,7 +45,7 @@ export default function CheckoutLayout({
         <div className="content-container py-5 text-center text-xs text-grey-50">
           Todos os preços apresentados não incluem IVA à taxa legal em vigor.
           <span className="mx-2">·</span>
-          Higitotal — Sistemas e Produtos de Higiene, Lda. · NIF 504297040
+          Higitotal — Sistemas e Produtos de Higiene, Lda. · NIPC 504297040
         </div>
       </footer>
     </div>

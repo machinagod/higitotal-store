@@ -10,8 +10,10 @@ import { notFound } from "next/navigation"
 import { listRegions } from "@lib/data/regions"
 import { getCustomer } from "@lib/data/customer"
 
+// Parallel-route slot pages don't receive the root " · Higitotal" title
+// template, so the account titles are absolute (never duplicated either way).
 export const metadata: Metadata = {
-  title: "Profile",
+  title: { absolute: "Perfil · Higitotal" },
   description: "Veja e edite o seu perfil Higitotal.",
 }
 
@@ -26,11 +28,12 @@ export default async function Profile() {
   return (
     <div className="w-full" data-testid="profile-page-wrapper">
       <div className="mb-8 flex flex-col gap-y-4">
-        <h1 className="text-2xl-semi">Profile</h1>
-        <p className="text-base-regular">
-          View and update your profile information, including your name, email,
-          and phone number. You can also update your billing address, or change
-          your password.
+        <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink">
+          Perfil
+        </h1>
+        <p className="text-base-regular text-grey-60">
+          Consulte e atualize os seus dados: nome, e-mail e telefone. Pode
+          também alterar a morada de faturação e a palavra-passe.
         </p>
       </div>
       <div className="flex flex-col gap-y-8 w-full">
