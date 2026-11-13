@@ -27,20 +27,18 @@ function pickDeepestCategory(
 }
 
 /**
- * Product breadcrumb — a plain "Início / Categoria / Subcategoria / Produto"
+ * Product breadcrumb — a plain "Catálogo / Categoria / Subcategoria / Produto"
  * trail (no category dropdowns; the top-level navigator covers category
- * browsing). Derived from the product's category chain, failing soft to
- * "Início / Produtos / {title}".
+ * browsing), rooted at the catalogue like the category pages. Derived from
+ * the product's category chain, failing soft to "Catálogo / {title}".
  */
 const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
   const categories = (product.categories ??
     []) as HttpTypes.StoreProductCategory[]
 
-  const crumbs: Crumb[] = [{ label: "Início", href: "/" }]
+  const crumbs: Crumb[] = [{ label: "Catálogo", href: "/store" }]
 
-  if (!categories.length) {
-    crumbs.push({ label: "Produtos", href: "/store" })
-  } else {
+  if (categories.length) {
     // Walk the parent chain (leaf → root), re-fetching each category by id to
     // get its parent. Guard against cycles / runaway depth.
     const deepest = pickDeepestCategory(categories)!
@@ -65,9 +63,6 @@ const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
         href: `/categories/${cat.handle}`,
       })
     }
-    if (crumbs.length === 1) {
-      crumbs.push({ label: "Produtos", href: "/store" })
-    }
   }
 
   // Leaf: the current product (no link).
@@ -76,9 +71,9 @@ const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
   return (
     <div className="content-container">
       <nav
-        aria-label="Breadcrumb"
+        aria-label="Navegação estrutural"
         data-testid="product-breadcrumb"
-        className="flex items-center gap-x-2 overflow-x-auto no-scrollbar py-4 text-xs font-semibold tracking-wide text-fg-muted"
+        className="flex items-center gap-x-2 overflow-x-auto no-scrollbar py-2.5 text-xs font-semibold tracking-wide text-fg-muted small:py-3"
       >
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1
@@ -95,7 +90,7 @@ const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
               {crumb.href && !isLast ? (
                 <LocalizedClientLink
                   href={crumb.href}
-                  className="whitespace-nowrap hover:text-brand-ink transition-colors"
+                  className="inline-flex min-h-[24px] items-center whitespace-nowrap transition-colors hover:text-brand-ink"
                 >
                   {crumb.label}
                 </LocalizedClientLink>

@@ -1,20 +1,28 @@
 "use client"
 
 import { isEqual } from "lodash"
-import { useParams, usePathname, useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useParams } from "next/navigation"
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
-import { useIntersection } from "@lib/hooks/use-in-view"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 
 import MobileActions from "./mobile-actions"
+import EnquiryDeepLink from "./enquiry-deep-link"
+import { useInViewport } from "./use-in-viewport"
 import ProductPrice from "../product-price"
 import ContactModal from "../contact-modal"
 import ProductSpecSheet from "../product-spec-sheet"
 import { addToCart } from "@lib/data/cart"
 import { COMPANY } from "@lib/company"
-import { ENQUIRY_PARAM, wantsEnquiryOpen } from "@lib/util/contact-request"
+import { shortHours } from "@lib/util/contact-request"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { specSheetUrl } from "@lib/util/product-specs"
 import { HttpTypes } from "@medusajs/types"
@@ -30,12 +38,19 @@ type ProductActionsProps = {
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
-    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
-      acc[varopt.option.title] = varopt.value
-    }
-    return acc
-  }, {})
+  return variantOptions?.reduce(
+    (acc: Record<string, string | undefined>, varopt: any) => {
+      if (
+        varopt.option &&
+        varopt.value !== null &&
+        varopt.value !== undefined
+      ) {
+        acc[varopt.option.title] = varopt.value
+      }
+      return acc
+    },
+    {}
+  )
 }
 
 const primaryCta =
@@ -55,8 +70,10 @@ export default function ProductActions({
   const [quantity, setQuantity] = useState(1)
   const [contactOpen, setContactOpen] = useState(false)
   const countryCode = useParams().countryCode as string
-  const router = useRouter()
-  const pathname = usePathname()
+  /** Primary CTA ("Pedir orçamento" / add to cart) — drives the mobile bar. */
+  const ctaRef = useRef<HTMLButtonElement>(null)
+  /** Whatever opened the enquiry dialog — focused again when it closes. */
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   // If there is only 1 variant, preselect the options
   useEffect(() => {
@@ -66,20 +83,15 @@ export default function ProductActions({
     }
   }, [product.variants])
 
-  // Deep link: /products/<handle>?pedido=1 opens the enquiry form, then the
-  // param is dropped so a refresh doesn't reopen it. Skipped for the disabled
-  // Suspense fallback so only the live instance reacts.
-  useEffect(() => {
-    if (disabled || typeof window === "undefined") return
-    const params = new URLSearchParams(window.location.search)
-    if (!wantsEnquiryOpen(params)) return
+  const openEnquiry = useCallback((e?: React.MouseEvent<HTMLElement>) => {
+    triggerRef.current = e?.currentTarget ?? null
     setContactOpen(true)
-    params.delete(ENQUIRY_PARAM)
-    const qs = params.toString()
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false })
-  }, [disabled, pathname, router])
-
-  const openEnquiry = useCallback(() => setContactOpen(true), [])
+  }, [])
+  /** `?pedido=1` deep link: no opener — focus returns to the main CTA. */
+  const openFromLink = useCallback(() => {
+    triggerRef.current = null
+    setContactOpen(true)
+  }, [])
   const closeEnquiry = useCallback(() => setContactOpen(false), [])
 
   const selectedVariant = useMemo(() => {
@@ -110,9 +122,9 @@ export default function ProductActions({
     return (selectedVariant.inventory_quantity || 0) > 0
   }, [selectedVariant])
 
-  const actionsRef = useRef<HTMLDivElement>(null)
-
-  const inView = useIntersection(actionsRef, "0px")
+  // Show the mobile bar whenever the primary CTA itself is off-screen (under
+  // the sticky header or behind the bar). null = not measured yet.
+  const ctaInView = useInViewport(ctaRef, "-140px 0px -88px 0px")
 
   // add the selected variant to the cart
   const handleAddToCart = async () => {
@@ -140,13 +152,18 @@ export default function ProductActions({
     selectedPrice && Number.isFinite(vatPct) && vatPct > 0
       ? new Intl.NumberFormat("pt-PT", {
           style: "currency",
-          currency: ((selectedPrice as any).currency_code || "eur").toUpperCase(),
+          currency: (
+            (selectedPrice as any).currency_code || "eur"
+          ).toUpperCase(),
         }).format(
-          ((selectedPrice as any).calculated_price_number || 0) * (1 + vatPct / 100)
+          ((selectedPrice as any).calculated_price_number || 0) *
+            (1 + vatPct / 100)
         )
       : null
 
-  const hasSpecSheet = !!specSheetUrl(product.metadata as Record<string, unknown> | null)
+  const hasSpecSheet = !!specSheetUrl(
+    product.metadata as Record<string, unknown> | null
+  )
 
   /** Secondary row: call + spec sheet. */
   const secondaryRow = (
@@ -167,15 +184,20 @@ export default function ProductActions({
         </a>
         <p className="mt-1.5 text-center text-[11px] leading-4 text-grey-50">
           {COMPANY.phone.costNote}
+          <span className="block" data-testid="product-call-hours">
+            {shortHours(COMPANY.hours)}
+          </span>
         </p>
       </div>
-      {hasSpecSheet && <ProductSpecSheet product={product} className="w-full" />}
+      {hasSpecSheet && (
+        <ProductSpecSheet product={product} className="w-full" />
+      )}
     </div>
   )
 
   return (
     <>
-      <div className="flex flex-col gap-y-2" ref={actionsRef}>
+      <div className="flex flex-col gap-y-2">
         <div>
           {(product.variants?.length ?? 0) > 1 && (
             <div className="flex flex-col gap-y-4">
@@ -201,7 +223,7 @@ export default function ProductActions({
         {catalogMode ? (
           <>
             {/* Catalog mode: no price / cart — enquiry CTA */}
-            <div className="my-2 border-y border-hairline py-5">
+            <div className="border-y border-hairline py-4">
               <p
                 className="text-xl font-extrabold tracking-[-0.01em] text-brand-ink"
                 data-testid="price-on-request"
@@ -216,6 +238,7 @@ export default function ProductActions({
 
             <div className="flex flex-col gap-3">
               <button
+                ref={ctaRef}
                 type="button"
                 onClick={openEnquiry}
                 disabled={!!disabled}
@@ -277,6 +300,7 @@ export default function ProductActions({
               </div>
 
               <button
+                ref={ctaRef}
                 type="button"
                 onClick={handleAddToCart}
                 disabled={!selectedVariant || !!disabled || isAdding}
@@ -325,23 +349,34 @@ export default function ProductActions({
           inStock={hasStock}
           handleAddToCart={handleAddToCart}
           isAdding={isAdding}
-          show={!inView && !contactOpen}
+          show={!disabled && ctaInView === false}
           optionsDisabled={!!disabled || isAdding}
           catalogMode={catalogMode}
           onRequestInfo={openEnquiry}
         />
       </div>
 
-      <ContactModal
-        open={contactOpen}
-        onClose={closeEnquiry}
-        product={{
-          title: product.title,
-          sku: selectedVariant?.sku ?? product.variants?.[0]?.sku ?? undefined,
-          thumbnail: product.thumbnail,
-          quantity: catalogMode ? undefined : quantity,
-        }}
-      />
+      {/* Only the live instance (not the disabled Suspense fallback). */}
+      {!disabled && (
+        <>
+          <Suspense fallback={null}>
+            <EnquiryDeepLink onOpen={openFromLink} />
+          </Suspense>
+          <ContactModal
+            open={contactOpen}
+            onClose={closeEnquiry}
+            returnFocusRef={triggerRef}
+            fallbackFocusRef={ctaRef}
+            product={{
+              title: product.title,
+              sku:
+                selectedVariant?.sku ?? product.variants?.[0]?.sku ?? undefined,
+              thumbnail: product.thumbnail,
+              quantity: catalogMode ? undefined : quantity,
+            }}
+          />
+        </>
+      )}
     </>
   )
 }

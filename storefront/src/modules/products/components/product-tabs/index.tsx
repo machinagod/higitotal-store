@@ -3,7 +3,7 @@ import { HttpTypes } from "@medusajs/types"
 import { getProductAttributes } from "@lib/data/products"
 import { buildSpecRows } from "@lib/util/product-specs"
 
-import SpecsAccordion from "./specs-accordion"
+import SpecsTable from "./specs-table"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
@@ -28,7 +28,7 @@ const ProductTabs = async ({ product }: ProductTabsProps) => {
 
   return (
     <div className="w-full" data-testid="product-specs">
-      <SpecsAccordion rows={rows} />
+      <SpecsTable rows={rows} />
     </div>
   )
 }

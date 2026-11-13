@@ -1,56 +1,88 @@
 "use client"
 
+import { clx } from "@medusajs/ui"
 import { X } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { RefObject, useCallback, useEffect, useRef, useState } from "react"
 
 import ContactRequestForm, {
   EnquiryProduct,
 } from "@modules/common/components/contact-request-form"
+import { isFormDirty } from "@modules/common/components/contact-request-form/fields"
 
 type Props = {
   open: boolean
   onClose: () => void
   product: EnquiryProduct
+  /** Element to focus again when the dialog closes (the button that opened it). */
+  returnFocusRef?: RefObject<HTMLElement | null>
+  /** Used when the opener is gone (e.g. opened from the `?pedido=1` deep link). */
+  fallbackFocusRef?: RefObject<HTMLElement | null>
 }
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([type="hidden"]):not([tabindex="-1"]), select, textarea'
+
+const isVisible = (el: HTMLElement) =>
+  el.isConnected && (el.offsetParent !== null || el.getClientRects().length > 0)
 
 /**
  * "Pedir orçamento" dialog on the product page — a thin wrapper around the
  * shared ContactRequestForm. Centered card on desktop, bottom sheet on mobile.
- * Closes on Esc / overlay click, focuses the first field, locks page scroll.
+ *
+ * Stays mounted while closed (hidden), so whatever the visitor typed survives
+ * closing and reopening; after a successful send the form starts fresh. Esc /
+ * ✕ close; a tap on the backdrop closes only while nothing has been typed.
+ * Focus moves into the dialog on open (first field with a mouse/keyboard, the
+ * dialog itself on touch so the keyboard doesn't cover the sheet) and back to
+ * the opener on close. Page scroll is locked while open.
  */
-const ContactModal = ({ open, onClose, product }: Props) => {
+const ContactModal = ({
+  open,
+  onClose,
+  product,
+  returnFocusRef,
+  fallbackFocusRef,
+}: Props) => {
   const panelRef = useRef<HTMLDivElement>(null)
-  const returnFocusRef = useRef<HTMLElement | null>(null)
+  const [formKey, setFormKey] = useState(0)
+  const sentRef = useRef(false)
+  // Latest callbacks without re-running the open/close effect.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
-    returnFocusRef.current = document.activeElement as HTMLElement | null
+    const panel = panelRef.current
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
+
+    // Move focus in once the dialog is displayed.
+    const finePointer = window.matchMedia?.("(pointer: fine)").matches ?? true
+    const first = panel?.querySelector<HTMLElement>("input:not([tabindex='-1'])")
+    if (finePointer && first) first.focus({ preventScroll: true })
+    else panel?.focus({ preventScroll: true })
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       // Keep Tab inside the dialog.
-      if (e.key === "Tab" && panelRef.current) {
-        const focusables = panelRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([type="hidden"]):not([tabindex="-1"]), select, textarea'
-        )
-        const visible = Array.from(focusables).filter(
-          (el) => el.offsetParent !== null || el.getClientRects().length > 0
-        )
+      if (e.key === "Tab" && panel) {
+        const visible = Array.from(
+          panel.querySelectorAll<HTMLElement>(FOCUSABLE)
+        ).filter(isVisible)
         if (!visible.length) return
-        const first = visible[0]
-        const last = visible[visible.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
+        const firstEl = visible[0]
+        const lastEl = visible[visible.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && (active === firstEl || active === panel)) {
           e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
+          lastEl.focus()
+        } else if (!e.shiftKey && active === lastEl) {
           e.preventDefault()
-          first.focus()
+          firstEl.focus()
         }
       }
     }
@@ -58,18 +90,42 @@ const ContactModal = ({ open, onClose, product }: Props) => {
     return () => {
       document.removeEventListener("keydown", onKey)
       document.body.style.overflow = prevOverflow
-      returnFocusRef.current?.focus?.({ preventScroll: true })
     }
-  }, [open, onClose])
+  }, [open])
 
-  if (!open) {
-    return null
-  }
+  // On close (open → false): focus back to the opener, and start a fresh form
+  // if the last one was sent.
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true
+      return
+    }
+    if (!wasOpen.current) return
+    wasOpen.current = false
+    const target = [returnFocusRef?.current, fallbackFocusRef?.current].find(
+      (el): el is HTMLElement => !!el && isVisible(el)
+    )
+    target?.focus({ preventScroll: true })
+    if (sentRef.current) {
+      sentRef.current = false
+      setFormKey((k) => k + 1)
+    }
+  }, [open, returnFocusRef, fallbackFocusRef])
+
+  const onBackdrop = useCallback(() => {
+    const form = panelRef.current?.querySelector("form")
+    if (isFormDirty(form)) return // don't throw away a half-filled form
+    onClose()
+  }, [onClose])
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50 small:items-center small:p-6"
-      onClick={onClose}
+      className={clx(
+        "fixed inset-0 z-[2000] items-end justify-center bg-black/50 small:items-center small:p-4",
+        open ? "flex" : "hidden"
+      )}
+      onClick={onBackdrop}
       data-testid="contact-modal-overlay"
     >
       <div
@@ -77,15 +133,12 @@ const ContactModal = ({ open, onClose, product }: Props) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="enquiry-title"
+        tabIndex={-1}
         data-testid="contact-modal"
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-card bg-white shadow-xl small:max-h-[90vh] small:max-w-[560px] small:rounded-card"
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-card bg-white shadow-xl outline-none small:max-h-[calc(100dvh-2rem)] small:max-w-[580px] small:rounded-card"
       >
-        {/* Grab handle (mobile bottom sheet) */}
-        <div className="flex justify-center pt-2.5 small:hidden" aria-hidden="true">
-          <span className="h-1 w-10 rounded-pill bg-grey-20" />
-        </div>
-        <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-3 small:px-7 small:pt-6">
+        <div className="flex flex-none items-center justify-between gap-4 border-b border-hairline py-2 pl-5 pr-2 small:pl-7 small:pr-4 small:pt-3">
           <h2
             id="enquiry-title"
             className="text-xl font-extrabold tracking-[-0.02em] text-brand-ink small:text-2xl"
@@ -96,22 +149,31 @@ const ContactModal = ({ open, onClose, product }: Props) => {
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="-mr-2 -mt-1 flex h-10 w-10 flex-none items-center justify-center rounded-full text-grey-50 transition-colors hover:bg-grey-10 hover:text-brand-ink"
+            data-testid="contact-modal-close"
+            className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-grey-60 transition-colors hover:bg-grey-10 hover:text-brand-ink"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] small:px-7 small:pb-7">
+        <div
+          className="flex flex-1 flex-col overflow-y-auto overscroll-contain px-5 pt-3 small:px-7"
+          data-testid="contact-modal-body"
+        >
           <ContactRequestForm
+            key={formKey}
             kind="produto"
             product={product}
             idPrefix="enquiry"
-            autoFocus
+            layout="sheet"
+            onSuccess={() => {
+              sentRef.current = true
+            }}
+            className="flex-1"
             successAction={
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-5 inline-flex h-11 items-center rounded-pill border-[1.5px] border-hairline px-6 text-[13px] font-bold uppercase tracking-[0.04em] text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan"
+                className="mb-6 mt-5 inline-flex h-11 items-center rounded-pill border-[1.5px] border-hairline px-6 text-[13px] font-bold uppercase tracking-[0.04em] text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan"
               >
                 Fechar
               </button>
