@@ -2,6 +2,7 @@ import { HttpTypes } from "@medusajs/types"
 import { notFound } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
 import { catalogModeFromEnv } from "@lib/util/catalog-mode-flag"
+import { legacyRedirect } from "@lib/legacy-redirects"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
@@ -157,6 +158,12 @@ function catalogModeRedirect(request: NextRequest): NextResponse | null {
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
+  // Legacy PrestaShop URLs (/base/…) → permanent redirect to the new pages.
+  const legacy = legacyRedirect(request.nextUrl.pathname, request.nextUrl.searchParams)
+  if (legacy) {
+    return NextResponse.redirect(new URL(legacy, request.nextUrl.origin), 301)
+  }
+
   const accessChallenge = accessTokenGate(request)
   if (accessChallenge) {
     return accessChallenge
