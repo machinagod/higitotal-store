@@ -43,6 +43,9 @@ export function inferContactKind(input: {
   return 'geral'
 }
 
+/** Staff heading for a quote-list request ("Novo pedido de orçamento — 5 produtos"). */
+export const staffQuoteHeading = (n: number) => `Novo pedido de orçamento — ${productCountLabel(n)}`
+
 export const STAFF_HEADINGS: Record<ContactRequestKind, string> = {
   produto: 'Novo pedido de orçamento',
   assistencia: 'Novo pedido de assistência técnica',
@@ -73,9 +76,36 @@ export function oneLine(value: string | null | undefined, max = 120): string {
 /** Subject prefix for requests flagged "Equipamento parado (urgente)". */
 export const URGENT_PREFIX = '[URGENTE]'
 
+/** One product line of a multi-product quote request ("carrinho de orçamento"). */
+export type QuoteItem = {
+  sku?: string
+  title?: string
+  /** Integer 1–9999. */
+  quantity: number
+  note?: string
+  /** Product page on the public storefront (allow-listed hosts only). */
+  url?: string
+}
+
+/** "1 produto" / "5 produtos". */
+export function productCountLabel(n: number): string {
+  return `${n} ${n === 1 ? 'produto' : 'produtos'}`
+}
+
+/** "3 un." — quantity as shown in the e-mails. */
+export function unitsLabel(n: number): string {
+  return `${n} un.`
+}
+
+/** Display name of a quote line: title, else the reference. */
+export function quoteItemLabel(item: Pick<QuoteItem, 'title' | 'sku'>): string {
+  return item.title || (item.sku ? `Ref.ª ${item.sku}` : 'Produto')
+}
+
 /**
- * Staff e-mail subject, e.g. "Pedido de orçamento: Drip Floor (2L) — Ana Silva, Hotel Central"
- * or "[URGENTE] Pedido de assistência técnica — Rui, Restaurante X".
+ * Staff e-mail subject, e.g. "Pedido de orçamento: Drip Floor (2L) — Ana Silva, Hotel Central",
+ * "Pedido de orçamento — 5 produtos — Hotel Central" (quote list) or
+ * "[URGENTE] Pedido de assistência técnica — Rui, Restaurante X".
  */
 export function buildStaffSubject(input: {
   kind: ContactRequestKind
@@ -83,13 +113,21 @@ export function buildStaffSubject(input: {
   empresa?: string | null
   productTitle?: string | null
   urgente?: boolean | null
+  items?: readonly QuoteItem[] | null
 }): string {
   const who = [oneLine(input.name, 80), oneLine(input.empresa, 80)].filter(Boolean).join(', ')
   const product = oneLine(input.productTitle, 90)
+  const items = input.items ?? []
   let subject: string
   switch (input.kind) {
     case 'produto':
-      subject = product ? `Pedido de orçamento: ${product} — ${who}` : `Pedido de orçamento — ${who}`
+      if (items.length) {
+        // Quote list: the company is what the sales team files it under.
+        const org = oneLine(input.empresa, 80) || oneLine(input.name, 80)
+        subject = `Pedido de orçamento — ${productCountLabel(items.length)} — ${org}`
+      } else {
+        subject = product ? `Pedido de orçamento: ${product} — ${who}` : `Pedido de orçamento — ${who}`
+      }
       break
     case 'assistencia':
       subject = `Pedido de assistência técnica — ${who}`
@@ -107,12 +145,18 @@ export function buildAckParagraphs(input: {
   name: string
   kind: ContactRequestKind
   productTitle?: string | null
+  /** Quote list lines — the e-mail lists them under these paragraphs. */
+  itemCount?: number | null
 }): string[] {
-  const product = input.kind === 'produto' ? oneLine(input.productTitle, 160) : ''
   const team = input.kind === 'assistencia' ? 'técnica' : 'comercial'
+  const count = input.kind === 'produto' ? input.itemCount ?? 0 : 0
+  const product = input.kind === 'produto' && !count ? oneLine(input.productTitle, 160) : ''
+  const thanks = count
+    ? `Obrigado pelo seu pedido de orçamento de ${productCountLabel(count)}, que resumimos abaixo.`
+    : `Obrigado pelo seu contacto${product ? ` sobre ${product}` : ''}.`
   return [
     `Olá, ${oneLine(input.name, 80)}.`,
-    `Obrigado pelo seu contacto${product ? ` sobre ${product}` : ''}. A nossa equipa ${team} responderá em dias úteis.`,
+    `${thanks} A nossa equipa ${team} responderá em dias úteis.`,
     `Para assuntos urgentes: ${COMPANY_INFO.phone} (${COMPANY_INFO.phoneCostNote}).`,
   ]
 }

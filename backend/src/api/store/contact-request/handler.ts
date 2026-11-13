@@ -2,6 +2,7 @@ import type { CreateNotificationDTO } from '@medusajs/framework/types'
 import {
   ACK_SUBJECT,
   ContactRequestKind,
+  QuoteItem,
   buildStaffSubject,
   inferContactKind,
 } from '../../../modules/email-notifications/contact-request-copy'
@@ -29,6 +30,11 @@ export type ContactRequestBody = {
   modelo?: unknown
   /** Assistência: equipment stopped (true / "true" / "1" / "on" / "sim"). */
   urgente?: unknown
+  /**
+   * Quote list ("carrinho de orçamento"): [{ sku, title, quantity, note, url }],
+   * at most {@link MAX_QUOTE_ITEMS} entries.
+   */
+  items?: unknown
   /** Honeypot — bots fill hidden fields; humans don't. */
   company?: unknown
 }
@@ -50,6 +56,8 @@ export type ContactRequest = {
   modelo?: string
   /** Only set (true) when the customer flagged the equipment as stopped. */
   urgente?: boolean
+  /** Quote list lines (sanitised); absent for single-product / general requests. */
+  items?: QuoteItem[]
 }
 
 /** Discriminated by `status` (the backend tsconfig is not strict, so boolean tags don't narrow). */
@@ -101,11 +109,90 @@ const safeUrl = (v: string | undefined): string | undefined => {
   }
 }
 
+/** Most lines a quote list may carry (the storefront caps the list at the same size). */
+export const MAX_QUOTE_ITEMS = 100
+
+/** Per-line limits; longer text is truncated (not rejected). */
+export const ITEM_LIMITS = { sku: 100, title: 300, note: 300, url: 2000 } as const
+
+export const MIN_ITEM_QUANTITY = 1
+export const MAX_ITEM_QUANTITY = 9999
+
+/**
+ * Hosts a quote line may link to in the staff e-mail. Anything else (another
+ * site, http:, javascript:, a preview deploy) is dropped so the e-mail never
+ * carries a customer-supplied link to a foreign host.
+ */
+export const QUOTE_URL_PREFIXES = ['https://store.higitotal.pt/', 'https://www.higitotal.pt/'] as const
+
+const capped = (v: unknown, max: number): string | undefined => {
+  const s = str(v)
+  if (!s) return undefined
+  // One line (notes too: they render inside a table cell).
+  const flat = s.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ')
+  return flat.length > max ? flat.slice(0, max).trimEnd() : flat
+}
+
+const quoteUrl = (v: unknown): string | undefined => {
+  const s = str(v)
+  if (!s || s.length > ITEM_LIMITS.url) return undefined
+  if (!QUOTE_URL_PREFIXES.some((p) => s.startsWith(p))) return undefined
+  try {
+    // Normalised form, and only if it still sits on an allowed origin.
+    const href = new URL(s).toString()
+    return QUOTE_URL_PREFIXES.some((p) => href.startsWith(p)) ? href : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** Integer 1–9999: numbers / numeric strings are floored and clamped; anything else is 1. */
+export function itemQuantity(v: unknown): number {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() ? Number(v) : NaN
+  if (!Number.isFinite(n)) return MIN_ITEM_QUANTITY
+  return Math.min(MAX_ITEM_QUANTITY, Math.max(MIN_ITEM_QUANTITY, Math.floor(n)))
+}
+
+export type QuoteItemsResult =
+  | { status: 'ok'; items?: QuoteItem[] }
+  | { status: 'invalid'; message: string }
+
+/**
+ * Sanitises the optional `items` array. Absent / not an array / empty → no
+ * items. More than {@link MAX_QUOTE_ITEMS} entries → invalid (400). Each entry
+ * keeps only known fields, trimmed and length-capped; entries with neither a
+ * title nor a reference are dropped.
+ */
+export function parseQuoteItems(raw: unknown): QuoteItemsResult {
+  if (!Array.isArray(raw) || raw.length === 0) return { status: 'ok' }
+  if (raw.length > MAX_QUOTE_ITEMS) {
+    return { status: 'invalid', message: `at most ${MAX_QUOTE_ITEMS} items are allowed` }
+  }
+  const items: QuoteItem[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+    const e = entry as Record<string, unknown>
+    const sku = capped(e.sku, ITEM_LIMITS.sku)
+    const title = capped(e.title, ITEM_LIMITS.title)
+    if (!sku && !title) continue
+    const item: QuoteItem = { quantity: itemQuantity(e.quantity) }
+    if (sku) item.sku = sku
+    if (title) item.title = title
+    const note = capped(e.note, ITEM_LIMITS.note)
+    if (note) item.note = note
+    const url = quoteUrl(e.url)
+    if (url) item.url = url
+    items.push(item)
+  }
+  return { status: 'ok', items: items.length ? items : undefined }
+}
+
 /**
  * Validates and normalises a contact-request body. Backward compatible with
  * the original payload (name/email/phone/contactPref/message/productTitle/sku/
  * quantity/productUrl); `kind`, `empresa`, `localidade`,
- * `quantidadeEstimada`, `modelo` and `urgente` are optional additions.
+ * `quantidadeEstimada`, `modelo`, `urgente` and `items` (quote list) are
+ * optional additions.
  */
 export function parseContactRequest(body: unknown): ParseResult {
   const b = (body && typeof body === 'object' ? body : {}) as ContactRequestBody
@@ -135,7 +222,18 @@ export function parseContactRequest(body: unknown): ParseResult {
       ? Math.floor(b.quantity)
       : undefined
 
-  const kind = inferContactKind({ kind: b.kind, productTitle: fields.productTitle, sku: fields.sku })
+  const parsedItems = parseQuoteItems(b.items)
+  if (parsedItems.status === 'invalid') {
+    return { status: 'invalid', message: parsedItems.message }
+  }
+  const items = parsedItems.items
+
+  // A quote list is a product request even when the kind is missing / unknown.
+  const kind = inferContactKind({
+    kind: b.kind,
+    productTitle: fields.productTitle,
+    sku: fields.sku ?? (items?.length ? items[0].sku ?? items[0].title : undefined),
+  })
 
   return {
     status: 'ok',
@@ -155,6 +253,7 @@ export function parseContactRequest(body: unknown): ParseResult {
       productUrl: safeUrl(fields.productUrl),
       modelo: fields.modelo,
       urgente: flag(b.urgente) ? true : undefined,
+      items,
     },
   }
 }
@@ -219,6 +318,11 @@ export async function sendContactRequest(
         name: request.name,
         kind: request.kind,
         productTitle: request.kind === 'produto' ? request.productTitle : undefined,
+        // The customer's own copy of the list (no links: plain reference).
+        items:
+          request.kind === 'produto' && request.items?.length
+            ? request.items.map(({ sku, title, quantity, note }) => ({ sku, title, quantity, note }))
+            : undefined,
       },
     })
     if (hasFailure(ack)) {

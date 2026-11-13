@@ -2,10 +2,14 @@ import { Section, Text, Hr, Link } from '@react-email/components'
 import { Base } from './base'
 import {
   ContactRequestKind,
+  QuoteItem,
   STAFF_HEADINGS,
   STAFF_INTROS,
   contactPrefLabel,
   inferContactKind,
+  productCountLabel,
+  quoteItemLabel,
+  staffQuoteHeading,
 } from '../contact-request-copy'
 
 export const CONTACT_REQUEST = 'contact-request'
@@ -41,6 +45,8 @@ export interface ContactRequestEmailProps {
   modelo?: string
   /** Assistência: equipment stopped — highlighted at the top */
   urgente?: boolean
+  /** Quote list lines (sanitised by the store route) */
+  items?: QuoteItem[]
   preview?: string
 }
 
@@ -55,6 +61,48 @@ const Row = ({ label, value }: { label: string; value?: string | number }) =>
   )
 
 const Divider = () => <Hr className="border border-solid border-[#eaeaea] my-[16px] mx-0 w-full" />
+
+const th = 'text-left text-[12px] leading-[16px] font-semibold text-[#555555] border-0 border-b border-solid border-[#dddddd] px-[6px] py-[6px]'
+const td = 'align-top text-[13px] leading-[19px] text-black border-0 border-b border-solid border-[#eeeeee] px-[6px] py-[7px]'
+
+/** Quote list as a table: Ref.ª · Produto (linked) · Quantidade · Nota. */
+export const QuoteItemsTable = ({ items, linked = true }: { items: QuoteItem[]; linked?: boolean }) => (
+  <table
+    width="100%"
+    cellPadding={0}
+    cellSpacing={0}
+    role="presentation"
+    className="w-full border-collapse my-[4px]"
+    data-testid="quote-items"
+  >
+    <thead>
+      <tr>
+        <th className={th}>Ref.ª</th>
+        <th className={th}>Produto</th>
+        <th className={`${th} text-right`}>Quantidade</th>
+        <th className={th}>Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+      {items.map((item, i) => (
+        <tr key={`${item.sku ?? ''}-${i}`}>
+          <td className={`${td} whitespace-nowrap`}>{item.sku ?? '—'}</td>
+          <td className={td}>
+            {linked && item.url ? (
+              <Link href={item.url} className="text-[#0074b3] underline">
+                {quoteItemLabel(item)}
+              </Link>
+            ) : (
+              quoteItemLabel(item)
+            )}
+          </td>
+          <td className={`${td} text-right whitespace-nowrap font-semibold`}>{item.quantity}</td>
+          <td className={`${td} text-[#444444]`}>{item.note ?? ''}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+)
 
 export const ContactRequestEmail = ({
   kind,
@@ -72,10 +120,12 @@ export const ContactRequestEmail = ({
   productUrl,
   modelo,
   urgente,
+  items,
   preview,
 }: ContactRequestEmailProps) => {
-  const k = inferContactKind({ kind, productTitle, sku })
-  const heading = STAFF_HEADINGS[k]
+  const k = inferContactKind({ kind, productTitle, sku: sku ?? items?.[0]?.sku ?? items?.[0]?.title })
+  const quote = items?.length ? items : undefined
+  const heading = quote ? staffQuoteHeading(quote.length) : STAFF_HEADINGS[k]
   return (
     <Base preview={preview ?? heading}>
       <Section className="mt-[24px]">
@@ -106,7 +156,17 @@ export const ContactRequestEmail = ({
           </Section>
         </>
       ) : null}
-      {k === 'produto' ? (
+      {quote ? (
+        <>
+          <Divider />
+          <Section>
+            <Text className="text-black text-[14px] leading-[22px] my-[2px]">
+              <strong>Produtos pedidos ({productCountLabel(quote.length)}):</strong>
+            </Text>
+            <QuoteItemsTable items={quote} />
+          </Section>
+        </>
+      ) : k === 'produto' ? (
         <>
           <Divider />
           <Section>

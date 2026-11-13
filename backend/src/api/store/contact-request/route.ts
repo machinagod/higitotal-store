@@ -11,7 +11,9 @@ import { parseContactRequest, sendContactRequest } from "./handler"
  * Body (all strings unless noted): name*, email*, phone, message (phone or
  * message required), empresa, localidade, quantidadeEstimada, contactPref,
  * kind ("produto" | "assistencia" | "geral", inferred when absent),
- * productTitle, sku, quantity (number), productUrl, company (honeypot).
+ * productTitle, sku, quantity (number), productUrl, company (honeypot),
+ * items (quote list: up to 100 × { sku, title, quantity 1–9999, note, url },
+ * sanitised — see parseQuoteItems).
  */
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const parsed = parseContactRequest(req.body)

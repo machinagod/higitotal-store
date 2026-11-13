@@ -1,4 +1,13 @@
-import { parseContactRequest, sendContactRequest, ContactRequest } from "../handler"
+import {
+  ITEM_LIMITS,
+  MAX_ITEM_QUANTITY,
+  MAX_QUOTE_ITEMS,
+  itemQuantity,
+  parseContactRequest,
+  parseQuoteItems,
+  sendContactRequest,
+  ContactRequest,
+} from "../handler"
 import {
   buildAckParagraphs,
   buildStaffSubject,
@@ -298,5 +307,202 @@ describe("sendContactRequest", () => {
       "Pedido de assistência técnica — Ana, Hotel Central"
     )
     expect(create.mock.calls[1][0].data.productTitle).toBeUndefined()
+  })
+})
+
+describe("parseQuoteItems", () => {
+  it("is absent for missing, non-array or empty input", () => {
+    expect(parseQuoteItems(undefined)).toEqual({ status: "ok" })
+    expect(parseQuoteItems("x")).toEqual({ status: "ok" })
+    expect(parseQuoteItems({ 0: { sku: "A" } })).toEqual({ status: "ok" })
+    expect(parseQuoteItems([])).toEqual({ status: "ok" })
+  })
+
+  it("trims and keeps only the known fields", () => {
+    const r = parseQuoteItems([
+      {
+        sku: " DX1002 ",
+        title: " Drip Floor (2L) ",
+        quantity: 3,
+        note: "  caixas de 6 ",
+        url: "https://store.higitotal.pt/pt/products/dx1002",
+        price: 12,
+        evil: "<script>",
+      },
+    ])
+    expect(r).toEqual({
+      status: "ok",
+      items: [
+        {
+          sku: "DX1002",
+          title: "Drip Floor (2L)",
+          quantity: 3,
+          note: "caixas de 6",
+          url: "https://store.higitotal.pt/pt/products/dx1002",
+        },
+      ],
+    })
+  })
+
+  it("caps lengths and flattens newlines", () => {
+    const r = parseQuoteItems([
+      { sku: "S".repeat(150), title: "T".repeat(400), note: "linha 1\r\nlinha 2 " + "n".repeat(400), quantity: 1 },
+    ])
+    const item = r.status === "ok" ? r.items![0] : undefined
+    expect(item!.sku).toHaveLength(ITEM_LIMITS.sku)
+    expect(item!.title).toHaveLength(ITEM_LIMITS.title)
+    expect(item!.note!.length).toBeLessThanOrEqual(ITEM_LIMITS.note)
+    expect(item!.note).toMatch(/^linha 1 linha 2 n/)
+  })
+
+  it("clamps quantities to an integer 1–9999", () => {
+    const q = (quantity: unknown) => {
+      const r = parseQuoteItems([{ sku: "A", quantity }])
+      return r.status === "ok" ? r.items![0].quantity : undefined
+    }
+    expect(q(5)).toBe(5)
+    expect(q(2.9)).toBe(2)
+    expect(q("12")).toBe(12)
+    expect(q(0)).toBe(1)
+    expect(q(-4)).toBe(1)
+    expect(q(100000)).toBe(9999)
+    expect(q("abc")).toBe(1)
+    expect(q(undefined)).toBe(1)
+    expect(q(Infinity)).toBe(1)
+    expect(itemQuantity(MAX_ITEM_QUANTITY + 1)).toBe(MAX_ITEM_QUANTITY)
+  })
+
+  it("only keeps product links on the public storefront hosts", () => {
+    const url = (u: unknown) => {
+      const r = parseQuoteItems([{ sku: "A", quantity: 1, url: u }])
+      return r.status === "ok" ? r.items![0].url : undefined
+    }
+    expect(url("https://store.higitotal.pt/pt/products/a")).toBe("https://store.higitotal.pt/pt/products/a")
+    expect(url("https://www.higitotal.pt/pt/products/a")).toBe("https://www.higitotal.pt/pt/products/a")
+    expect(url("http://store.higitotal.pt/pt/products/a")).toBeUndefined()
+    expect(url("https://store.higitotal.pt.evil.com/x")).toBeUndefined()
+    expect(url("https://store.higitotal.pt@evil.com/x")).toBeUndefined()
+    expect(url("https://evil.com/?https://store.higitotal.pt/")).toBeUndefined()
+    expect(url("javascript:alert(1)")).toBeUndefined()
+    expect(url("http://localhost:8000/pt/products/a")).toBeUndefined()
+    expect(url(42)).toBeUndefined()
+  })
+
+  it("drops entries that are not objects or have neither title nor sku", () => {
+    const r = parseQuoteItems([null, "x", 3, [], { quantity: 2, note: "só nota" }, { title: "Só título" }])
+    expect(r).toEqual({ status: "ok", items: [{ title: "Só título", quantity: 1 }] })
+    expect(parseQuoteItems([{ note: "x" }])).toEqual({ status: "ok" })
+  })
+
+  it("rejects more than 100 entries", () => {
+    const ok = Array.from({ length: MAX_QUOTE_ITEMS }, (_, i) => ({ sku: `S${i}`, quantity: 1 }))
+    expect(parseQuoteItems(ok).status).toBe("ok")
+    expect(parseQuoteItems([...ok, { sku: "X", quantity: 1 }])).toEqual({
+      status: "invalid",
+      message: "at most 100 items are allowed",
+    })
+  })
+})
+
+describe("parseContactRequest with a quote list", () => {
+  const base = { name: "Ana", email: "ana@empresa.pt", phone: "912345678" }
+  const items = [
+    { sku: "DX1002", title: "Drip Floor (2L)", quantity: 3, url: "https://store.higitotal.pt/pt/products/dx1002" },
+    { sku: "SU100", title: "Suma Bac D10", quantity: 12, note: "Urgente para março" },
+  ]
+
+  it("accepts items alongside the usual fields", () => {
+    const r = parseContactRequest({ ...base, kind: "produto", empresa: "Hotel Central", items })
+    expect(r.status).toBe("ok")
+    expect(r.status === "ok" && r.request.items).toEqual(items)
+    expect(r.status === "ok" && r.request.kind).toBe("produto")
+  })
+
+  it("infers a product request from the items when the kind is missing", () => {
+    const r = parseContactRequest({ ...base, items })
+    expect(r.status === "ok" && r.request.kind).toBe("produto")
+  })
+
+  it("rejects an oversized list (400)", () => {
+    const many = Array.from({ length: 101 }, (_, i) => ({ sku: `S${i}`, quantity: 1 }))
+    expect(parseContactRequest({ ...base, items: many })).toEqual({
+      status: "invalid",
+      message: "at most 100 items are allowed",
+    })
+  })
+
+  it("still needs the contact fields", () => {
+    expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt", items }).status).toBe("invalid")
+  })
+
+  it("leaves items unset for the legacy single-product payload", () => {
+    const r = parseContactRequest({ ...base, productTitle: "Drip Floor", sku: "DX1002", quantity: 2 })
+    expect(r.status === "ok" && r.request.items).toBeUndefined()
+  })
+})
+
+describe("buildStaffSubject for a quote list", () => {
+  const items = [
+    { sku: "A", quantity: 1 },
+    { sku: "B", quantity: 2 },
+    { sku: "C", quantity: 1 },
+    { sku: "D", quantity: 1 },
+    { sku: "E", quantity: 9 },
+  ]
+
+  it("counts the products and names the company", () => {
+    expect(buildStaffSubject({ kind: "produto", name: "Ana Silva", empresa: "Hotel Central", items })).toBe(
+      "Pedido de orçamento — 5 produtos — Hotel Central"
+    )
+  })
+
+  it("falls back to the customer name, singular for one product", () => {
+    expect(buildStaffSubject({ kind: "produto", name: "Ana Silva", items: items.slice(0, 1) })).toBe(
+      "Pedido de orçamento — 1 produto — Ana Silva"
+    )
+  })
+
+  it("keeps the [URGENTE] prefix rule and header safety", () => {
+    expect(buildStaffSubject({ kind: "produto", name: "Ana", urgente: true, items })).toBe(
+      "[URGENTE] Pedido de orçamento — 5 produtos — Ana"
+    )
+    expect(buildStaffSubject({ kind: "produto", name: "Ana", empresa: "X\r\nBcc: y@z", items })).not.toMatch(/[\r\n]/)
+  })
+
+  it("ignores an empty list", () => {
+    expect(buildStaffSubject({ kind: "produto", name: "Ana", productTitle: "Drip Floor", items: [] })).toBe(
+      "Pedido de orçamento: Drip Floor — Ana"
+    )
+  })
+})
+
+describe("buildAckParagraphs for a quote list", () => {
+  it("thanks for the list instead of a single product", () => {
+    expect(buildAckParagraphs({ name: "Ana", kind: "produto", productTitle: "x", itemCount: 3 })[1]).toBe(
+      "Obrigado pelo seu pedido de orçamento de 3 produtos, que resumimos abaixo. A nossa equipa comercial responderá em dias úteis."
+    )
+  })
+})
+
+describe("sendContactRequest with a quote list", () => {
+  it("sends the items to staff (subject with the count) and to the customer without links", async () => {
+    const create = jest.fn().mockResolvedValue([{ status: "success" }])
+    const items = [
+      { sku: "DX1002", title: "Drip Floor (2L)", quantity: 3, url: "https://store.higitotal.pt/pt/products/dx1002" },
+      { sku: "SU100", title: "Suma Bac D10", quantity: 12, note: "caixas" },
+    ]
+    await sendContactRequest(
+      { kind: "produto", name: "Ana", email: "ana@empresa.pt", phone: "912345678", empresa: "Hotel Central", items },
+      { notification: { createNotifications: create }, logger: { warn: jest.fn() }, to: "vendas@higitotal.pt" }
+    )
+    const staff = create.mock.calls[0][0]
+    expect(staff.data.emailOptions.subject).toBe("Pedido de orçamento — 2 produtos — Hotel Central")
+    expect(staff.data.items).toEqual(items)
+    const ack = create.mock.calls[1][0]
+    expect(ack.data.items).toEqual([
+      { sku: "DX1002", title: "Drip Floor (2L)", quantity: 3 },
+      { sku: "SU100", title: "Suma Bac D10", quantity: 12, note: "caixas" },
+    ])
+    expect(ack.data.items[0].url).toBeUndefined()
   })
 })
