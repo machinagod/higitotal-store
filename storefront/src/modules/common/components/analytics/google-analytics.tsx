@@ -5,8 +5,8 @@ import Script from "next/script"
  * nothing until that variable is set, so this is safe to ship ahead of having a
  * property — set the measurement id (G-XXXXXXXXXX) at build time to activate.
  *
- * Consent Mode v2 defaults to denied for advertising and granted for first-party
- * analytics, which is a sensible EU baseline. Pair with a consent banner that
+ * Consent Mode v2 defaults everything (incl. analytics) to denied, as Portuguese law
+ * requires consent first; the consent banner flips it with gtag('consent','update').
  * calls `gtag('consent', 'update', …)` to flip advertising storage on acceptance.
  */
 export default function GoogleAnalytics() {
@@ -29,7 +29,7 @@ export default function GoogleAnalytics() {
               ad_storage: 'denied',
               ad_user_data: 'denied',
               ad_personalization: 'denied',
-              analytics_storage: 'granted'
+              analytics_storage: 'denied'
             });
           `,
         }}
