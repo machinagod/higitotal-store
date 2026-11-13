@@ -6,14 +6,13 @@ import {
   getCategoryById,
   listCategories,
 } from "@lib/data/categories"
-import {
-  displayCategoryName,
-  isInternalCategory,
-} from "@lib/util/category-display"
+import { isInternalCategory } from "@lib/util/category-display"
 import { categoryMetaDescription } from "@lib/util/listing-copy"
 import { listRegions } from "@lib/data/regions"
 import { StoreProductCategory, StoreRegion } from "@medusajs/types"
-import CategoryTemplate from "@modules/categories/templates"
+import CategoryTemplate, {
+  categoryPageTitle,
+} from "@modules/categories/templates"
 import JsonLd from "@modules/common/components/json-ld"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
@@ -63,27 +62,41 @@ export async function generateStaticParams() {
 /**
  * Parent chain (root first) of a category reached by its own handle — the
  * route usually names only the leaf (`/categories/toalhas-de-maos`), so the
- * breadcrumb walks up via `parent_category`. Bounded and fail-soft.
+ * breadcrumb walks up via `parent_category`. Also returns the immediate
+ * parent's children (the category's siblings, itself included) so a leaf can
+ * offer "jump to a sibling" chips. Bounded and fail-soft.
  */
-async function getAncestors(
-  category: StoreProductCategory | undefined
-): Promise<{ name: string; handle: string | null }[]> {
+async function getAncestors(category: StoreProductCategory | undefined): Promise<{
+  chain: { name: string; handle: string | null }[]
+  siblings: StoreProductCategory[]
+}> {
   const chain: { name: string; handle: string | null }[] = []
+  let siblings: StoreProductCategory[] = []
   let current = category ? await getCategoryById(category.id) : null
   for (let depth = 0; depth < 5 && current?.parent_category; depth++) {
     const parent = await getCategoryById(current.parent_category.id)
     if (!parent) break
+    if (depth === 0) {
+      // Same (merchandising) order as the parent page's own chips; this
+      // request is the one the parent page makes, so it is usually cached.
+      const ordered = parent.handle
+        ? await getCategoryByHandle([parent.handle])
+            .then((r) => r.product_categories?.[0]?.category_children)
+            .catch(() => undefined)
+        : undefined
+      siblings = ordered ?? parent.category_children ?? []
+    }
     chain.unshift({ name: parent.name, handle: parent.handle ?? null })
     current = parent
   }
-  return chain
+  return { chain, siblings }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const { product_categories } = await getCategoryByHandle(params.category)
     const category = product_categories[product_categories.length - 1]
-    const title = displayCategoryName(category.name)
+    const title = categoryPageTitle(category)
     const description =
       category.description?.trim() || categoryMetaDescription(title)
 
@@ -116,10 +129,19 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     notFound()
   }
 
-  const ancestors =
+  const { chain: ancestors, siblings: parentChildren } =
     product_categories.length === 1
-      ? await getAncestors(product_categories[0]).catch(() => [])
-      : []
+      ? await getAncestors(product_categories[0]).catch(() => ({
+          chain: [],
+          siblings: [] as StoreProductCategory[],
+        }))
+      : {
+          chain: [],
+          // Multi-segment URL: the parent is the previous segment.
+          siblings:
+            product_categories[product_categories.length - 2]
+              ?.category_children ?? [],
+        }
 
   const trail = [
     { name: SITE_NAME, url: await canonicalUrl("") },
@@ -127,7 +149,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       [...ancestors, ...(product_categories as StoreProductCategory[])]
         .filter((c) => c.handle && !isInternalCategory(c.name))
         .map(async (c) => ({
-          name: displayCategoryName(c.name),
+          name: categoryPageTitle(c),
           url: await canonicalUrl(`categories/${c.handle}`),
         }))
     )),
@@ -139,6 +161,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <CategoryTemplate
         categories={product_categories}
         ancestors={ancestors}
+        siblings={parentChildren}
         sortBy={sortBy}
         page={page}
         countryCode={params.countryCode}

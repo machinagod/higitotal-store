@@ -94,7 +94,7 @@ export function Pagination({
             <li
               key={`gap-${i}`}
               aria-hidden
-              className="hidden h-11 w-6 items-center justify-center text-sm text-grey-40 xsmall:flex"
+              className="hidden h-11 w-6 items-center justify-center text-sm text-grey-60 xsmall:flex"
             >
               …
             </li>

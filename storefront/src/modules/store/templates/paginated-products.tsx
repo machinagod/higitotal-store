@@ -6,7 +6,11 @@ import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
-const PRODUCT_LIMIT = 12
+/** Products per listing page: 6 rows of 4 on desktop, 12 rows of 2 on phones. */
+export const PRODUCT_LIMIT = 24
+
+/** Cards whose image loads eagerly (the LCP): the first row on desktop, two on phones. */
+const PRIORITY_CARDS = 4
 
 type PaginatedProductsParams = {
   limit: number
@@ -23,6 +27,7 @@ export default async function PaginatedProducts({
   productsIds,
   countryCode,
   showCount = true,
+  eyebrowContext,
 }: {
   sortBy?: SortOptions
   page: number
@@ -32,6 +37,8 @@ export default async function PaginatedProducts({
   countryCode: string
   /** Show the "123 produtos" line above the grid. */
   showCount?: boolean
+  /** The listing's own names — card eyebrows that repeat them stay blank. */
+  eyebrowContext?: (string | null | undefined)[]
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: PRODUCT_LIMIT,
@@ -103,21 +110,28 @@ export default async function PaginatedProducts({
         <p className="mb-4 text-sm text-grey-60" data-testid="products-count">
           {productCountLabel(count)}
           {totalPages > 1 && (
-            <span className="text-grey-40">
+            <>
               {" "}
               · página {Math.min(Math.max(page, 1), totalPages)} de {totalPages}
-            </span>
+            </>
           )}
         </p>
       )}
+      {/* Keeps the outline h1 > h2 > card h3 for screen readers. */}
+      <h2 className="sr-only">Produtos</h2>
       <ul
         className="grid w-full grid-cols-2 gap-x-3 gap-y-4 small:grid-cols-3 small:gap-x-6 small:gap-y-8 medium:grid-cols-4"
         data-testid="products-list"
       >
-        {products.map((p) => {
+        {products.map((p, i) => {
           return (
             <li key={p.id}>
-              <ProductPreview product={p} region={region} />
+              <ProductPreview
+                product={p}
+                region={region}
+                priority={i < PRIORITY_CARDS}
+                eyebrowContext={eyebrowContext}
+              />
             </li>
           )
         })}

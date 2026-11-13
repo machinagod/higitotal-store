@@ -7,7 +7,12 @@ import {
   orderListing,
   pageIds,
 } from "../listing-order"
-import { isPriceSort, resolveSort, sortProducts } from "../sort-products"
+import {
+  defaultSort,
+  isPriceSort,
+  resolveSort,
+  sortProducts,
+} from "../sort-products"
 
 const p = (
   id: string,
@@ -100,8 +105,18 @@ describe("resolveSort", () => {
     expect(resolveSort("bogus", { catalogMode: false, hasIds: false })).toBe("created_at")
   })
 
+  it("defaults to A–Z in catalog mode, keeping newest as an option", () => {
+    expect(resolveSort(undefined, { catalogMode: true, hasIds: false })).toBe("name_asc")
+    expect(resolveSort("bogus", { catalogMode: true, hasIds: false })).toBe("name_asc")
+    expect(resolveSort("created_at", { catalogMode: true, hasIds: false })).toBe("created_at")
+    expect(resolveSort("relevance", { catalogMode: true, hasIds: false })).toBe("name_asc")
+    expect(defaultSort({ catalogMode: true })).toBe("name_asc")
+    expect(defaultSort({ catalogMode: false })).toBe("created_at")
+    expect(defaultSort({ catalogMode: true, hasIds: true })).toBe("relevance")
+  })
+
   it("drops price sorts in catalog mode", () => {
-    expect(resolveSort("price_asc", { catalogMode: true, hasIds: false })).toBe("created_at")
+    expect(resolveSort("price_asc", { catalogMode: true, hasIds: false })).toBe("name_asc")
     expect(resolveSort("price_desc", { catalogMode: false, hasIds: false })).toBe("price_desc")
     expect(resolveSort("name_asc", { catalogMode: true, hasIds: false })).toBe("name_asc")
   })
@@ -140,6 +155,28 @@ describe("orderListing + pageIds", () => {
     const seen = [1, 2, 3].flatMap((page) => pageIds(ordered, page, 12))
     expect(seen).toEqual(ids(ordered))
     expect(pageIds(ordered, 4, 12)).toEqual([])
+  })
+
+  it("A–Z keeps images first, then alphabetical within each group", () => {
+    const rows = [
+      p("z-img", { title: "Zeta", thumbnail: "https://x/z.png" }),
+      p("a-none", { title: "Alfa" }),
+      p("b-img", { title: "beta", thumbnail: "https://x/b.png" }),
+      p("c-none", { title: "Ácido" }),
+    ]
+    expect(ids(orderListing(rows, "name_asc"))).toEqual([
+      "b-img",
+      "z-img",
+      "c-none",
+      "a-none",
+    ])
+  })
+
+  it("pages of 24 cover a set without gaps", () => {
+    const ordered = orderListing(list, "name_asc")
+    expect(pageIds(ordered, 1, 24)).toHaveLength(24)
+    expect(pageIds(ordered, 2, 24)).toHaveLength(6)
+    expect([...pageIds(ordered, 1, 24), ...pageIds(ordered, 2, 24)]).toEqual(ids(ordered))
   })
 
   it("clamps bad page numbers to the first page", () => {

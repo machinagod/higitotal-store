@@ -24,10 +24,19 @@ export default async function ProductPreview({
   product,
   isFeatured,
   region,
+  priority = false,
+  eyebrowContext,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
+  /** First row of a listing: load the image eagerly (it is the LCP). */
+  priority?: boolean
+  /**
+   * Names of the page the card is listed on (category / brand / collection).
+   * An eyebrow that would just repeat one of them is left blank.
+   */
+  eyebrowContext?: (string | null | undefined)[]
 }) {
   const catalogMode = isCatalogMode()
 
@@ -48,8 +57,9 @@ export default async function ProductPreview({
     product: pricedProduct,
   })
 
-  // Brand, else a customer-facing category (never "EQ_…" or "Outros").
-  const eyebrow = productEyebrow(product)
+  // Brand when known, else the most specific customer-facing category; blank
+  // when it repeats the page (see productEyebrow).
+  const eyebrow = productEyebrow(product, { context: eyebrowContext })
 
   // Single (default) variant — add it straight to the cart from the card.
   const variant = (pricedProduct.variants ?? [])[0]
@@ -62,7 +72,7 @@ export default async function ProductPreview({
   return (
     <div
       data-testid="product-wrapper"
-      className="group relative flex h-full flex-col rounded-card border border-hairline bg-white p-3 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(16,24,40,0.10)] small:p-4"
+      className="group relative flex h-full flex-col rounded-card border border-hairline bg-white p-2.5 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(16,24,40,0.10)] xsmall:p-3 small:p-4"
     >
       {/* The title link stretches over the whole card (after:inset-0), so a
           click anywhere opens the PDP; footer controls sit above it (z-10). */}
@@ -72,20 +82,33 @@ export default async function ProductPreview({
         size="full"
         isFeatured={isFeatured}
         alt={product.title}
+        priority={priority}
         className="mb-3 small:mb-3.5"
       />
 
-      {eyebrow && (
-        <span className="mb-1 flex min-w-0 items-center gap-x-1.5 text-[10px] font-bold uppercase tracking-[0.04em] text-brand-cyan xsmall:tracking-[0.1em] small:mb-1.5 small:gap-x-2">
-          <span className="ind flex-none" />
-          <span className="truncate" title={eyebrow}>
+      {/* The eyebrow line is ALWAYS there (blank when there is no label), so
+          titles line up across a row. The narrowest phones (< 380px, cards
+          ~130px) allow two lines rather than truncating "Máquinas de Limp…". */}
+      <p
+        className="mb-1 line-clamp-2 h-[26px] overflow-hidden break-words text-[10px] font-bold uppercase leading-[13px] tracking-[0.02em] text-brand-cyan min-[380px]:line-clamp-1 min-[380px]:h-[13px] min-[380px]:tracking-[0.06em] xsmall:tracking-[0.1em] small:mb-1.5"
+        aria-hidden={eyebrow ? undefined : true}
+        title={eyebrow ?? undefined}
+        data-testid="product-eyebrow"
+      >
+        {eyebrow && (
+          <>
+            {/* No dot on narrow phone cards: it would wrap alone onto line 1. */}
+            <span
+              className="mr-1.5 hidden h-[7px] w-[7px] rounded-pill bg-brand-cyan align-[1px] min-[380px]:inline-block"
+              aria-hidden
+            />
             {eyebrow}
-          </span>
-        </span>
-      )}
+          </>
+        )}
+      </p>
 
       <h3
-        className="line-clamp-4 text-[13px] font-medium small:line-clamp-3 leading-snug text-brand-ink small:text-sm"
+        className="line-clamp-4 text-sm font-medium leading-snug text-brand-ink small:line-clamp-3 small:text-[15px]"
         data-testid="product-title"
       >
         <LocalizedClientLink
@@ -105,11 +128,15 @@ export default async function ProductPreview({
           >
             Preço sob consulta
           </span>
+          {/* Secondary (outline) on cards so a grid of 24 doesn't shout over
+              the product names; the solid button stays on the PDP/header. */}
           <LocalizedClientLink
             href={`${href}?pedido=1`}
             aria-label={`Pedir orçamento: ${product.title}`}
             data-testid="card-request-quote"
-            className="relative z-10 flex h-11 w-full items-center justify-center whitespace-nowrap rounded-pill bg-brand-cyan px-2 text-xs font-bold text-white xsmall:text-[13px] small:px-3 small:text-sm transition-colors hover:bg-brand-cyan-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2"
+            // 320px phones leave ~100px for the label: semibold + tight
+            // tracking + no side padding keeps it on one line without clipping.
+            className="relative z-10 flex h-11 w-full items-center justify-center whitespace-nowrap rounded-pill border-[1.5px] border-brand-cyan bg-white px-0.5 text-xs font-semibold tracking-[-0.02em] text-brand-cyan-ink transition-colors hover:bg-brand-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 xsmall:px-2 xsmall:text-[13px] xsmall:font-bold xsmall:tracking-normal small:px-3 small:text-sm"
           >
             Pedir orçamento
           </LocalizedClientLink>

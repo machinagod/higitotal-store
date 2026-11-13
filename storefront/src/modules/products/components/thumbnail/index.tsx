@@ -15,6 +15,11 @@ type ThumbnailProps = {
   alt?: string
   /** Optional glyph for the no-image placeholder (e.g. a category icon). */
   placeholderIcon?: React.ReactNode
+  /**
+   * Above-the-fold image (the first row of a listing): load eagerly with
+   * `fetchpriority="high"` and a preload — it is usually the page's LCP.
+   */
+  priority?: boolean
   "data-testid"?: string
 }
 
@@ -41,6 +46,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   className,
   alt,
   placeholderIcon,
+  priority = false,
   "data-testid": dataTestid,
 }) => {
   const initialImage = thumbnail || images?.[0]?.url
@@ -67,6 +73,9 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
           draggable={false}
           quality={50}
           sizes={SIZES[size]}
+          // `priority` = eager + preload; the fetch priority is a separate hint.
+          priority={priority}
+          fetchPriority={priority ? "high" : undefined}
           fill
         />
       ) : (
