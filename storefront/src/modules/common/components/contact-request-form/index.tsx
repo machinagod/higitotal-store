@@ -1,6 +1,7 @@
 "use client"
 
 import { clx } from "@medusajs/ui"
+import { formLeadEvent, pushDataLayer } from "@lib/quote-list/analytics"
 import { Check, ImageIcon } from "lucide-react"
 import Image from "next/image"
 import React, { useEffect, useRef, useState } from "react"
@@ -156,6 +157,8 @@ export default function ContactRequestForm({
       })
       await submitContactRequest(payload)
       setStatus("done")
+      // Quote lists report their own lead (with the line count) on /orcamento.
+      if (!payload.items?.length) pushDataLayer(formLeadEvent(payload.kind))
       onSuccess?.(payload)
     } catch {
       setStatus("error")
