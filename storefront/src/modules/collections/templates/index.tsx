@@ -9,6 +9,7 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
+import { brandForCategory } from "@lib/brands"
 
 export default function CollectionTemplate({
   sortBy,
@@ -44,12 +45,21 @@ export default function CollectionTemplate({
       </nav>
 
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 small:mb-5">
-        <h1
-          className="text-2xl font-extrabold tracking-tight text-brand-ink small:text-[28px]"
-          data-testid="collection-page-title"
-        >
-          {collection.title}
-        </h1>
+        <div className="flex min-w-0 flex-col gap-1">
+          {/* Most collections are brand ranges ("Vileda"); some are product lines. */}
+          {brandForCategory({ name: collection.title, handle: collection.handle }) && (
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-cyan">
+              <span className="ind" />
+              Marca
+            </span>
+          )}
+          <h1
+            className="text-2xl font-extrabold tracking-tight text-brand-ink small:text-[28px]"
+            data-testid="collection-page-title"
+          >
+            {collection.title}
+          </h1>
+        </div>
         <RefinementList sortBy={sort} catalogMode={catalogMode} />
       </div>
 
@@ -59,6 +69,7 @@ export default function CollectionTemplate({
           page={pageNumber}
           collectionId={collection.id}
           countryCode={countryCode}
+          eyebrowContext={[collection.title]}
         />
       </Suspense>
     </div>

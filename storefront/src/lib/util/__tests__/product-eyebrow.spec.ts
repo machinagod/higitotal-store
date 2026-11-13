@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { productEyebrow } from "../product-eyebrow"
+import {
+  productBrand,
+  productCategoryLabel,
+  productEyebrow,
+  sameLabel,
+} from "../product-eyebrow"
 import {
   categoryMetaDescription,
   collectionMetaDescription,
@@ -49,6 +54,90 @@ describe("productEyebrow", () => {
         categories: [{ name: "Outros" }, { name: "ML_Máquinas", parent_category: null }],
       })
     ).toBeNull()
+  })
+})
+
+describe("productBrand", () => {
+  it("takes a collection only when it is a known brand", () => {
+    expect(productBrand({ collection: { title: "Diversey" } })).toBe("Diversey")
+    expect(
+      productBrand({
+        collection: { title: "Máquinas de Limpeza" },
+        categories: [{ name: "ML_Máquinas", parent_category: { name: "Máquinas de Limpeza" } }],
+      })
+    ).toBeNull()
+  })
+
+  it("reads a brand-root category (or its parent)", () => {
+    expect(
+      productBrand({ categories: [{ name: "Cozinha", parent_category: { name: "Diversey" } }] })
+    ).toBe("Diversey")
+    expect(
+      productBrand({ categories: [{ name: "Produtos", parent_category: { name: "SCJohnson (DEB)" } }] })
+    ).toBe("SC Johnson (Deb)")
+    expect(productBrand({ categories: [{ name: "Vileda" }] })).toBe("Vileda")
+  })
+
+  it("finds a known brand named in the title, longest first", () => {
+    expect(productBrand({ title: "Aspirador Vp930 Eco Hepa Nilfisk" })).toBe("Nilfisk")
+    expect(productBrand({ title: "Rotativa Monodisco Ls 160 VIPER" })).toBe("Viper")
+    expect(productBrand({ title: "Mopa Vileda Swep Duo" })).toBe("Vileda Swep")
+    // Whole words only.
+    expect(productBrand({ title: "Papel Higiénico Celeaxx" })).toBeNull()
+  })
+})
+
+describe("productCategoryLabel", () => {
+  it("prefers a sub-category over a top-level one", () => {
+    expect(
+      productCategoryLabel({
+        categories: [
+          { name: "Papel" },
+          { name: "Papel Higiénico", parent_category: { name: "Papel" } },
+        ],
+      })
+    ).toBe("Papel Higiénico")
+  })
+})
+
+describe("productEyebrow context", () => {
+  it("one concept: brand when known, else the most specific category", () => {
+    expect(
+      productEyebrow({
+        title: "Aspirador Nilfisk VL500",
+        collection: { title: "Máquinas de Limpeza" },
+        categories: [{ name: "ML_Máquinas", parent_category: { name: "Máquinas de Limpeza" } }],
+      })
+    ).toBe("Nilfisk")
+    expect(
+      productEyebrow({
+        title: "Aspirador LSU 135P",
+        collection: { title: "Máquinas de Limpeza" },
+        categories: [{ name: "ML_Máquinas", parent_category: { name: "Máquinas de Limpeza" } }],
+      })
+    ).toBe("Máquinas de Limpeza")
+  })
+
+  it("hides the label when it repeats the page it is listed on", () => {
+    const diversey = {
+      collection: { title: "Diversey" },
+      categories: [{ name: "Cozinha", parent_category: { name: "Diversey" } }],
+    }
+    expect(productEyebrow(diversey, { context: ["Diversey"] })).toBeNull()
+    expect(productEyebrow(diversey, { context: ["Papel"] })).toBe("Diversey")
+
+    const jumbo = {
+      title: "Papel Higiénico Jumbo (12 rolos)",
+      categories: [{ name: "Papel Higiénico", parent_category: { name: "Papel" } }],
+    }
+    expect(productEyebrow(jumbo, { context: ["papel higienico"] })).toBeNull()
+    expect(productEyebrow(jumbo, { context: ["Papel", null] })).toBe("Papel Higiénico")
+  })
+
+  it("compares labels loosely", () => {
+    expect(sameLabel("SCJohnson (DEB)", "scjohnson deb")).toBe(true)
+    expect(sameLabel("", "")).toBe(false)
+    expect(sameLabel("Papel", "Papel Higiénico")).toBe(false)
   })
 })
 

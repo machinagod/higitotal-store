@@ -2,8 +2,9 @@ import { HttpTypes } from "@medusajs/types"
 
 /**
  * Listing sort orders.
- * - `created_at` — newest first ("Mais recentes", the default)
- * - `name_asc`   — title A–Z, pt-PT collation ("Nome (A–Z)")
+ * - `created_at` — newest first ("Mais recentes"; the default with prices)
+ * - `name_asc`   — title A–Z, pt-PT collation ("Nome (A–Z)"; the default in
+ *                  catalog mode — B2B buyers scan for a product they know)
  * - `price_asc` / `price_desc` — cheapest variant price (never in catalog mode)
  * - `relevance`  — keep the order the ids were given in (search results)
  */
@@ -29,20 +30,36 @@ export function isPriceSort(sortBy: SortOptions): boolean {
 }
 
 /**
+ * The order a listing opens in when `?sortBy=` is absent: A–Z in catalog mode
+ * (no prices to compare, so "newest" means little to a buyer), newest first
+ * otherwise. Search results (an explicit id list) always open by relevance.
+ */
+export function defaultSort({
+  catalogMode,
+  hasIds = false,
+}: {
+  catalogMode: boolean
+  hasIds?: boolean
+}): SortOptions {
+  if (hasIds) return "relevance"
+  return catalogMode ? "name_asc" : "created_at"
+}
+
+/**
  * Normalise a `?sortBy=` value into a sort the current listing can honour:
- * unknown values fall back to the default, price sorts are dropped in catalog
- * mode (there are no prices), and `relevance` only makes sense for an explicit
- * id list (search results), which also defaults to it.
+ * unknown values fall back to the default ({@link defaultSort}), price sorts
+ * are dropped in catalog mode (there are no prices), and `relevance` only makes
+ * sense for an explicit id list (search results), which also defaults to it.
  */
 export function resolveSort(
   sortBy: string | null | undefined,
   { catalogMode, hasIds }: { catalogMode: boolean; hasIds: boolean }
 ): SortOptions {
-  const fallback: SortOptions = hasIds ? "relevance" : "created_at"
+  const fallback = defaultSort({ catalogMode, hasIds })
   const s = SORT_OPTIONS.find((o) => o === sortBy)
   if (!s) return fallback
   if (catalogMode && isPriceSort(s)) return fallback
-  if (s === "relevance" && !hasIds) return "created_at"
+  if (s === "relevance" && !hasIds) return defaultSort({ catalogMode })
   return s
 }
 
