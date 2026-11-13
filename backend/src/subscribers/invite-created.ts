@@ -22,11 +22,10 @@ export default async function userInviteHandler({
       template: EmailTemplates.INVITE_USER,
       data: {
         emailOptions: {
-          replyTo: 'info@example.com',
-          subject: "You've been invited to Medusa!"
+          subject: 'Convite para o painel de administração Higitotal'
         },
         inviteLink: `${BACKEND_URL}/app/invite?token=${invite.token}`,
-        preview: 'The administration dashboard awaits...'
+        preview: 'Foi convidado para o painel de administração da loja Higitotal'
       }
     })
   } catch (error) {

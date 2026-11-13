@@ -20,12 +20,11 @@ export default async function orderPlacedHandler({
       template: EmailTemplates.ORDER_PLACED,
       data: {
         emailOptions: {
-          replyTo: 'info@example.com',
-          subject: 'Your order has been placed'
+          subject: 'Encomenda recebida — Higitotal'
         },
         order,
         shippingAddress,
-        preview: 'Thank you for your order!'
+        preview: 'Obrigado pela sua encomenda!'
       }
     })
   } catch (error) {

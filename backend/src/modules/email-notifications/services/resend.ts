@@ -67,7 +67,9 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       )
     }
 
-    const emailOptions = notification.data.emailOptions as NotificationEmailOptions
+    // Callers may omit emailOptions (e.g. the storefront contact-request route) —
+    // reading .subject off undefined used to throw here, so those emails never sent.
+    const emailOptions = (notification.data?.emailOptions ?? {}) as NotificationEmailOptions
 
     // Compose the message body to send via API to Resend
     const message: CreateEmailOptions = {
@@ -93,20 +95,27 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       scheduledAt: emailOptions.scheduledAt
     }
 
-    // Send the email via Resend
+    // Send the email via Resend. The SDK does not throw on API errors (invalid key,
+    // unverified sender domain, …) — it returns { error } — so check it explicitly,
+    // otherwise a rejected email was logged as "Successfully sent".
+    let result: Awaited<ReturnType<Resend['emails']['send']>>
     try {
-      await this.resend.emails.send(message)
-      this.logger_.log(
-        `Successfully sent "${notification.template}" email to ${notification.to} via Resend`
-      )
-      return {} // Return an empty object on success
+      result = await this.resend.emails.send(message)
     } catch (error) {
-      const errorCode = error.code
-      const responseError = error.response?.body?.errors?.[0]
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Failed to send "${notification.template}" email to ${notification.to} via Resend: ${errorCode} - ${responseError?.message ?? 'unknown error'}`
+        `Failed to send "${notification.template}" email to ${notification.to} via Resend: ${error?.message ?? 'network error'}`
       )
     }
+    if (result.error) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        `Resend rejected "${notification.template}" email to ${notification.to}: ${result.error.name} - ${result.error.message}`
+      )
+    }
+    this.logger_.log(
+      `Successfully sent "${notification.template}" email to ${notification.to} via Resend (id ${result.data?.id})`
+    )
+    return { id: result.data?.id }
   }
 }

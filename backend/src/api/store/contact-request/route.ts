@@ -45,12 +45,18 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     process.env.RESEND_FROM_EMAIL ||
     "higitotal@higitotal.pt"
 
+  const about = (b.productTitle ?? "").trim()
   const notification = req.scope.resolve(Modules.NOTIFICATION)
-  await notification.createNotifications({
+  const sent = await notification.createNotifications({
     to,
     channel: "email",
     template: CONTACT_REQUEST,
     data: {
+      emailOptions: {
+        subject: `Pedido de contacto${about ? `: ${about}` : ""} — ${name}`,
+        // "Reply" in the sales inbox goes straight to the customer
+        replyTo: email,
+      },
       name,
       email,
       phone: (b.phone ?? "").trim() || undefined,
@@ -62,6 +68,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       productUrl: b.productUrl,
     },
   })
+
+  // The notification module records a failed send instead of throwing; surface it
+  // so the form tells the customer to try again / call, rather than "sent".
+  const failed = [sent].flat().some((n) => (n as { status?: string })?.status === "failure")
+  if (failed) {
+    return res.status(502).json({ message: "could not send the request email" })
+  }
 
   res.json({ ok: true })
 }
