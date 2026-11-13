@@ -26,7 +26,7 @@ const WORDMARK_STYLE: Record<string, string> = {
   Diversey: "font-bold tracking-[-0.02em] text-[23px]",
   Taski: "uppercase font-extrabold tracking-[0.14em] text-[20px]",
   Unilever: "font-semibold tracking-[-0.01em] text-[23px]",
-  "SC Johnson (Deb)": "font-bold tracking-[-0.03em] text-[22px]",
+  "SC Johnson (Deb)": "font-bold tracking-[-0.03em] text-[19px]",
   Celea: "lowercase font-bold tracking-[0.01em] text-[25px]",
 }
 const WORDMARK_DEFAULT = "font-extrabold tracking-tight text-[21px]"
@@ -82,7 +82,7 @@ const Suppliers = async () => {
                     ) : (
                       <span
                         aria-hidden
-                        className={`block max-w-full overflow-hidden whitespace-nowrap leading-none text-brand-ink opacity-70 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 ${
+                        className={`block max-w-full whitespace-nowrap px-0.5 leading-none text-brand-ink opacity-70 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 ${
                           WORDMARK_STYLE[brand.name] ?? WORDMARK_DEFAULT
                         }`}
                       >

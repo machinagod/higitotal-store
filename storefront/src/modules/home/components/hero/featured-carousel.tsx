@@ -105,9 +105,9 @@ const FeaturedCarousel = ({ images }: FeaturedCarouselProps) => {
                   <span className="ind" />
                   {s.eyebrow}
                 </span>
-                <h3 className="mt-2.5 max-w-[14ch] text-xl font-bold leading-tight tracking-tight text-brand-ink small:text-2xl">
+                <h2 className="mt-2.5 max-w-[14ch] text-xl font-bold leading-tight tracking-tight text-brand-ink small:text-2xl">
                   {s.title}
-                </h3>
+                </h2>
                 <p className="mt-2 max-w-[26ch] text-[13px] font-medium leading-snug text-[#5a636c]">
                   {s.blurb}
                 </p>

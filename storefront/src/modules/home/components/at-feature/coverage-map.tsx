@@ -21,7 +21,18 @@ export const CoverageMap = ({ className = "" }: { className?: string }) => (
     className={className}
     preserveAspectRatio="xMidYMid meet"
   >
-    <path d={ES_PATH} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.16)" strokeWidth="1.1" strokeLinejoin="round" />
+    <defs>
+      {/* Spain is cropped by the frame: fade it out towards the edges so the
+          crop never shows as a hard line. */}
+      <radialGradient id="ht-coverage-fade" cx="110" cy="190" r="230" gradientUnits="userSpaceOnUse">
+        <stop offset="0.45" stopColor="#fff" stopOpacity="1" />
+        <stop offset="1" stopColor="#fff" stopOpacity="0" />
+      </radialGradient>
+      <mask id="ht-coverage-mask" maskUnits="userSpaceOnUse" x="-6" y="6" width="300" height="392">
+        <rect x="-6" y="6" width="300" height="392" fill="url(#ht-coverage-fade)" />
+      </mask>
+    </defs>
+    <path mask="url(#ht-coverage-mask)" d={ES_PATH} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.16)" strokeWidth="1.1" strokeLinejoin="round" />
     <path d={PT_PATH} fill="rgba(0,173,239,0.12)" stroke="rgba(0,173,239,0.6)" strokeWidth="1.3" strokeLinejoin="round" />
     <circle cx={MIRANDELA.x} cy={MIRANDELA.y} r={RADIUS} fill="rgba(255,122,26,0.06)" stroke="rgba(255,122,26,0.5)" strokeWidth="1.3" strokeDasharray="5 6" />
     {[

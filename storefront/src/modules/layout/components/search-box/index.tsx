@@ -36,16 +36,16 @@ type Option = {
 }
 
 const GROUP_LABEL: Record<Exclude<Option["group"], "todos">, string> = {
-  categorias: "Categorias",
   marcas: "Marcas",
+  categorias: "Categorias",
   paginas: "Páginas",
   produtos: "Produtos",
 }
 
 /**
  * Header search with a predictive dropdown, built as an ARIA 1.2 combobox:
- * the input owns a listbox of grouped options (categories/subcategories and
- * brands matched client-side, static site pages, and product hits from the
+ * the input owns a listbox of grouped options (brands and
+ * categories/subcategories matched client-side, static site pages, and product hits from the
  * backend search). Focus stays in the input; ArrowUp/Down move the active
  * option (`aria-activedescendant`), Enter opens it (or runs the full search
  * when none is active), Escape closes the list. Products show their Moloni
@@ -141,11 +141,29 @@ const SearchBox = ({
   const iconBox =
     "flex h-9 w-9 flex-none items-center justify-center rounded-btn bg-brand-cyan-50 text-brand-cyan-ink"
   const titleCls = "block text-sm font-medium leading-snug text-brand-ink"
-  const metaCls = "block text-xs text-grey-50"
+  const metaCls = "block text-xs text-[#5a636c]"
 
   // Flat, ordered option list — the order the keyboard walks through.
   const options: Option[] = useMemo(() => {
     const out: Option[] = []
+    for (const b of brandMatches) {
+      out.push({
+        key: `brand-${b.href}`,
+        group: "marcas",
+        href: b.href,
+        render: () => (
+          <>
+            <span className={iconBox} aria-hidden>
+              <Tag className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className={`${titleCls} truncate`}>{b.name}</span>
+              <span className={metaCls}>Marca · ver produtos</span>
+            </span>
+          </>
+        ),
+      })
+    }
     for (const c of catMatches) {
       out.push({
         key: `cat-${c.type}-${c.handle}`,
@@ -167,24 +185,6 @@ const SearchBox = ({
                   ? `Subcategoria${c.parent ? ` · ${c.parent}` : ""}`
                   : "Categoria"}
               </span>
-            </span>
-          </>
-        ),
-      })
-    }
-    for (const b of brandMatches) {
-      out.push({
-        key: `brand-${b.href}`,
-        group: "marcas",
-        href: b.href,
-        render: () => (
-          <>
-            <span className={iconBox} aria-hidden>
-              <Tag className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className={`${titleCls} truncate`}>{b.name}</span>
-              <span className={metaCls}>Marca · ver produtos</span>
             </span>
           </>
         ),
@@ -235,7 +235,7 @@ const SearchBox = ({
                 <span className={`${metaCls} truncate`}>
                   {p.sku && (
                     <>
-                      Ref.ª <span className="font-semibold text-grey-60">{p.sku}</span>
+                      Ref.ª <span className="font-semibold text-brand-ink">{p.sku}</span>
                     </>
                   )}
                   {p.sku && p.category && " · "}
@@ -344,7 +344,7 @@ const SearchBox = ({
         }}
         role="search"
         data-testid="nav-search-form"
-        className="flex items-center gap-x-2.5 rounded-pill border-[1.5px] border-hairline bg-white pl-5 pr-1.5 py-1.5 transition-colors focus-within:border-brand-cyan focus-within:shadow-[0_0_0_4px_rgba(0,173,239,0.12)]"
+        className="flex items-center gap-x-2.5 rounded-pill border-[1.5px] border-hairline bg-white pl-5 pr-1 py-1 small:pr-1.5 small:py-1.5 transition-colors focus-within:border-brand-cyan focus-within:shadow-[0_0_0_4px_rgba(0,173,239,0.12)]"
       >
         <input
           type="search"
@@ -371,7 +371,7 @@ const SearchBox = ({
         <button
           type="submit"
           aria-label="Pesquisar"
-          className="flex h-10 w-10 flex-none items-center justify-center rounded-pill bg-brand-cyan text-white transition-colors hover:bg-brand-cyan-ink"
+          className="flex h-9 w-9 flex-none items-center justify-center rounded-pill bg-brand-cyan small:h-10 small:w-10 text-white transition-colors hover:bg-brand-cyan-ink"
         >
           <Search className="h-[18px] w-[18px]" />
         </button>
@@ -442,12 +442,12 @@ const SearchBox = ({
 
           {!hasResults &&
             (loading ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-grey-50">
+              <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-[#5a636c]">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> A
                 pesquisar…
               </div>
             ) : (
-              <div className="px-4 py-6 text-center text-sm text-grey-50">
+              <div className="px-4 py-6 text-center text-sm text-[#5a636c]">
                 Sem resultados para “{q}”.
               </div>
             ))}

@@ -110,7 +110,7 @@ export function MobileSearchRow({ children }: { children: ReactNode }) {
       }`}
       data-testid="mobile-search-row"
     >
-      <div className="content-container flex items-center gap-x-2 py-2.5">
+      <div className="content-container flex items-center gap-x-2 py-2">
         {children}
       </div>
     </div>
