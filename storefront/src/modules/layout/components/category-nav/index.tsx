@@ -9,7 +9,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 type NavCategory = { label: string; href: string; icon?: string }
 
 // How many categories show inline before the rest collapse into "Mais".
-const TOP_N = 3
+const TOP_N = 4
 
 /**
  * Top-level category strip (matches the design mock): the first few categories

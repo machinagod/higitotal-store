@@ -4,6 +4,7 @@ import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import BlackCat from "@modules/layout/components/black-cat"
 import { isCatalogMode } from "@lib/util/catalog-mode"
 
 export default async function Footer() {
@@ -166,7 +167,11 @@ export default async function Footer() {
               © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de
               Higiene, Lda. · NIF 504297040
             </span>
-            <span>Mirandela · Portugal</span>
+            <span className="inline-flex items-center gap-x-1.5">
+              Mirandela
+              <BlackCat className="h-[18px] w-auto" />
+              · Portugal
+            </span>
           </div>
         </div>
       </div>
