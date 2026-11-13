@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test"
 import "dotenv/config.js"
+import { consentStorageState } from "./e2e/consent"
 
 /**
  * Smoke config — a self-contained, v2-correct sanity gate used by CI.
@@ -25,6 +26,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.NEXT_PUBLIC_BASE_URL,
     trace: "retain-on-failure",
+    // `pnpm start` is a production build (GTM + cookie banner): start with a
+    // stored choice so the banner never covers what the tests click.
+    storageState: consentStorageState(process.env.NEXT_PUBLIC_BASE_URL),
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

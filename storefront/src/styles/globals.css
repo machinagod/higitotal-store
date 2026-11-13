@@ -273,6 +273,24 @@ body {
   outline: none;
 }
 
+/* Cookie banner: a short rise-in, only when motion is welcome. Transform and
+   opacity only, so it never shifts layout. */
+@media (prefers-reduced-motion: no-preference) {
+  .ht-consent-in {
+    animation: ht-consent-in 0.22s ease-out both;
+  }
+}
+@keyframes ht-consent-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Hero "Em destaque" carousel — active indicator fills to show time-to-next. */
 @keyframes carousel-progress {
   from {

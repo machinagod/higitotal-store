@@ -13,6 +13,8 @@ import {
 import { getNavGroups } from "@lib/data/categories"
 import { COMPANY } from "@lib/company"
 import { isCatalogMode } from "@lib/util/catalog-mode"
+import { analyticsEnabled } from "@lib/util/gtm"
+import CookiePreferencesButton from "@modules/common/components/cookie-consent/preferences-button"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import BlackCat from "@modules/layout/components/black-cat"
@@ -274,6 +276,11 @@ export default async function Footer() {
                   </LocalizedClientLink>
                 </li>
               ))}
+              {analyticsEnabled() && (
+                <li>
+                  <CookiePreferencesButton className="text-svc-fg transition-colors hover:text-white" />
+                </li>
+              )}
               <li>
                 <a
                   href={COMPANY.complaintsBookUrl}

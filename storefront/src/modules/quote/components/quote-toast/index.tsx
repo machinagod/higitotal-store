@@ -45,7 +45,9 @@ export default function QuoteToast() {
         <div
           ref={boxRef}
           key={toast.id}
-          className="fixed inset-x-4 bottom-[calc(96px+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-[420px] small:inset-x-auto small:bottom-6 small:right-6 small:mx-0 small:w-[400px]"
+          // Phones: above the PDP sticky bar, and above the cookie banner
+          // while it is open (--ht-consent-stack = its top edge).
+          className="fixed inset-x-4 bottom-[max(calc(96px+env(safe-area-inset-bottom)),calc(var(--ht-consent-stack,0px)+8px))] z-[70] mx-auto max-w-[420px] small:inset-x-auto small:bottom-6 small:right-6 small:mx-0 small:w-[400px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocus={() => setPaused(true)}

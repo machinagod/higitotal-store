@@ -8,8 +8,10 @@ import {
   GoogleTagManagerNoScript,
   GoogleTagManagerScript,
 } from "@modules/common/components/analytics/google-tag-manager"
+import CookieConsent from "@modules/common/components/cookie-consent"
 import JsonLd from "@modules/common/components/json-ld"
 import { getBaseURL } from "@lib/util/env"
+import { analyticsEnabled } from "@lib/util/gtm"
 import {
   SITE_DESCRIPTION,
   SITE_LOCALE,
@@ -107,6 +109,10 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       </head>
       <body>
         <GoogleTagManagerNoScript />
+        {/* Fixed bottom card, but first in the DOM so keyboard users reach
+            it early. Only when a Google tag loads (nothing to consent to
+            otherwise); renders nothing on the server. */}
+        {analyticsEnabled() && <CookieConsent />}
         <JsonLd data={[organizationSchema(), websiteSchema()]} />
         {/* Landmarks (header, <main>, footer) come from each route-group
             layout, so the header/footer are never nested inside <main>. */}
