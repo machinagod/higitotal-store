@@ -49,17 +49,19 @@ const Hero = ({
             aconselhamento técnico.
           </p>
 
-          <div className="mt-6 grid grid-cols-2 gap-2.5 small:mt-8 small:flex small:flex-wrap small:gap-3">
+          {/* Two columns from 360px; below that (320px phones) the uppercase
+              labels no longer fit side by side, so the buttons stack. */}
+          <div className="mt-6 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 small:mt-8 small:flex small:flex-wrap small:gap-3">
             <LocalizedClientLink
               href="/store"
-              className="inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-pill bg-white px-4 py-3.5 text-[12px] font-bold uppercase tracking-[0.04em] text-brand-navy shadow-lg transition-transform hover:-translate-y-0.5 small:px-6 small:text-[13px]"
+              className="inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-pill bg-white px-3 py-3.5 text-[12px] font-bold uppercase tracking-[0.02em] text-brand-navy shadow-lg transition-transform hover:-translate-y-0.5 small:px-6 small:text-[13px] small:tracking-[0.04em]"
             >
               Ver catálogo
               <span aria-hidden>→</span>
             </LocalizedClientLink>
             <LocalizedClientLink
               href="/contact"
-              className="inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-pill border-[1.5px] border-white/60 bg-white/[0.14] px-4 py-3.5 text-[12px] font-bold uppercase tracking-[0.04em] text-white transition-transform hover:-translate-y-0.5 hover:bg-white/25 small:px-6 small:text-[13px]"
+              className="inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-pill border-[1.5px] border-white/60 bg-white/[0.14] px-3 py-3.5 text-[12px] font-bold uppercase tracking-[0.02em] text-white transition-transform hover:-translate-y-0.5 hover:bg-white/25 small:px-6 small:text-[13px] small:tracking-[0.04em]"
             >
               Pedir orçamento
             </LocalizedClientLink>
@@ -107,15 +109,15 @@ const Hero = ({
               <span className="ind amber" />
               Assistência Técnica
             </span>
-            <h3 className="mt-2.5 max-w-[13ch] text-xl font-bold leading-tight tracking-tight text-white small:text-2xl">
+            <h2 className="mt-2.5 max-w-[13ch] text-xl font-bold leading-tight tracking-tight text-white small:text-2xl">
               Instalação, reparação e manutenção
-            </h3>
+            </h2>
             <p className="mt-2 max-w-[28ch] text-[13px] font-medium leading-snug text-svc-fg-muted">
               Técnicos especializados, sediados em Mirandela. Resposta
               prioritária no Norte.
             </p>
             <LocalizedClientLink
-              href="/assistencia-tecnica"
+              href="/assistencia-tecnica#pedir"
               className="mt-4 inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.04em] text-white"
             >
               Pedir assistência

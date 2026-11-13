@@ -85,10 +85,12 @@ const CategoryCards = async ({ countryCode }: { countryCode: string }) => {
                 )}
               </span>
               <span className="flex flex-1 items-center justify-between gap-2 px-3.5 py-3 small:px-5 small:py-4">
-                <h3 className="text-[14px] font-bold leading-tight tracking-tight text-brand-ink [overflow-wrap:normal] [word-break:normal] small:text-[15px]">
+                <h3 className="min-w-0 text-[14px] font-bold leading-tight tracking-tight text-brand-ink [overflow-wrap:normal] [word-break:normal] small:text-[15px]">
                   {cat.label}
                 </h3>
-                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full border-[1.5px] border-hairline text-brand-ink transition-colors group-hover:border-brand-cyan group-hover:bg-brand-cyan group-hover:text-white small:h-8 small:w-8">
+                {/* The whole card is the link; below 360px the arrow would push
+                    single long words ("Detergentes") out of the card. */}
+                <span aria-hidden className="flex h-7 w-7 flex-none items-center justify-center rounded-full border-[1.5px] border-hairline text-brand-ink transition-colors max-[359px]:hidden group-hover:border-brand-cyan group-hover:bg-brand-cyan group-hover:text-white small:h-8 small:w-8">
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </span>

@@ -19,6 +19,10 @@ import BlackCat from "@modules/layout/components/black-cat"
 
 type FooterLink = { label: string; href: string }
 
+// Each service leads straight to the request form on the Assistência page
+// (the page has no per-service sections; the form's "Tipo de serviço" field
+// covers all three).
+const SERVICE_FORM = "/assistencia-tecnica#pedir"
 const SERVICE_LINKS = ["Instalação", "Reparação", "Contratos de manutenção"]
 
 const LEGAL_LINKS: FooterLink[] = [
@@ -64,14 +68,14 @@ function ServiceColumn() {
       <ul className="m-0 flex list-none flex-col gap-[11px] p-0">
         {SERVICE_LINKS.map((item) => (
           <li key={item}>
-            <LocalizedClientLink className={linkClass} href="/assistencia-tecnica">
+            <LocalizedClientLink className={linkClass} href={SERVICE_FORM}>
               {item}
             </LocalizedClientLink>
           </li>
         ))}
       </ul>
       <LocalizedClientLink
-        href="/assistencia-tecnica"
+        href={SERVICE_FORM}
         className="inline-flex items-center justify-center gap-2 rounded-pill bg-svc-signal px-[18px] py-[11px] text-[12px] font-bold uppercase leading-none tracking-[0.04em] text-white transition-colors hover:bg-svc-signal-ink"
       >
         <Wrench className="h-3.5 w-3.5" aria-hidden />
