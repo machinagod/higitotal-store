@@ -142,7 +142,7 @@ Fix failures before committing — including pre-existing ones in files you touc
 The storefront **runtime** variable `STOREFRONT_CATALOG_MODE` hides every price and
 the cart: cards/PDP show "Preço sob consulta", the CTA becomes **"Pedir informação"**
 (the `/store/contact-request` form, pre-filled), `/cart` and `/checkout` redirect home,
-sorting is hidden, and prices are stripped from the page payload (incl. JSON-LD
+sorting drops the price options and defaults to A–Z, and prices are stripped from the page payload (incl. JSON-LD
 offers). The production image defaults it to `true` (`storefront/Dockerfile`); set
 `STOREFRONT_CATALOG_MODE=false` on the Railway storefront service (restart, no rebuild)
 to sell with prices again. Local dev/e2e default to off. Logic:

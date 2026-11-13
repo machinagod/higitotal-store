@@ -67,13 +67,14 @@ export function ChipRow({
 /** Category chips for a list of categories (internal "EQ_…" groups left out). */
 export function categoryChips(
   categories: (Pick<HttpTypes.StoreProductCategory, "id" | "name" | "handle"> | null | undefined)[] | null | undefined,
-  activeId?: string
+  activeId?: string,
+  parentName?: string | null
 ): Chip[] {
   return (categories ?? [])
     .filter((c): c is NonNullable<typeof c> => Boolean(c?.handle) && !isInternalCategory(c?.name))
     .map((c) => ({
       href: `/categories/${c.handle}`,
-      label: displayCategoryName(c.name),
+      label: displayCategoryName(c.name, parentName),
       active: c.id === activeId,
     }))
 }
@@ -87,15 +88,23 @@ const SubcategoryChips = ({
   categories,
   siblings,
   activeId,
+  parentName,
+  siblingParentName,
   label = "Subcategorias",
 }: {
   categories?: HttpTypes.StoreProductCategory[]
   siblings?: HttpTypes.StoreProductCategory[]
   activeId?: string
+  /** Name of the category whose children are shown (qualifies "Produtos" etc.). */
+  parentName?: string | null
+  /** Name of the parent the siblings share. */
+  siblingParentName?: string | null
   label?: string
 }) => {
-  const children = categoryChips(categories)
-  const chips = children.length ? children : categoryChips(siblings, activeId)
+  const children = categoryChips(categories, undefined, parentName)
+  const chips = children.length
+    ? children
+    : categoryChips(siblings, activeId, siblingParentName)
   // A lone chip pointing at the page you're on is noise.
   if (chips.length < 2 && chips.every((c) => c.active)) return null
 

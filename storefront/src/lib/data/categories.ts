@@ -47,7 +47,7 @@ export const getCategoryByHandle = cache(async function (
       // Pull the full descendant tree so a top-level category can list products
       // from all of its sub-categories (most products live on the leaves).
       include_descendants_tree: true,
-      fields: "id,name,handle,description,*category_children",
+      fields: "id,name,handle,description,*parent_category,*category_children",
     },
     { next: { tags: ["categories"] } }
   )
@@ -80,7 +80,7 @@ export const getCategoryById = cache(async function (categoryId: string) {
       categoryId,
       {
         fields:
-          "id,name,handle,*parent_category,*category_children",
+          "id,name,handle,rank,*parent_category,*category_children",
       },
       { next: { tags: ["categories"] } }
     )

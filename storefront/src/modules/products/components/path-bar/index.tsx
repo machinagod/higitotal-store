@@ -58,10 +58,13 @@ const PathBar = async ({ product, countryCode }: PathBarWrapperProps) => {
     const path = chain.length ? chain : [deepest]
     // Internal bookkeeping groups (EQ_/ML_…) are skipped; the rest use their
     // customer-facing names.
+    let parentName: string | null = null
     for (const cat of path) {
+      const pName = parentName
+      parentName = cat.name
       if (isInternalCategory(cat.name)) continue
       crumbs.push({
-        label: displayCategoryName(cat.name),
+        label: displayCategoryName(cat.name, pName),
         href: `/categories/${cat.handle}`,
       })
     }

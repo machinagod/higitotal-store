@@ -28,8 +28,12 @@ type Crumb = { name: string; handle?: string | null }
 export function categoryPageTitle(category: {
   name?: string | null
   handle?: string | null
+  parent_category?: { name?: string | null } | null
 }): string {
-  return brandForCategory(category)?.name ?? displayCategoryName(category.name)
+  return (
+    brandForCategory(category)?.name ??
+    displayCategoryName(category.name, category.parent_category?.name)
+  )
 }
 
 export default function CategoryTemplate({
@@ -151,6 +155,8 @@ export default function CategoryTemplate({
         categories={category.category_children}
         siblings={siblings}
         activeId={category.id}
+        parentName={category.name}
+        siblingParentName={category.parent_category?.name}
         label={brand ? `Gamas ${title}` : "Subcategorias"}
       />
 
