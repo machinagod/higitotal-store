@@ -152,9 +152,22 @@ describe("parseContactRequest", () => {
   it("requires a phone or a message", () => {
     expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt" })).toEqual({
       status: "invalid",
-      message: "provide a phone or a message",
+      message: "provide a phone, a message or items",
     })
     expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt", message: "Olá" }).status).toBe("ok")
+  })
+
+  it("accepts a quote list without phone or message", () => {
+    const r = parseContactRequest({
+      name: "Ana",
+      email: "ana@empresa.pt",
+      items: [{ sku: "PA3008", title: "Toalha de Mãos", quantity: 5 }],
+    })
+    expect(r.status).toBe("ok")
+    // items that sanitise to nothing don't count as content
+    expect(
+      parseContactRequest({ name: "Ana", email: "ana@empresa.pt", items: [{ quantity: 2 }] }).status
+    ).toBe("invalid")
   })
 
   it("rejects over-long fields", () => {
@@ -431,8 +444,11 @@ describe("parseContactRequest with a quote list", () => {
     })
   })
 
-  it("still needs the contact fields", () => {
-    expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt", items }).status).toBe("invalid")
+  it("still needs a name and a valid e-mail", () => {
+    expect(parseContactRequest({ email: "ana@empresa.pt", items }).status).toBe("invalid")
+    expect(parseContactRequest({ name: "Ana", email: "ana@", items }).status).toBe("invalid")
+    // the list itself replaces the phone-or-message requirement
+    expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt", items }).status).toBe("ok")
   })
 
   it("leaves items unset for the legacy single-product payload", () => {

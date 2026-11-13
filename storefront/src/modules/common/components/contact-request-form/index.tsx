@@ -122,7 +122,10 @@ export default function ContactRequestForm({
     prefilledProp ?? (product ? PRODUCT_ENQUIRY_MESSAGE : undefined)
 
   const errors = useFieldErrors(idPrefix, (form) =>
-    validateContactRequestAll(readFields(form), { prefilledMessage })
+    validateContactRequestAll(readFields(form), {
+      prefilledMessage,
+      hasItems: (getItems?.().length ?? 0) > 0,
+    })
   )
 
   useEffect(() => {

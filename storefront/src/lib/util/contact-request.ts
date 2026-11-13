@@ -157,6 +157,11 @@ export type ValidateOptions = {
   prefilledMessage?: string
   /** How the message is asked for in errors (assistência: "descreva o pedido"). */
   messageHint?: string
+  /**
+   * The request carries a quote list: the products and quantities are the
+   * content, so an unchanged prefilled message is enough (no phone needed).
+   */
+  hasItems?: boolean
 }
 
 /** Minimum digits for a phone number (PT numbers have 9). */
@@ -193,11 +198,12 @@ export function validateContactRequestAll(
   const phone = clean(f.phone)
   const message = clean(f.message)
   const hasMessage =
-    !!message &&
-    !(
-      opts.prefilledMessage &&
-      normalise(message) === normalise(opts.prefilledMessage)
-    )
+    !!opts.hasItems ||
+    (!!message &&
+      !(
+        opts.prefilledMessage &&
+        normalise(message) === normalise(opts.prefilledMessage)
+      ))
   const pref = normalise(f.contactPref)
   const hint = opts.messageHint ?? "escreva uma mensagem"
 

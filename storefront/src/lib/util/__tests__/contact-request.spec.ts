@@ -42,6 +42,16 @@ describe("validateContactRequest", () => {
     expect(validateContactRequest({ ...ok, phone: " ", message: "Olá" })).toBeNull()
   })
 
+  it("accepts a quote list with only the prefilled message when e-mail is preferred", () => {
+    const f = { ...ok, phone: "", message: "Pedido", contactPref: "email" }
+    expect(validateContactRequest(f, { prefilledMessage: "Pedido" })).not.toBeNull()
+    expect(validateContactRequest(f, { prefilledMessage: "Pedido", hasItems: true })).toBeNull()
+    // phone preferred still needs a phone, list or not
+    expect(
+      validateContactRequest({ ...f, contactPref: "telefone" }, { hasItems: true })?.field
+    ).toBe("phone")
+  })
+
   it("requires a name", () => {
     expect(validateContactRequest({ ...ok, name: "  " })).toEqual({
       field: "name",

@@ -213,10 +213,6 @@ export function parseContactRequest(body: unknown): ParseResult {
   if (!fields.name || !fields.email || !EMAIL_RE.test(fields.email)) {
     return { status: 'invalid', message: 'name and a valid email are required' }
   }
-  if (!fields.phone && !fields.message) {
-    return { status: 'invalid', message: 'provide a phone or a message' }
-  }
-
   const quantity =
     typeof b.quantity === 'number' && Number.isFinite(b.quantity) && b.quantity > 0
       ? Math.floor(b.quantity)
@@ -227,6 +223,10 @@ export function parseContactRequest(body: unknown): ParseResult {
     return { status: 'invalid', message: parsedItems.message }
   }
   const items = parsedItems.items
+  // A quote list is content in itself; otherwise a phone or a message is needed.
+  if (!fields.phone && !fields.message && !items?.length) {
+    return { status: 'invalid', message: 'provide a phone, a message or items' }
+  }
 
   // A quote list is a product request even when the kind is missing / unknown.
   const kind = inferContactKind({
