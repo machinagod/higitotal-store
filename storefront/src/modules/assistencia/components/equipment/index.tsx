@@ -1,11 +1,14 @@
 // Equipment brands we service (machines/appliances) — distinct from the homepage
 // "brands we represent" list. SVG logos render white on the dark section; brands
 // whose logo doesn't survive that white-silhouette treatment (Sammic's round
-// badge would become a plain white disc) fall back to a styled wordmark.
+// badge would become a plain white disc, Viper's red oval a solid blob) fall
+// back to a styled wordmark. The list follows our repair records (Moloni
+// assistance invoices, 2024–2026): Fagor, Sammic, Nilfisk and Viper.
 const BRANDS: { name: string; logo?: string }[] = [
   { name: "Fagor", logo: "/brands/fagor.svg" },
   { name: "Sammic" },
   { name: "Nilfisk", logo: "/brands/nilfisk.svg" },
+  { name: "Viper" },
 ]
 
 /**
@@ -24,9 +27,10 @@ const Equipment = () => {
           As marcas com que trabalha, assistidas por quem as conhece
         </h2>
         <p className="mt-3.5 text-base leading-relaxed text-svc-fg-muted">
-          Trabalhamos com as principais marcas de equipamento de cozinha,
-          lavandaria e limpeza profissional — e com o restante equipamento de
-          higiene e hotelaria do seu negócio.
+          Damos assistência a equipamento Fagor, Sammic, Nilfisk e Viper —
+          cozinha, lavandaria e máquinas de limpeza — e reparamos também
+          equipamento de refrigeração, de confeção a gás e de lavandaria de
+          outras marcas.
         </p>
       </div>
 
@@ -54,7 +58,7 @@ const Equipment = () => {
           )
         )}
         <span className="rounded-pill border border-dashed border-svc-line bg-svc-ground-2 px-[26px] py-[13px] text-base font-semibold tracking-[-0.01em] text-svc-fg-muted">
-          + equipamento geral de higiene, hotelaria e restauração
+          + refrigeração, confeção a gás e lavandaria de outras marcas
         </span>
       </div>
     </section>
