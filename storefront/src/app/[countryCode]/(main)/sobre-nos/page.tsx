@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import Image from "next/image"
 import {
   ArrowRight,
   ClipboardCheck,
@@ -23,6 +24,7 @@ import { getStripBrands } from "@lib/data/categories"
 import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
 import { aboutPageSchema } from "@lib/util/structured-data"
 import CompanyCta from "@modules/company/components/company-cta"
+import sedePhoto from "@modules/company/assets/sede-mirandela.webp"
 import JsonLd from "@modules/common/components/json-ld"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -41,6 +43,14 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${TITLE} · ${SITE_NAME}`,
       description: DESCRIPTION,
       url: canonical,
+      images: [
+        {
+          url: sedePhoto.src,
+          width: sedePhoto.width,
+          height: sedePhoto.height,
+          alt: PHOTO_ALT,
+        },
+      ],
     },
   }
 }
@@ -85,6 +95,9 @@ const VALUES: (Item & { text: string })[] = [
     text: "Construímos relações de longo prazo com clientes e fornecedores, assentes na confiança mútua.",
   },
 ]
+
+const PHOTO_ALT =
+  "Instalações da Higitotal na Zona Industrial de Mirandela, com o painel das marcas e as viaturas de assistência técnica"
 
 /* Shared type scale for the page sections. */
 const eyebrow =
@@ -138,7 +151,7 @@ export default async function SobreNosPage() {
       {/* Intro */}
       <section
         aria-labelledby="about-title"
-        className="grid grid-cols-1 gap-8 small:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] small:items-end small:gap-14"
+        className="grid grid-cols-1 gap-8 small:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] small:items-center small:gap-14"
       >
         <div>
           <span className={eyebrow}>
@@ -161,38 +174,48 @@ export default async function SobreNosPage() {
             instalação e à manutenção do equipamento, com uma equipa
             especializada e assistência técnica própria.
           </p>
+          <dl className="mt-8 grid grid-cols-2 overflow-hidden rounded-large border border-hairline bg-white xsmall:grid-cols-4">
+            <div className="border-b border-r border-hairline p-5 xsmall:border-b-0">
+              <dt className="text-xs font-semibold text-grey-50">Desde</dt>
+              <dd className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-brand-ink">
+                {COMPANY.since}
+              </dd>
+            </div>
+            <div className="border-b border-hairline p-5 xsmall:border-b-0 xsmall:border-r">
+              <dt className="text-xs font-semibold text-grey-50">
+                Anos de atividade
+              </dt>
+              <dd className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-brand-ink">
+                {years}
+              </dd>
+            </div>
+            <div className="border-r border-hairline p-5">
+              <dt className="text-xs font-semibold text-grey-50">Sede</dt>
+              <dd className="mt-1 font-bold leading-snug text-brand-ink">
+                {COMPANY.address.city}
+              </dd>
+            </div>
+            <div className="p-5">
+              <dt className="text-xs font-semibold text-grey-50">
+                Assistência técnica
+              </dt>
+              <dd className="mt-1 font-bold leading-snug text-brand-ink">
+                Própria
+              </dd>
+            </div>
+          </dl>
         </div>
 
-        <dl className="grid grid-cols-2 overflow-hidden rounded-large border border-hairline bg-white">
-          <div className="border-b border-r border-hairline p-5">
-            <dt className="text-xs font-semibold text-grey-50">Desde</dt>
-            <dd className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-brand-ink">
-              {COMPANY.since}
-            </dd>
-          </div>
-          <div className="border-b border-hairline p-5">
-            <dt className="text-xs font-semibold text-grey-50">
-              Anos de atividade
-            </dt>
-            <dd className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-brand-ink">
-              {years}
-            </dd>
-          </div>
-          <div className="border-r border-hairline p-5">
-            <dt className="text-xs font-semibold text-grey-50">Sede</dt>
-            <dd className="mt-1 font-bold leading-snug text-brand-ink">
-              {COMPANY.address.city}
-            </dd>
-          </div>
-          <div className="p-5">
-            <dt className="text-xs font-semibold text-grey-50">
-              Assistência técnica
-            </dt>
-            <dd className="mt-1 font-bold leading-snug text-brand-ink">
-              Própria
-            </dd>
-          </div>
-        </dl>
+        <figure className="overflow-hidden rounded-large border border-hairline bg-grey-10">
+          <Image
+            src={sedePhoto}
+            alt={PHOTO_ALT}
+            placeholder="blur"
+            priority
+            sizes="(min-width: 1024px) 40vw, 100vw"
+            className="h-auto w-full"
+          />
+        </figure>
       </section>
 
       {/* What we do */}
