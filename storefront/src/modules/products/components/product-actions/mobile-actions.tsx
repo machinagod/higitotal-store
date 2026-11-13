@@ -20,6 +20,9 @@ type MobileActionsProps = {
   isAdding?: boolean
   show: boolean
   optionsDisabled: boolean
+  /** No prices / cart: show a single "Pedir informação" button. */
+  catalogMode?: boolean
+  onRequestInfo?: () => void
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -32,6 +35,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   isAdding,
   show,
   optionsDisabled,
+  catalogMode = false,
+  onRequestInfo,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -74,8 +79,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               <span className="truncate" data-testid="mobile-title">
                 {product.title}
               </span>
-              <span>—</span>
-              {selectedPrice ? (
+              {!catalogMode && <span>—</span>}
+              {catalogMode ? null : selectedPrice ? (
                 <div className="flex items-end gap-x-2 text-ui-fg-base">
                   {selectedPrice.price_type === "sale" && (
                     <p>
@@ -97,6 +102,15 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 <div></div>
               )}
             </div>
+            {catalogMode ? (
+              <Button
+                onClick={onRequestInfo}
+                className="w-full min-w-0"
+                data-testid="mobile-request-info-button"
+              >
+                <span className="truncate">Pedir informação</span>
+              </Button>
+            ) : (
             <div
               className={clx("w-full gap-x-3", {
                 "grid grid-cols-2": (product.variants?.length ?? 0) > 1,
@@ -134,6 +148,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 </span>
               </Button>
             </div>
+            )}
           </div>
         </Transition>
       </div>

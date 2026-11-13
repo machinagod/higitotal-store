@@ -5,6 +5,7 @@ import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
 import { omit } from "lodash"
 import { revalidateTag } from "next/cache"
+import { catalogModeFromEnv } from "@lib/util/catalog-mode-flag"
 import { redirect } from "next/navigation"
 import { getAuthHeaders, getCartId, removeCartId, setCartId } from "./cookies"
 import { getProductsById } from "./products"
@@ -77,6 +78,10 @@ export async function addToCart({
   quantity: number
   countryCode: string
 }) {
+  if (catalogModeFromEnv()) {
+    throw new Error("Cart is disabled in catalog mode")
+  }
+
   if (!variantId) {
     throw new Error("Missing variant ID when adding to cart")
   }

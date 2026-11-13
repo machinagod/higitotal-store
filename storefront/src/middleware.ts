@@ -1,6 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { notFound } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
+import { catalogModeFromEnv } from "@lib/util/catalog-mode-flag"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
@@ -132,12 +133,36 @@ function accessTokenGate(request: NextRequest): NextResponse | null {
 }
 
 /**
+ * Catalog mode (STOREFRONT_CATALOG_MODE): there is no cart, so send the cart
+ * and checkout pages (/{country}/cart, /{country}/checkout) back to the home
+ * page of the same country.
+ */
+function catalogModeRedirect(request: NextRequest): NextResponse | null {
+  if (!catalogModeFromEnv()) {
+    return null
+  }
+  const [, country, section] = request.nextUrl.pathname.split("/")
+  if (country && (section === "cart" || section === "checkout")) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/${country}`
+    url.search = ""
+    return NextResponse.redirect(url, 307)
+  }
+  return null
+}
+
+/**
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
   const accessChallenge = accessTokenGate(request)
   if (accessChallenge) {
     return accessChallenge
+  }
+
+  const catalogRedirect = catalogModeRedirect(request)
+  if (catalogRedirect) {
+    return catalogRedirect
   }
 
   const searchParams = request.nextUrl.searchParams

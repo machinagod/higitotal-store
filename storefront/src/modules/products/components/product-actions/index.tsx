@@ -14,12 +14,17 @@ import ContactModal from "../contact-modal"
 import { addToCart } from "@lib/data/cart"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { HttpTypes } from "@medusajs/types"
-import { Phone, ArrowRight, Clock } from "lucide-react"
+import { Phone, ArrowRight, Clock, MessageCircle } from "lucide-react"
+
+// Pre-filled enquiry text in catalog mode (same wording as the legacy site).
+const INFO_REQUEST_MESSAGE = "Estou interessado neste produto. Contactem-me!"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   disabled?: boolean
+  /** No prices / cart: the CTA becomes "Pedir informação". */
+  catalogMode?: boolean
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
@@ -35,6 +40,7 @@ export default function ProductActions({
   product,
   region,
   disabled,
+  catalogMode = false,
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
@@ -84,7 +90,7 @@ export default function ProductActions({
 
   // add the selected variant to the cart
   const handleAddToCart = async () => {
-    if (!selectedVariant?.id) return null
+    if (catalogMode || !selectedVariant?.id) return null
 
     setIsAdding(true)
 
@@ -139,6 +145,43 @@ export default function ProductActions({
           )}
         </div>
 
+        {catalogMode ? (
+          <>
+            {/* Catalog mode: no price / cart — single enquiry CTA */}
+            <div className="border-y border-hairline py-5 my-2">
+              <p
+                className="text-lg font-bold text-brand-ink"
+                data-testid="price-on-request"
+              >
+                Preço sob consulta
+              </p>
+              <p className="mt-1 text-small-regular text-grey-50">
+                Peça-nos informação sobre preço, disponibilidade e condições para a
+                sua empresa — respondemos rapidamente.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setContactOpen(true)}
+              disabled={!!disabled}
+              data-testid="request-info-cta"
+              className="w-full h-[52px] mt-2 rounded-btn bg-brand-ink text-white font-bold uppercase tracking-wide text-small-regular flex items-center justify-center gap-2 transition hover:bg-brand-cyan hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-brand-ink"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Pedir informação
+            </button>
+
+            <a
+              href="tel:+351278262913"
+              className="flex items-center justify-center gap-1.5 mt-3 text-small-regular text-grey-60 hover:text-brand-cyan"
+            >
+              <Phone className="h-4 w-4" />
+              Ou ligue-nos: <b className="text-grey-70">+351 278 262 913</b>
+            </a>
+          </>
+        ) : (
+          <>
         {/* Price box */}
         <div className="flex items-end gap-3 border-y border-hairline py-5 my-2">
           <ProductPrice product={product} variant={selectedVariant} />
@@ -241,6 +284,8 @@ export default function ProductActions({
             </div>
           ))}
         </div>
+          </>
+        )}
 
         <MobileActions
           product={product}
@@ -252,6 +297,8 @@ export default function ProductActions({
           isAdding={isAdding}
           show={!inView}
           optionsDisabled={!!disabled || isAdding}
+          catalogMode={catalogMode}
+          onRequestInfo={() => setContactOpen(true)}
         />
       </div>
 
@@ -259,8 +306,10 @@ export default function ProductActions({
         open={contactOpen}
         onClose={() => setContactOpen(false)}
         productTitle={product.title}
-        sku={selectedVariant?.sku ?? undefined}
-        quantity={quantity}
+        sku={selectedVariant?.sku ?? product.variants?.[0]?.sku ?? undefined}
+        quantity={catalogMode ? undefined : quantity}
+        heading={catalogMode ? "Pedir informação" : undefined}
+        defaultMessage={catalogMode ? INFO_REQUEST_MESSAGE : undefined}
       />
     </>
   )

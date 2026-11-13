@@ -4,6 +4,7 @@ import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 
 export default async function Footer() {
   const { collections } = await getCollectionsList(0, 6)
@@ -154,9 +155,12 @@ export default async function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-svc-line py-7">
-          <p className="mb-3 text-[12px] leading-relaxed text-svc-fg-muted">
-            Todos os preços apresentados não incluem IVA à taxa legal em vigor.
-          </p>
+          {/* No prices are shown in catalog mode, so the VAT note is moot. */}
+          {!isCatalogMode() && (
+            <p className="mb-3 text-[12px] leading-relaxed text-svc-fg-muted">
+              Todos os preços apresentados não incluem IVA à taxa legal em vigor.
+            </p>
+          )}
           <div className="flex flex-col gap-2 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
             <span>
               © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de

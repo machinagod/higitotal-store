@@ -9,13 +9,25 @@ type Props = {
   productTitle?: string
   sku?: string
   quantity?: number
+  /** Dialog heading (default "Pedir contacto"). */
+  heading?: string
+  /** Pre-filled message text. */
+  defaultMessage?: string
 }
 
 /**
  * "Pedir contacto a um comercial" — B2B contact/quote request. Posts to the
  * backend /store/contact-request (emails sales via Resend). pt-PT.
  */
-const ContactModal = ({ open, onClose, productTitle, sku, quantity }: Props) => {
+const ContactModal = ({
+  open,
+  onClose,
+  productTitle,
+  sku,
+  quantity,
+  heading = "Pedir contacto",
+  defaultMessage,
+}: Props) => {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle")
 
   if (!open) {
@@ -61,7 +73,7 @@ const ContactModal = ({ open, onClose, productTitle, sku, quantity }: Props) => 
         data-testid="contact-modal"
       >
         <div className="flex items-start justify-between">
-          <h3 className="text-xl font-bold text-brand-ink">Pedir contacto</h3>
+          <h3 className="text-xl font-bold text-brand-ink">{heading}</h3>
           <button onClick={onClose} aria-label="Fechar" className="text-grey-50 text-2xl leading-none">
             ×
           </button>
@@ -87,6 +99,7 @@ const ContactModal = ({ open, onClose, productTitle, sku, quantity }: Props) => 
             <textarea
               name="message"
               rows={3}
+              defaultValue={defaultMessage}
               placeholder="Mensagem (ex.: quantidade, prazo, orçamento)"
               className="ht-field"
             />

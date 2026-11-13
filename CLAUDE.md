@@ -138,6 +138,17 @@ Fix failures before committing — including pre-existing ones in files you touc
 - The `storefront/e2e` suite **drops/recreates its DB** — only ever point it at a
   `test_`-prefixed DB, never the production `DATABASE_URL`.
 
+## Catalog mode (no prices) — ON in production
+The storefront **runtime** variable `STOREFRONT_CATALOG_MODE` hides every price and
+the cart: cards/PDP show "Preço sob consulta", the CTA becomes **"Pedir informação"**
+(the `/store/contact-request` form, pre-filled), `/cart` and `/checkout` redirect home,
+sorting is hidden, and prices are stripped from the page payload (incl. JSON-LD
+offers). The production image defaults it to `true` (`storefront/Dockerfile`); set
+`STOREFRONT_CATALOG_MODE=false` on the Railway storefront service (restart, no rebuild)
+to sell with prices again. Local dev/e2e default to off. Logic:
+`storefront/src/lib/util/catalog-mode*.ts`. The Store API itself still returns prices
+to anyone holding the (public) publishable key.
+
 ## Conventions
 - This repo commits small config/fix changes directly to `master`.
 - Secrets live only in the gitignored `.env` / `.env.local` files — never commit them.

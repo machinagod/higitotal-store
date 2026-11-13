@@ -12,6 +12,7 @@ import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import PathBar from "@modules/products/components/path-bar"
 import { HttpTypes } from "@medusajs/types"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -27,6 +28,8 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   if (!product || !product.id) {
     return notFound()
   }
+
+  const catalogMode = isCatalogMode()
 
   return (
     <>
@@ -51,10 +54,15 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                 disabled={true}
                 product={product}
                 region={region}
+                catalogMode={catalogMode}
               />
             }
           >
-            <ProductActionsWrapper id={product.id} region={region} />
+            <ProductActionsWrapper
+              id={product.id}
+              region={region}
+              catalogMode={catalogMode}
+            />
           </Suspense>
           <Suspense fallback={null}>
             <ProductHighlights productId={product.id} />

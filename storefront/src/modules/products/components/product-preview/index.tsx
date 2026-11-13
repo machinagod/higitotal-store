@@ -5,6 +5,8 @@ import PreviewPrice from "./price"
 import ProductCardAddButton from "./add-button"
 import { getProductsById } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
+import { MessageCircle } from "lucide-react"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 
 export default async function ProductPreview({
   product,
@@ -15,6 +17,8 @@ export default async function ProductPreview({
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
 }) {
+  const catalogMode = isCatalogMode()
+
   const [pricedProduct] = await getProductsById({
     ids: [product.id!],
     regionId: region.id,
@@ -79,14 +83,38 @@ export default async function ProductPreview({
       {/* Footer: price + compact add-to-cart. mt-auto keeps it aligned across
           cards regardless of title length. */}
       <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-        <div className="min-w-0">
-          {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
-        </div>
-        <ProductCardAddButton
-          variantId={variantId}
-          inStock={inStock}
-          countryCode={countryCode}
-        />
+        {catalogMode ? (
+          <>
+            {/* Catalog mode: no price / cart — the button leads to the PDP's
+                "Pedir informação" enquiry form. */}
+            <span
+              className="min-w-0 text-sm font-semibold text-grey-60"
+              data-testid="price-on-request"
+            >
+              Preço sob consulta
+            </span>
+            <LocalizedClientLink
+              href={`/products/${product.handle}`}
+              aria-label={`Pedir informação: ${product.title}`}
+              title="Pedir informação"
+              data-testid="card-request-info"
+              className="flex h-10 w-10 flex-none items-center justify-center rounded-btn bg-brand-ink text-white transition-colors hover:bg-brand-cyan"
+            >
+              <MessageCircle className="h-[18px] w-[18px]" />
+            </LocalizedClientLink>
+          </>
+        ) : (
+          <>
+            <div className="min-w-0">
+              {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+            </div>
+            <ProductCardAddButton
+              variantId={variantId}
+              inStock={inStock}
+              countryCode={countryCode}
+            />
+          </>
+        )}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { Suspense } from "react"
 
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -52,7 +53,9 @@ export default function CategoryTemplate({
             ))}
           <h1 data-testid="category-page-title">{category.name}</h1>
         </div>
-        <RefinementList sortBy={sort} data-testid="sort-by-container" />
+        {!isCatalogMode() && (
+          <RefinementList sortBy={sort} data-testid="sort-by-container" />
+        )}
       </div>
 
       {category.description && (

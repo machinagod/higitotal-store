@@ -33,11 +33,14 @@ function buildSearchCategories(all: any[]): SearchCategory[] {
   return out
 }
 import { Phone, User, ShoppingBag, Wrench } from "lucide-react"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
   const categories = await getNavCategories()
   const searchCategories = buildSearchCategories(await listCategories())
+  // Catalog mode (no prices / no cart) hides the cart button everywhere.
+  const catalogMode = isCatalogMode()
 
   const cartFallback = (
     <LocalizedClientLink
@@ -110,7 +113,11 @@ export default async function Nav() {
 
           {/* Hamburger — mobile only, pinned right on the logo row */}
           <div className="small:hidden flex items-center shrink-0 ml-auto">
-            <SideMenu regions={regions} categories={categories} />
+            <SideMenu
+              regions={regions}
+              categories={categories}
+              catalogMode={catalogMode}
+            />
           </div>
 
           {/* Search + cart. On mobile this is its own full-width row with the
@@ -118,11 +125,13 @@ export default async function Nav() {
               search field (the cart shows in the account group instead). */}
           <div className="order-last small:order-none basis-full small:basis-auto small:flex-1 small:max-w-[520px] flex items-center gap-x-2">
             <SearchBox categories={searchCategories} />
-            <div className="small:hidden shrink-0">
-              <Suspense fallback={cartFallback}>
-                <CartButton />
-              </Suspense>
-            </div>
+            {!catalogMode && (
+              <div className="small:hidden shrink-0">
+                <Suspense fallback={cartFallback}>
+                  <CartButton />
+                </Suspense>
+              </div>
+            )}
           </div>
 
           {/* Account + cart — desktop only, right-aligned */}
@@ -135,9 +144,11 @@ export default async function Nav() {
               <User className="h-[18px] w-[18px]" />
               <span>Conta</span>
             </LocalizedClientLink>
-            <Suspense fallback={cartFallback}>
-              <CartButton />
-            </Suspense>
+            {!catalogMode && (
+              <Suspense fallback={cartFallback}>
+                <CartButton />
+              </Suspense>
+            )}
           </div>
         </div>
       </header>

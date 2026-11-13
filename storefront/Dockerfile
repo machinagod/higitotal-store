@@ -70,6 +70,10 @@ COPY --from=builder /app ./
 # confirm this exact build is live before running prod e2e.
 ARG GIT_SHA
 ENV GIT_SHA=${GIT_SHA}
+# Catalog mode ON by default in the production image: no prices / no cart, product
+# CTAs become "Pedir informação". Runtime, server-only flag — override on the
+# Railway storefront service with STOREFRONT_CATALOG_MODE=false to show prices.
+ENV STOREFRONT_CATALOG_MODE=true
 
 # Railway injects PORT; default to the repo's 8000 convention.
 EXPOSE 8000

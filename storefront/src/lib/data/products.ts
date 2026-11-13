@@ -4,6 +4,20 @@ import { cache } from "react"
 import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
+import { isCatalogMode } from "@lib/util/catalog-mode"
+import { stripVariantPrices } from "@lib/util/strip-variant-prices"
+
+/**
+ * In catalog mode, drop the computed prices from product payloads before they
+ * reach any component — client components serialize their props into the page
+ * (RSC payload), so hiding the price in the UI alone would still leak it in the
+ * page source.
+ */
+function withoutPricesInCatalogMode<T extends HttpTypes.StoreProduct>(
+  products: T[]
+): T[] {
+  return isCatalogMode() ? stripVariantPrices(products) : products
+}
 
 export const getProductsById = cache(async function ({
   ids,
@@ -21,7 +35,7 @@ export const getProductsById = cache(async function ({
       },
       { next: { tags: ["products"] } }
     )
-    .then(({ products }) => products)
+    .then(({ products }) => withoutPricesInCatalogMode(products))
 })
 
 export const getProductByHandle = cache(async function (
@@ -38,7 +52,7 @@ export const getProductByHandle = cache(async function (
       },
       { next: { tags: ["products"] } }
     )
-    .then(({ products }) => products[0])
+    .then(({ products }) => withoutPricesInCatalogMode(products)[0])
 })
 
 export type ProductHighlight = { id: string; value: string; rank: number }
@@ -126,7 +140,7 @@ export const getProductsList = cache(async function ({
 
       return {
         response: {
-          products,
+          products: withoutPricesInCatalogMode(products),
           count,
         },
         nextPage: nextPage,
@@ -167,7 +181,11 @@ export const getProductsListWithSort = cache(async function ({
     countryCode,
   })
 
-  const sortedProducts = sortProducts(products, sortBy)
+  // No prices in catalog mode → price sorts are meaningless; keep newest-first.
+  const sortedProducts = sortProducts(
+    products,
+    isCatalogMode() ? "created_at" : sortBy
+  )
 
   const pageParam = (page - 1) * limit
 

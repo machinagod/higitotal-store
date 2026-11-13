@@ -22,15 +22,18 @@ const defaultCategories: Category[] = [
 const SideMenu = ({
   regions,
   categories,
+  catalogMode = false,
 }: {
   regions: HttpTypes.StoreRegion[] | null
   categories?: Category[]
+  /** Catalog mode has no cart → drop the "Carrinho" link. */
+  catalogMode?: boolean
 }) => {
   const toggleState = useToggleState()
 
   const storeLinks: Category[] = categories?.length
     ? categories
-    : defaultCategories
+    : defaultCategories.filter((c) => !(catalogMode && c.href === "/cart"))
 
   return (
     <div className="h-full">
