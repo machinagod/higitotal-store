@@ -1,6 +1,8 @@
-import { Metadata } from "next"
+import { Metadata, Viewport } from "next"
+import { Montserrat } from "next/font/google"
 import "styles/globals.css"
 
+import ConsentModeDefaults from "@modules/common/components/analytics/consent-mode"
 import GoogleAnalytics from "@modules/common/components/analytics/google-analytics"
 import {
   GoogleTagManagerNoScript,
@@ -17,6 +19,26 @@ import {
   organizationSchema,
   websiteSchema,
 } from "@lib/util/structured-data"
+
+// Self-hosted at build time by next/font (no render-blocking request to
+// fonts.googleapis.com, no third-party font host at runtime). Exposed as
+// --font-montserrat, which tailwind's `font-sans` and globals.css use.
+const montserrat = Montserrat({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-montserrat",
+})
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Lets content reach the screen edges on notched phones; components pad
+  // with env(safe-area-inset-*) where needed.
+  viewportFit: "cover",
+  // Matches the dark top utility bar of the header.
+  themeColor: "#16181d",
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -73,11 +95,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="pt-PT" data-mode="light">
+    <html lang="pt-PT" data-mode="light" className={montserrat.variable}>
+      <head>
+        {/* Must run before any Google tag: Consent Mode v2 defaults. */}
+        <ConsentModeDefaults />
+      </head>
       <body>
         <GoogleTagManagerNoScript />
         <JsonLd data={[organizationSchema(), websiteSchema()]} />
-        <main className="relative">{props.children}</main>
+        {/* Landmarks (header, <main>, footer) come from each route-group
+            layout, so the header/footer are never nested inside <main>. */}
+        {props.children}
         <GoogleAnalytics />
         <GoogleTagManagerScript />
       </body>

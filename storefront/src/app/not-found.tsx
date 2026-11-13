@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 
 import { COMPANY } from "@lib/company"
 import { getNavCategories } from "@lib/data/categories"
@@ -16,10 +17,21 @@ export const metadata: Metadata = {
 
 /**
  * Root-level 404 (outside the [countryCode] site layout, so no header/footer):
- * a minimal branded page linking back into the Portuguese storefront. Also
- * served for unmatched URLs under a country prefix (e.g. /pt/xyz).
+ * a minimal branded page linking back into the Portuguese storefront, with a
+ * catalogue search. Also served for unmatched URLs under a country prefix
+ * (e.g. /pt/xyz). A `(main)/[...rest]` catch-all that would render the
+ * in-layout 404 instead breaks the account parallel routes (Next 15.5
+ * "Expected clientReferenceManifest" on /pt/account), so it is not used.
  */
 const COUNTRY = "/pt"
+
+async function searchCatalog(formData: FormData) {
+  "use server"
+  const q = String(formData.get("q") ?? "")
+    .trim()
+    .slice(0, 100)
+  redirect(q ? `${COUNTRY}/results/${encodeURIComponent(q)}` : `${COUNTRY}/store`)
+}
 
 export default async function NotFound() {
   // Fail soft: a backend hiccup must never turn the 404 into a 500.
@@ -29,7 +41,7 @@ export default async function NotFound() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center">
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center">
         <Link href={COUNTRY} aria-label="Higitotal — página inicial">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -48,7 +60,34 @@ export default async function NotFound() {
         <p className="mt-4 max-w-[46ch] text-base leading-relaxed text-grey-60 small:text-lg">
           A página que procura não existe ou foi movida.
         </p>
-        <div className="mt-8 flex w-full max-w-[520px] flex-col items-stretch justify-center gap-3 xsmall:flex-row xsmall:items-center">
+        {/* Search straight from the 404 (a server action, so it also works
+            without JavaScript). */}
+        <form
+          action={searchCatalog}
+          role="search"
+          className="mt-8 flex w-full max-w-[520px] items-center gap-2 rounded-pill border-[1.5px] border-hairline bg-white py-1.5 pl-5 pr-1.5 focus-within:border-brand-cyan"
+        >
+          <label htmlFor="pesquisa-404" className="sr-only">
+            Pesquisar produtos ou marcas
+          </label>
+          <input
+            id="pesquisa-404"
+            name="q"
+            type="search"
+            required
+            maxLength={100}
+            autoComplete="off"
+            placeholder="Produto ou marca…"
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-brand-ink outline-none placeholder:text-[#6b7480]"
+          />
+          <button
+            type="submit"
+            className="inline-flex h-11 flex-none items-center justify-center rounded-pill bg-brand-cyan px-5 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-brand-cyan-ink"
+          >
+            Pesquisar
+          </button>
+        </form>
+        <div className="mt-6 flex w-full max-w-[520px] flex-col items-stretch justify-center gap-3 xsmall:flex-row xsmall:items-center">
           <Link
             href={COUNTRY}
             className="inline-flex items-center justify-center rounded-pill bg-brand-cyan px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-transform hover:-translate-y-0.5"
@@ -76,7 +115,7 @@ export default async function NotFound() {
             ))}
           </ul>
         )}
-      </div>
+      </main>
       <footer className="border-t border-hairline px-4 py-5 text-center text-xs text-grey-50">
         {COMPANY.legalName} ·{" "}
         <a href={COMPANY.phone.href} className="hover:text-brand-cyan">
