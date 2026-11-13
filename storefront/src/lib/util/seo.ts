@@ -5,7 +5,7 @@ import { getBaseURL } from "./env"
 export const SITE_NAME = "Higitotal"
 
 export const SITE_DESCRIPTION =
-  "Higiene profissional e equipamento para hotelaria, restauração e indústria, com assistência técnica nacional. Especialistas desde 1999."
+  "Higiene profissional e equipamento para hotelaria, restauração e indústria, com assistência técnica própria sediada em Mirandela. Especialistas desde 1999."
 
 /** The content language. The catalog and copy are Portuguese across every
  * region, so a single locale is correct here. */
