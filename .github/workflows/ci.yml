@@ -452,7 +452,10 @@ jobs:
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
       && needs.deploy.result == 'success'
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, which Playwright 1.57 can't install
+    # chromium on ("Playwright does not support chromium on ubuntu26.04-x64").
+    # Bump back to ubuntu-latest once Playwright supports it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
