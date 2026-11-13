@@ -25,6 +25,10 @@ export type ContactRequestBody = {
   sku?: unknown
   quantity?: unknown
   productUrl?: unknown
+  /** Assistência: equipment model / serial number. */
+  modelo?: unknown
+  /** Assistência: equipment stopped (true / "true" / "1" / "on" / "sim"). */
+  urgente?: unknown
   /** Honeypot — bots fill hidden fields; humans don't. */
   company?: unknown
 }
@@ -43,6 +47,9 @@ export type ContactRequest = {
   sku?: string
   quantity?: number
   productUrl?: string
+  modelo?: string
+  /** Only set (true) when the customer flagged the equipment as stopped. */
+  urgente?: boolean
 }
 
 /** Discriminated by `status` (the backend tsconfig is not strict, so boolean tags don't narrow). */
@@ -66,6 +73,7 @@ export const FIELD_LIMITS = {
   productTitle: 300,
   sku: 100,
   productUrl: 2000,
+  modelo: 200,
 } as const
 
 type LimitedField = keyof typeof FIELD_LIMITS
@@ -76,6 +84,11 @@ const str = (v: unknown): string | undefined => {
   const s = v.trim()
   return s ? s : undefined
 }
+
+/** Checkbox / JSON truthiness for flags. */
+const flag = (v: unknown): boolean =>
+  v === true ||
+  (typeof v === 'string' && ['1', 'true', 'on', 'sim', 'yes'].includes(v.trim().toLowerCase()))
 
 /** Only absolute http(s) URLs end up as a link in the staff e-mail. */
 const safeUrl = (v: string | undefined): string | undefined => {
@@ -91,8 +104,8 @@ const safeUrl = (v: string | undefined): string | undefined => {
 /**
  * Validates and normalises a contact-request body. Backward compatible with
  * the original payload (name/email/phone/contactPref/message/productTitle/sku/
- * quantity/productUrl); `kind`, `empresa`, `localidade` and
- * `quantidadeEstimada` are optional additions.
+ * quantity/productUrl); `kind`, `empresa`, `localidade`,
+ * `quantidadeEstimada`, `modelo` and `urgente` are optional additions.
  */
 export function parseContactRequest(body: unknown): ParseResult {
   const b = (body && typeof body === 'object' ? body : {}) as ContactRequestBody
@@ -140,6 +153,8 @@ export function parseContactRequest(body: unknown): ParseResult {
       sku: fields.sku,
       quantity,
       productUrl: safeUrl(fields.productUrl),
+      modelo: fields.modelo,
+      urgente: flag(b.urgente) ? true : undefined,
     },
   }
 }

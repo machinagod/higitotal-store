@@ -15,7 +15,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 export const metadata: Metadata = {
   // The root layout's title template appends " · Higitotal".
-  title: "Contacto",
+  title: "Contactos",
   description:
     "Contacte a Higitotal — produtos de higiene profissional, equipamento hoteleiro e assistência técnica. Mirandela, Portugal.",
 }
@@ -25,6 +25,10 @@ const MAP_URL =
 
 const iconTile =
   "flex h-10 w-10 flex-none items-center justify-center rounded-btn bg-[#eef6fa] text-brand-cyan"
+
+/** Whole contact row is the link (icon included), ≥44px tall. */
+const rowLink =
+  "group -mx-2 flex min-h-[44px] items-center gap-3 rounded-btn px-2 py-1 transition-colors hover:bg-[#f7f9fa] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-cyan/25"
 
 export default function ContactPage() {
   const { address, phone } = COMPANY
@@ -38,7 +42,7 @@ export default function ContactPage() {
             Fale connosco
           </span>
           <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.025em] text-brand-ink small:text-[40px] small:leading-[1.1]">
-            Contacto
+            Contactos
           </h1>
           <p className="mt-4 max-w-[46ch] leading-relaxed text-grey-60">
             Para orçamentos, informação sobre produtos ou outras questões,
@@ -46,55 +50,68 @@ export default function ContactPage() {
             responde em dias úteis.
           </p>
 
-          <ul className="mt-8 flex flex-col gap-5 text-brand-ink">
-            <li className="flex items-start gap-3">
-              <span className={iconTile}>
-                <Phone className="h-[18px] w-[18px]" aria-hidden="true" />
-              </span>
-              <div>
-                <a
-                  href={phone.href}
-                  className="font-bold transition-colors hover:text-brand-cyan"
-                >
-                  {phone.display}
-                </a>
-                <p className="text-xs text-grey-50">{phone.costNote}</p>
-              </div>
-            </li>
-            <li className="flex items-center gap-3">
-              <span className={iconTile}>
-                <Mail className="h-[18px] w-[18px]" aria-hidden="true" />
-              </span>
+          <ul className="mt-8 flex flex-col gap-3 text-brand-ink">
+            <li>
               <a
-                href={`mailto:${COMPANY.email}`}
-                className="font-bold transition-colors hover:text-brand-cyan"
+                href={phone.href}
+                className={rowLink}
+                data-testid="contact-phone"
               >
-                {COMPANY.email}
+                <span className={iconTile}>
+                  <Phone className="h-[18px] w-[18px]" aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block font-bold transition-colors group-hover:text-brand-cyan-ink">
+                    {phone.display}
+                  </span>
+                  <span className="block text-xs text-grey-50">
+                    {phone.costNote}
+                  </span>
+                </span>
               </a>
             </li>
-            <li className="flex items-start gap-3">
-              <span className={iconTile}>
-                <MapPin className="h-[18px] w-[18px]" aria-hidden="true" />
-              </span>
-              <div>
-                <address className="not-italic font-medium leading-relaxed text-grey-70">
-                  {address.street}
-                  <br />
-                  {address.postalCode} {address.city}, {address.country}
-                </address>
-                <a
-                  href={MAP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-brand-cyan hover:text-brand-cyan-ink"
-                >
-                  Ver no mapa
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="sr-only">(abre o Google Maps num novo separador)</span>
-                </a>
-              </div>
+            <li>
+              <a
+                href={`mailto:${COMPANY.email}`}
+                className={rowLink}
+                data-testid="contact-email"
+              >
+                <span className={iconTile}>
+                  <Mail className="h-[18px] w-[18px]" aria-hidden="true" />
+                </span>
+                <span className="font-bold transition-colors group-hover:text-brand-cyan-ink">
+                  {COMPANY.email}
+                </span>
+              </a>
             </li>
-            <li className="flex items-start gap-3">
+            <li>
+              <a
+                href={MAP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={rowLink}
+                data-testid="contact-map"
+              >
+                <span className={iconTile}>
+                  <MapPin className="h-[18px] w-[18px]" aria-hidden="true" />
+                </span>
+                <div>
+                  <address className="not-italic font-medium leading-relaxed text-grey-70">
+                    {address.street}
+                    <br />
+                    {address.postalCode} {address.city}, {address.country}
+                  </address>
+                  <span className="mt-0.5 inline-flex items-center gap-1.5 text-sm font-bold text-brand-cyan-ink group-hover:underline">
+                    Ver no mapa
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                  <span className="sr-only">
+                    (abre o Google Maps num novo separador)
+                  </span>
+                </div>
+              </a>
+            </li>
+            <li className="flex items-center gap-3 py-1">
               <span className={iconTile}>
                 <Clock className="h-[18px] w-[18px]" aria-hidden="true" />
               </span>
@@ -105,7 +122,7 @@ export default function ContactPage() {
                 </p>
               </div>
             </li>
-            <li className="flex items-start gap-3">
+            <li className="flex items-center gap-3 py-1">
               <span className={iconTile}>
                 <Building2 className="h-[18px] w-[18px]" aria-hidden="true" />
               </span>
@@ -146,8 +163,8 @@ export default function ContactPage() {
             Envie-nos uma mensagem
           </h2>
           <p className="mb-6 mt-1 text-sm text-grey-60">
-            Os campos assinalados com * são obrigatórios. Indique um telefone ou
-            escreva uma mensagem.
+            Os campos assinalados com * são obrigatórios. Indique um telefone
+            ou, se preferir ser contactado por e-mail, escreva uma mensagem.
           </p>
           <ContactRequestForm kind="geral" idPrefix="contact" />
         </section>

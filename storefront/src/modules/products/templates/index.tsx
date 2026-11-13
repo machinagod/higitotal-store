@@ -48,7 +48,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <ImageGallery images={product?.images || []} title={product.title} />
         </div>
 
-        <div className="flex w-full flex-col gap-y-6 py-6 small:py-0">
+        <div className="flex w-full flex-col gap-y-5 pb-6 pt-4 small:gap-y-6 small:py-0">
           <ProductInfo product={product} />
           <Suspense
             fallback={

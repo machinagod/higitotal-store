@@ -70,23 +70,34 @@ export function oneLine(value: string | null | undefined, max = 120): string {
   return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s
 }
 
-/** Staff e-mail subject, e.g. "Pedido de orçamento: Drip Floor (2L) — Ana Silva, Hotel Central". */
+/** Subject prefix for requests flagged "Equipamento parado (urgente)". */
+export const URGENT_PREFIX = '[URGENTE]'
+
+/**
+ * Staff e-mail subject, e.g. "Pedido de orçamento: Drip Floor (2L) — Ana Silva, Hotel Central"
+ * or "[URGENTE] Pedido de assistência técnica — Rui, Restaurante X".
+ */
 export function buildStaffSubject(input: {
   kind: ContactRequestKind
   name: string
   empresa?: string | null
   productTitle?: string | null
+  urgente?: boolean | null
 }): string {
   const who = [oneLine(input.name, 80), oneLine(input.empresa, 80)].filter(Boolean).join(', ')
   const product = oneLine(input.productTitle, 90)
+  let subject: string
   switch (input.kind) {
     case 'produto':
-      return product ? `Pedido de orçamento: ${product} — ${who}` : `Pedido de orçamento — ${who}`
+      subject = product ? `Pedido de orçamento: ${product} — ${who}` : `Pedido de orçamento — ${who}`
+      break
     case 'assistencia':
-      return `Pedido de assistência técnica — ${who}`
+      subject = `Pedido de assistência técnica — ${who}`
+      break
     default:
-      return `Pedido de contacto — ${who}`
+      subject = `Pedido de contacto — ${who}`
   }
+  return input.urgente ? `${URGENT_PREFIX} ${subject}` : subject
 }
 
 export const ACK_SUBJECT = 'Recebemos o seu pedido — Higitotal'

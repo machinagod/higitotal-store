@@ -25,6 +25,17 @@ export function wantsEnquiryOpen(
   return v === "1" || v === "true"
 }
 
+/**
+ * The query string without the enquiry param (leading "?" included when
+ * anything is left), so a refresh after the deep link doesn't reopen the form.
+ */
+export function searchWithoutEnquiryParam(search: string): string {
+  const params = new URLSearchParams(search)
+  params.delete(ENQUIRY_PARAM)
+  const qs = params.toString()
+  return qs ? `?${qs}` : ""
+}
+
 /** Neutral prefilled message when the enquiry is about a specific product. */
 export const PRODUCT_ENQUIRY_MESSAGE =
   "Gostaria de receber informação sobre preço, disponibilidade e condições deste produto."
@@ -51,6 +62,10 @@ export type ContactRequestFields = {
   quantidadeEstimada?: string | null
   contactPref?: string | null
   message?: string | null
+  /** Assistência: equipment model / serial number. */
+  modelo?: string | null
+  /** Assistência: equipment stopped (urgent). Checkbox values ("on") count as true. */
+  urgente?: boolean | string | null
   /** Bot honeypot — must stay hidden and empty. */
   company?: string | null
 }
@@ -62,6 +77,12 @@ export type ContactRequestContext = {
   /** Cart quantity (non-catalog mode PDP). */
   quantity?: number
   productUrl?: string
+  /**
+   * Message actually sent, when it differs from what the user typed (the
+   * assistência form prefixes the service type / equipment). Defaults to
+   * `fields.message`.
+   */
+  message?: string
 }
 
 export type ContactRequestPayload = {
@@ -74,6 +95,9 @@ export type ContactRequestPayload = {
   quantidadeEstimada?: string
   contactPref?: string
   message?: string
+  modelo?: string
+  /** Only present (true) when the equipment is stopped. */
+  urgente?: true
   company?: string
   productTitle?: string
   sku?: string
@@ -88,31 +112,106 @@ const clean = (v: string | null | undefined): string | undefined => {
   return s ? s : undefined
 }
 
+/** Collapses whitespace / case so a re-wrapped prefilled message still compares equal. */
+const normalise = (v: string | null | undefined) =>
+  (v ?? "").replace(/\s+/g, " ").trim().toLowerCase()
+
+/** Checkbox / JSON truthiness for the `urgente` flag. */
+export function isTruthyFlag(v: unknown): boolean {
+  if (v === true) return true
+  if (typeof v !== "string") return false
+  return ["1", "true", "on", "sim", "yes"].includes(v.trim().toLowerCase())
+}
+
+/** Fields the validator can flag (also the form control names). */
+export type ContactRequestField = "name" | "email" | "phone" | "message"
+
 export type ContactRequestProblem = {
-  /** Form field to focus. */
-  field: "name" | "email" | "phone"
+  /** Form field to mark invalid / focus. */
+  field: ContactRequestField
   message: string
 }
 
+export type ValidateOptions = {
+  /**
+   * Text the message box is prefilled with (product enquiry). Left unchanged
+   * it says nothing about the request, so it counts as empty for the
+   * "telefone ou mensagem" rule.
+   */
+  prefilledMessage?: string
+  /** How the message is asked for in errors (assistência: "descreva o pedido"). */
+  messageHint?: string
+}
+
+/** Minimum digits for a phone number (PT numbers have 9). */
+export const MIN_PHONE_DIGITS = 9
+
 /**
- * Client-side check mirroring the backend rules (name + valid e-mail, and a
- * phone or a message). Returns the first problem (pt-PT), or null when valid.
+ * Client-side checks, in form order. Mirrors the backend (name + valid e-mail,
+ * and a phone or a message) and adds lead-quality rules the backend doesn't
+ * enforce (older storefronts must keep working):
+ *  - a phone is required when "Telefone" is the preferred contact;
+ *  - a phone, when given, needs at least 9 digits;
+ *  - an unchanged prefilled message counts as no message.
+ * Returns every problem (pt-PT); empty when valid.
  */
-export function validateContactRequest(
-  f: ContactRequestFields
-): ContactRequestProblem | null {
-  if (!clean(f.name)) return { field: "name", message: "Indique o seu nome." }
+export function validateContactRequestAll(
+  f: ContactRequestFields,
+  opts: ValidateOptions = {}
+): ContactRequestProblem[] {
+  const problems: ContactRequestProblem[] = []
+  if (!clean(f.name)) {
+    problems.push({ field: "name", message: "Indique o seu nome." })
+  }
+
   const email = clean(f.email)
-  if (!email || !EMAIL_RE.test(email)) {
-    return { field: "email", message: "Indique um e-mail válido." }
+  if (!email) {
+    problems.push({ field: "email", message: "Indique o seu e-mail." })
+  } else if (!EMAIL_RE.test(email)) {
+    problems.push({
+      field: "email",
+      message: "Indique um e-mail válido (ex.: nome@empresa.pt).",
+    })
   }
-  if (!clean(f.phone) && !clean(f.message)) {
-    return {
+
+  const phone = clean(f.phone)
+  const message = clean(f.message)
+  const hasMessage =
+    !!message &&
+    !(
+      opts.prefilledMessage &&
+      normalise(message) === normalise(opts.prefilledMessage)
+    )
+  const pref = normalise(f.contactPref)
+  const hint = opts.messageHint ?? "escreva uma mensagem"
+
+  if (phone && phone.replace(/\D/g, "").length < MIN_PHONE_DIGITS) {
+    problems.push({
       field: "phone",
-      message: "Indique um telefone ou escreva uma mensagem.",
-    }
+      message: "Indique um telefone válido, com pelo menos 9 dígitos.",
+    })
+  } else if (!phone && pref === "telefone") {
+    problems.push({
+      field: "phone",
+      message:
+        "Indique um telefone ou escolha E-mail como forma de contacto preferida.",
+    })
+  } else if (!phone && !hasMessage) {
+    problems.push({
+      // With e-mail preferred the natural fix is the message.
+      field: pref === "email" ? "message" : "phone",
+      message: `Indique um telefone ou ${hint}.`,
+    })
   }
-  return null
+  return problems
+}
+
+/** First problem only (see validateContactRequestAll), or null when valid. */
+export function validateContactRequest(
+  f: ContactRequestFields,
+  opts: ValidateOptions = {}
+): ContactRequestProblem | null {
+  return validateContactRequestAll(f, opts)[0] ?? null
 }
 
 /** Normalised request body for `POST /store/contact-request`. */
@@ -129,7 +228,9 @@ export function buildContactRequestPayload(
     localidade: clean(f.localidade),
     quantidadeEstimada: clean(f.quantidadeEstimada),
     contactPref: clean(f.contactPref),
-    message: clean(f.message),
+    message: clean(ctx.message ?? f.message),
+    modelo: clean(f.modelo),
+    urgente: isTruthyFlag(f.urgente) ? true : undefined,
     company: clean(f.company),
     productTitle: clean(ctx.productTitle),
     sku: clean(ctx.sku),
@@ -143,4 +244,35 @@ export function buildContactRequestPayload(
   return Object.fromEntries(
     Object.entries(payload).filter(([, v]) => v !== undefined)
   ) as ContactRequestPayload
+}
+
+/**
+ * Assistência: the message the team receives — service type and equipment as
+ * header lines, then the customer's own description.
+ */
+export function buildAssistanceMessage(input: {
+  tipo?: string | null
+  equipamento?: string | null
+  descricao?: string | null
+}): string | undefined {
+  const tipo = clean(input.tipo)
+  const equipamento = clean(input.equipamento)
+  const descricao = clean(input.descricao)
+  const head = [
+    tipo ? `Tipo de serviço: ${tipo}` : null,
+    equipamento ? `Equipamento / marca: ${equipamento}` : null,
+  ].filter(Boolean)
+  const out = [head.join("\n"), descricao].filter(Boolean).join("\n\n")
+  return out || undefined
+}
+
+/**
+ * Compact opening hours for tight spots (PDP call button):
+ * "Segunda a sexta, 9h00–12h30 e 14h00–18h30" → "Seg–Sex 9h00–12h30 · 14h00–18h30".
+ * Unknown formats are returned unchanged.
+ */
+export function shortHours(hours: string): string {
+  const m = hours.match(/^\s*segunda\s+a\s+sexta,?\s+(.+)$/i)
+  if (!m) return hours
+  return `Seg–Sex ${m[1].replace(/\s+e\s+/g, " · ").trim()}`
 }

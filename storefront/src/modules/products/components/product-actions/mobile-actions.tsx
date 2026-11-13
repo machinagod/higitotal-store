@@ -23,7 +23,7 @@ type MobileActionsProps = {
   optionsDisabled: boolean
   /** No prices / cart: "Ligar" + "Pedir orçamento". */
   catalogMode?: boolean
-  onRequestInfo?: () => void
+  onRequestInfo?: (e?: React.MouseEvent<HTMLElement>) => void
 }
 
 /** Height of the bar's button row (+ padding) — reserved at the page bottom. */
@@ -32,10 +32,15 @@ const BAR_SPACE = "76px"
 const pillBase =
   "flex h-12 min-w-0 items-center justify-center gap-2 rounded-pill px-4 text-[13px] font-bold uppercase tracking-[0.04em] transition-colors"
 
+/** Catalog-mode buttons: sentence case, no tracking, so they fit at 320px. */
+const barButton =
+  "flex h-12 min-w-0 items-center justify-center gap-2 rounded-pill text-[15px] font-bold transition-colors"
+
 /**
- * Mobile sticky action bar (below `lg`), shown while the main CTA block is
- * scrolled out of view. Catalog mode: "Ligar" (outline, tel:) + "Pedir
- * orçamento" (filled cyan). Otherwise: variant picker + add to cart.
+ * Mobile sticky action bar (below `lg`), shown while the primary CTA button
+ * is out of view. Catalog mode: compact "Ligar" (outline, tel:) + "Pedir
+ * orçamento" (filled cyan, takes the rest of the row). Otherwise: variant
+ * picker + add to cart.
  */
 const MobileActions: React.FC<MobileActionsProps> = ({
   product,
@@ -78,30 +83,33 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             data-testid="mobile-actions"
           >
             {catalogMode ? (
-              <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3">
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
                 <a
                   href={COMPANY.phone.href}
                   aria-label={`Ligar ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()})`}
                   className={clx(
-                    pillBase,
-                    "border-[1.5px] border-hairline bg-white text-brand-ink hover:border-brand-cyan hover:text-brand-cyan"
+                    barButton,
+                    "border-[1.5px] border-hairline bg-white px-4 text-brand-ink hover:border-brand-cyan hover:text-brand-cyan"
                   )}
                   data-testid="mobile-call-button"
                 >
                   <Phone className="h-4 w-4 flex-none" aria-hidden="true" />
-                  <span className="truncate">Ligar</span>
+                  Ligar
                 </a>
                 <button
                   type="button"
                   onClick={onRequestInfo}
                   className={clx(
-                    pillBase,
-                    "bg-brand-cyan text-white hover:bg-brand-cyan-ink"
+                    barButton,
+                    "bg-brand-cyan px-3 text-white hover:bg-brand-cyan-ink"
                   )}
                   data-testid="mobile-request-info-button"
                 >
-                  <span className="truncate">Pedir orçamento</span>
-                  <ArrowRight className="h-4 w-4 flex-none" aria-hidden="true" />
+                  <span className="whitespace-nowrap">Pedir orçamento</span>
+                  <ArrowRight
+                    className="hidden h-4 w-4 flex-none min-[360px]:block"
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
             ) : (

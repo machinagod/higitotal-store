@@ -56,24 +56,19 @@ const Item: React.FC<AccordionItemProps> = ({
         className
       )}
     >
-      {/* x@ts-expect-error */}
+      {/* The whole header row is the trigger, so its accessible name is the title. */}
       <AccordionPrimitive.Header className="px-1">
-        <div className="flex flex-col">
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Text className="text-base font-bold text-brand-ink">{title}</Text>
-            </div>
-            {/* x@ts-expect-error */}
-            <AccordionPrimitive.Trigger>
-              {customTrigger || <MorphingTrigger />}
-            </AccordionPrimitive.Trigger>
-          </div>
-          {subtitle && (
-            <Text as="span" size="small" className="mt-1">
-              {subtitle}
-            </Text>
-          )}
-        </div>
+        <AccordionPrimitive.Trigger className="flex min-h-[44px] w-full items-center justify-between gap-4 text-left">
+          <span className="flex flex-col">
+            <span className="text-base font-bold text-brand-ink">{title}</span>
+            {subtitle && (
+              <Text as="span" size="small" className="mt-1">
+                {subtitle}
+              </Text>
+            )}
+          </span>
+          <span aria-hidden="true">{customTrigger || <MorphingTrigger />}</span>
+        </AccordionPrimitive.Trigger>
       </AccordionPrimitive.Header>
       {/* x@ts-expect-error */}
       <AccordionPrimitive.Content

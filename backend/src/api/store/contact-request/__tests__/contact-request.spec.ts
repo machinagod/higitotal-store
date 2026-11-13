@@ -47,6 +47,15 @@ describe("buildStaffSubject", () => {
     expect(buildStaffSubject({ kind: "geral", name: "Rui" })).toBe("Pedido de contacto — Rui")
   })
 
+  it("prefixes [URGENTE] when the equipment is stopped", () => {
+    expect(buildStaffSubject({ kind: "assistencia", name: "Rui", empresa: "Restaurante X", urgente: true })).toBe(
+      "[URGENTE] Pedido de assistência técnica — Rui, Restaurante X"
+    )
+    expect(buildStaffSubject({ kind: "assistencia", name: "Rui", urgente: false })).toBe(
+      "Pedido de assistência técnica — Rui"
+    )
+  })
+
   it("strips newlines (header safety) and truncates long titles", () => {
     const subject = buildStaffSubject({ kind: "produto", name: "Ana\r\nBcc: x@y.z", productTitle: "A".repeat(200) })
     expect(subject).not.toMatch(/[\r\n]/)
@@ -152,6 +161,35 @@ describe("parseContactRequest", () => {
     expect(r.status === "ok" && r.request.quantity).toBeUndefined()
   })
 
+  it("accepts the assistência model / serial and the urgent flag", () => {
+    const r = parseContactRequest({ ...base, kind: "assistencia", modelo: " LVC-21 SN 123 ", urgente: true })
+    expect(r.status === "ok" && r.request).toMatchObject({
+      kind: "assistencia",
+      modelo: "LVC-21 SN 123",
+      urgente: true,
+    })
+    for (const v of ["true", "1", "on", "sim"]) {
+      const s = parseContactRequest({ ...base, urgente: v })
+      expect(s.status === "ok" && s.request.urgente).toBe(true)
+    }
+  })
+
+  it("leaves urgente unset for falsy / unknown values (backward compatible)", () => {
+    for (const v of [undefined, false, "false", "0", "", 1, { yes: true }]) {
+      const r = parseContactRequest({ ...base, urgente: v })
+      expect(r.status === "ok" && r.request.urgente).toBeUndefined()
+    }
+    const legacy = parseContactRequest(base)
+    expect(legacy.status === "ok" && legacy.request.modelo).toBeUndefined()
+  })
+
+  it("rejects an over-long modelo", () => {
+    expect(parseContactRequest({ ...base, modelo: "x".repeat(201) })).toEqual({
+      status: "invalid",
+      message: "modelo is too long",
+    })
+  })
+
   it("ignores non-string field types", () => {
     const r = parseContactRequest({ ...base, empresa: { evil: true } })
     expect(r.status === "ok" && r.request.empresa).toBeUndefined()
@@ -226,6 +264,28 @@ describe("sendContactRequest", () => {
       .mockResolvedValueOnce({ status: "failure" })
     await expect(sendContactRequest(request, deps(create))).resolves.toEqual({ ok: true, ackSent: false })
     expect(logger.warn).toHaveBeenCalled()
+  })
+
+  it("sends urgent assistência requests with the [URGENTE] subject and the extra fields", async () => {
+    const create = jest.fn().mockResolvedValue([{ status: "success" }])
+    await sendContactRequest(
+      {
+        ...request,
+        kind: "assistencia",
+        productTitle: "Assistência Técnica",
+        sku: undefined,
+        modelo: "LVC-21",
+        urgente: true,
+      },
+      deps(create)
+    )
+    const staff = create.mock.calls[0][0]
+    expect(staff.data.emailOptions.subject).toBe(
+      "[URGENTE] Pedido de assistência técnica — Ana, Hotel Central"
+    )
+    expect(staff.data).toMatchObject({ modelo: "LVC-21", urgente: true })
+    // The customer acknowledgement stays as before.
+    expect(create.mock.calls[1][0].data.emailOptions.subject).toBe("Recebemos o seu pedido — Higitotal")
   })
 
   it("leaves the product out of a non-product acknowledgement", async () => {
