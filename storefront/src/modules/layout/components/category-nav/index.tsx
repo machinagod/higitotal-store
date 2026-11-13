@@ -14,7 +14,7 @@ import { Popover, Transition } from "@headlessui/react"
 import { ArrowRight, ChevronDown } from "lucide-react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CategoryIcon from "@modules/common/icons/category-icon"
-import { logoRestStyle, type NavLink } from "@lib/brands"
+import { logoOpticalStyle, logoRestStyle, type NavLink } from "@lib/brands"
 import { fallbackInlineClass, fallbackMoreClass, fitCount } from "./fit"
 
 // Gap between inline items (Tailwind gap-x-1) — keep in sync with the markup.
@@ -296,7 +296,12 @@ function BrandMark({ brand }: { brand: NavLink }) {
           height={h}
           loading="lazy"
           className="block object-contain opacity-70 [filter:var(--logo-rest,grayscale(1)_brightness(0.35))] transition-[filter,opacity] group-hover:opacity-100 group-hover:[filter:none]"
-          style={{ width: w, height: h, ...logoRestStyle(brand.logo) }}
+          style={{
+            width: w,
+            height: h,
+            ...logoRestStyle(brand.logo),
+            ...logoOpticalStyle(brand.logo, h),
+          }}
         />
       </span>
     )

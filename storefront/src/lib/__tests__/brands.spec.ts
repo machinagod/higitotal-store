@@ -246,3 +246,20 @@ describe("stripBrands / brandHref", () => {
     expect(brandHref({ name: "Y" }, { categoryHandle: "y" })).toBe("/categories/y")
   })
 })
+
+describe("logoOpticalStyle", () => {
+  it("shifts a low-weighted mark up by its measured offset", async () => {
+    const { logoOpticalStyle } = await import("../brands")
+    expect(
+      logoOpticalStyle({ src: "/x.svg", width: 100, height: 30, opticalY: 0.2 }, 30)
+    ).toEqual({ transform: "translateY(-6px)" })
+  })
+
+  it("does nothing without an offset or below half a pixel", async () => {
+    const { logoOpticalStyle } = await import("../brands")
+    expect(logoOpticalStyle({ src: "/x.svg", width: 100, height: 30 }, 30)).toEqual({})
+    expect(
+      logoOpticalStyle({ src: "/x.svg", width: 100, height: 30, opticalY: 0.01 }, 30)
+    ).toEqual({})
+  })
+})

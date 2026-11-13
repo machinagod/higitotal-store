@@ -22,6 +22,26 @@ export type BrandLogo = {
    * coloured field (Viper), or white lettering on one (Taski, Sammic).
    */
   restFilter?: string
+  /**
+   * Optical vertical centring: where the logo's ink mass sits relative to its
+   * box centre, as a fraction of its height (positive = the mass sits low,
+   * e.g. Vileda's leaf on top, Celea's large lowercase). Renderers shift the
+   * mark by `-opticalY × renderedHeight` so every logo's visual weight lands
+   * on the same centre line. Measured from the files (alpha-weighted centroid);
+   * omitted when under 1.5%.
+   */
+  opticalY?: number
+}
+
+/** Shift that puts a logo's ink centre on the box centre (see `opticalY`). */
+export function logoOpticalStyle(
+  logo: BrandLogo,
+  renderedHeight: number
+): CSSProperties {
+  const dy = -(logo.opticalY ?? 0) * renderedHeight
+  return Math.abs(dy) >= 0.5
+    ? { transform: `translateY(${Math.round(dy * 10) / 10}px)` }
+    : {}
 }
 
 /** Inline style carrying a logo's at-rest filter override, if any. */
@@ -66,7 +86,7 @@ export type Brand = {
 export const BRANDS: Brand[] = [
   {
     name: "Fagor",
-    logo: { src: "/brands/fagor.svg", width: 180, height: 61 },
+    logo: { src: "/brands/fagor.svg", width: 180, height: 61, opticalY: -0.027 },
   },
   {
     // sammic.com header logo (assets/logo-sammic-115px.svg) — round badge.
@@ -98,7 +118,7 @@ export const BRANDS: Brand[] = [
     // solenis.com (Assets/imgs/diversey-logo.svg) — Diversey is a Solenis
     // brand since 2023; this is the 2024 refreshed mark.
     name: "Diversey",
-    logo: { src: "/brands/diversey.svg", width: 103, height: 20.65 },
+    logo: { src: "/brands/diversey.svg", width: 103, height: 20.65, opticalY: -0.017 },
     collection: "diversey",
     categoryKeys: ["diversey"],
   },
@@ -120,6 +140,7 @@ export const BRANDS: Brand[] = [
     name: "Unilever",
     logo: {
       src: "/brands/unilever.svg",
+      opticalY: -0.033,
       width: 117.92,
       height: 129.58,
       scale: 1.4,
@@ -129,7 +150,7 @@ export const BRANDS: Brand[] = [
   },
   {
     name: "Vileda",
-    logo: { src: "/brands/vileda.svg", width: 1687, height: 484 },
+    logo: { src: "/brands/vileda.svg", width: 1687, height: 484, opticalY: 0.176 },
     collection: "vileda",
     categoryKeys: ["vileda"],
   },
@@ -138,14 +159,14 @@ export const BRANDS: Brand[] = [
     // SC Johnson wordmark extracted (vector, unchanged) from an official SC
     // Johnson Professional brochure; scjohnson.com/scjp.com are bot-walled.
     name: "SC Johnson (Deb)",
-    logo: { src: "/brands/sc-johnson.svg", width: 123.01, height: 41.27 },
+    logo: { src: "/brands/sc-johnson.svg", width: 123.01, height: 41.27, opticalY: -0.051 },
     wordmark: "SC Johnson",
     categoryKeys: ["scjohnson (deb)", "sc johnson", "deb"],
   },
   {
     // celea.es header logo (media/images/logos/logo_blau_updated_2.svg).
     name: "Celea",
-    logo: { src: "/brands/celea.svg", width: 281.03, height: 85.9 },
+    logo: { src: "/brands/celea.svg", width: 281.03, height: 85.9, opticalY: 0.106 },
   },
 ]
 

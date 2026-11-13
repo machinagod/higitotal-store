@@ -1,4 +1,4 @@
-import { logoRestStyle } from "@lib/brands"
+import { logoOpticalStyle, logoRestStyle } from "@lib/brands"
 import { getStripBrands } from "@lib/data/categories"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -88,6 +88,7 @@ const Suppliers = async () => {
                           width: size.width,
                           height: size.height,
                           ...logoRestStyle(brand.logo),
+                          ...logoOpticalStyle(brand.logo, size.height),
                         }}
                       />
                     ) : (
