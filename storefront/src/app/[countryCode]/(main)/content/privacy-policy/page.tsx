@@ -98,9 +98,10 @@ export default function PrivacyPolicyPage() {
             6.º, n.º 1, als. b) e c), do RGPD).
           </li>
           <li>
-            <B>Medição de audiências e marketing</B> — apenas com o seu
-            consentimento (art. 6.º, n.º 1, al. a), do RGPD), através das
-            ferramentas carregadas pelo Google Tag Manager. Ver a{" "}
+            <B>Estatísticas de utilização do site</B> (Google Analytics) —
+            apenas com o seu consentimento (art. 6.º, n.º 1, al. a), do RGPD),
+            através do Google Tag Manager. O site não utiliza cookies de
+            publicidade nem de marketing. Ver a{" "}
             <LegalLink href="/content/cookie-policy">
               Política de Cookies
             </LegalLink>
@@ -132,9 +133,9 @@ export default function PrivacyPolicyPage() {
               pela área de cliente.
             </li>
             <li>
-              <B>Google</B> (Google Tag Manager e ferramentas associadas) —
-              apenas se der o seu consentimento a cookies de análise ou
-              marketing.
+              <B>Google Ireland Limited</B> (Google Tag Manager e Google
+              Analytics) — estatísticas de utilização, apenas se der o seu
+              consentimento aos cookies de estatística.
             </li>
           </LegalList>
           <p>
@@ -233,6 +234,7 @@ export default function PrivacyPolicyPage() {
     <LegalPage
       title="Política de Privacidade"
       current="/content/privacy-policy"
+      lastUpdated="13 de novembro de 2026"
       intro={
         <p>
           Esta política explica que dados pessoais recolhemos através do site,
