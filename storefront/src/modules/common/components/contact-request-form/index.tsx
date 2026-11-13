@@ -9,18 +9,22 @@ import {
   buildContactRequestPayload,
   CONTACT_ERROR_MESSAGE,
   CONTACT_SUCCESS_MESSAGE,
+  ContactRequestFields,
   ContactRequestKind,
   PRODUCT_ENQUIRY_MESSAGE,
-  validateContactRequest,
+  validateContactRequestAll,
 } from "@lib/util/contact-request"
 
 import {
   ContactPrefField,
+  ErrorSummary,
+  FieldError,
   FieldLabel,
   fieldClass,
   Honeypot,
   PrivacyNote,
   submitContactRequest,
+  useFieldErrors,
 } from "./fields"
 
 export type EnquiryProduct = {
@@ -37,23 +41,48 @@ type Props = {
   product?: EnquiryProduct
   /** Unique prefix for input ids (several forms can share a page). */
   idPrefix?: string
-  /** Focus the first field on mount (modal). */
+  /** Focus the first field on mount. */
   autoFocus?: boolean
   /** Placeholder for the message when there is no product context. */
   messagePlaceholder?: string
   /** Rendered under the success message (e.g. a "Fechar" button). */
   successAction?: React.ReactNode
+  /** Called once the request was sent. */
+  onSuccess?: () => void
+  /**
+   * "sheet": inside a scrolling dialog — the submit button sticks to the
+   * bottom of the dialog (safe-area aware) so it is always reachable.
+   */
+  layout?: "inline" | "sheet"
   className?: string
 }
 
 const GENERAL_PLACEHOLDER =
   "Em que podemos ajudar? Indique produtos, quantidades ou outras informações úteis."
 
+/** Field values as the validator / payload builder expect them. */
+const readFields = (form: HTMLFormElement): ContactRequestFields => {
+  const fd = new FormData(form)
+  const get = (k: string) => (fd.get(k) as string | null) ?? undefined
+  return {
+    name: get("name"),
+    email: get("email"),
+    phone: get("phone"),
+    empresa: get("empresa"),
+    localidade: get("localidade"),
+    quantidadeEstimada: get("quantidadeEstimada"),
+    contactPref: get("contactPref"),
+    message: get("message"),
+    company: get("company"),
+  }
+}
+
 /**
  * Enquiry form ("Pedir orçamento"). Posts to the backend
  * `POST /store/contact-request`, which e-mails the sales team and sends the
  * customer an acknowledgement. Used inline on the contact page and inside the
- * product page's ContactModal. pt-PT.
+ * product page's ContactModal. Inline errors per field (aria-invalid +
+ * aria-describedby), a summary when there are several. pt-PT.
  */
 export default function ContactRequestForm({
   kind,
@@ -62,46 +91,41 @@ export default function ContactRequestForm({
   autoFocus = false,
   messagePlaceholder = GENERAL_PLACEHOLDER,
   successAction,
+  onSuccess,
+  layout = "inline",
   className,
 }: Props) {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
   )
-  const [invalid, setInvalid] = useState<string | null>(null)
+  const [pref, setPref] = useState("telefone")
   const firstRef = useRef<HTMLInputElement>(null)
   const id = (name: string) => `${idPrefix}-${name}`
+  const prefilledMessage = product ? PRODUCT_ENQUIRY_MESSAGE : undefined
+
+  const errors = useFieldErrors(idPrefix, (form) =>
+    validateContactRequestAll(readFields(form), { prefilledMessage })
+  )
 
   useEffect(() => {
     if (autoFocus) firstRef.current?.focus({ preventScroll: true })
   }, [autoFocus])
 
+  const onChange = (e: React.FormEvent<HTMLFormElement>) => {
+    const t = e.target as HTMLInputElement
+    if (t.name === "contactPref") setPref(t.value)
+    errors.onChange(e)
+  }
+
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const get = (k: string) => (fd.get(k) as string | null) ?? undefined
-    const fields = {
-      name: get("name"),
-      email: get("email"),
-      phone: get("phone"),
-      empresa: get("empresa"),
-      localidade: get("localidade"),
-      quantidadeEstimada: get("quantidadeEstimada"),
-      contactPref: get("contactPref"),
-      message: get("message"),
-      company: get("company"),
-    }
-    const problem = validateContactRequest(fields)
-    setInvalid(problem?.message ?? null)
-    if (problem) {
-      const el = e.currentTarget.elements.namedItem(problem.field)
-      if (el instanceof HTMLElement) el.focus()
-      return
-    }
+    const form = e.currentTarget
+    if (!errors.check(form)) return
 
     setStatus("sending")
     try {
       await submitContactRequest(
-        buildContactRequestPayload(fields, {
+        buildContactRequestPayload(readFields(form), {
           kind,
           productTitle: product?.title,
           sku: product?.sku,
@@ -111,6 +135,7 @@ export default function ContactRequestForm({
         })
       )
       setStatus("done")
+      onSuccess?.()
     } catch {
       setStatus("error")
     }
@@ -134,25 +159,33 @@ export default function ContactRequestForm({
     )
   }
 
+  const sheet = layout === "sheet"
+  // Paired fields go two-up from 360px; name / e-mail from 512px.
+  const pair = "col-span-2 min-[360px]:col-span-1"
+  const wide = "col-span-2 xsmall:col-span-1"
+
   return (
     <form
-      className={clx("flex flex-col gap-4", className)}
+      className={clx("flex flex-col gap-3.5", className)}
       onSubmit={submit}
+      onChange={onChange}
       noValidate
       data-testid="contact-request-form"
     >
+      <ErrorSummary problems={errors.problems} fieldId={(f) => id(f)} />
+
       {product && (
         <div
-          className="flex items-center gap-3 rounded-btn border border-hairline bg-[#f7f9fa] p-3"
+          className="flex items-center gap-3 rounded-btn border border-hairline bg-[#f7f9fa] p-2.5"
           data-testid="contact-request-product"
         >
-          <div className="relative h-14 w-14 flex-none overflow-hidden rounded-[10px] border border-hairline bg-white">
+          <div className="relative h-12 w-12 flex-none overflow-hidden rounded-[10px] border border-hairline bg-white">
             {product.thumbnail ? (
               <Image
                 src={product.thumbnail}
                 alt=""
                 fill
-                sizes="56px"
+                sizes="48px"
                 className="object-contain p-1 mix-blend-multiply"
               />
             ) : (
@@ -174,8 +207,8 @@ export default function ContactRequestForm({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 xsmall:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
+        <div className={wide}>
           <FieldLabel htmlFor={id("name")} required>
             Nome
           </FieldLabel>
@@ -186,9 +219,11 @@ export default function ContactRequestForm({
             required
             autoComplete="name"
             className={fieldClass}
+            {...errors.a11y("name")}
           />
+          <FieldError id={errors.errorId("name")} message={errors.messageFor("name")} />
         </div>
-        <div>
+        <div className={wide}>
           <FieldLabel htmlFor={id("email")} required>
             E-mail
           </FieldLabel>
@@ -201,10 +236,14 @@ export default function ContactRequestForm({
             inputMode="email"
             placeholder="nome@empresa.pt"
             className={fieldClass}
+            {...errors.a11y("email")}
           />
+          <FieldError id={errors.errorId("email")} message={errors.messageFor("email")} />
         </div>
-        <div>
-          <FieldLabel htmlFor={id("phone")}>Telefone</FieldLabel>
+        <div className={pair}>
+          <FieldLabel htmlFor={id("phone")} required={pref === "telefone"}>
+            Telefone
+          </FieldLabel>
           <input
             id={id("phone")}
             name="phone"
@@ -212,28 +251,12 @@ export default function ContactRequestForm({
             autoComplete="tel"
             inputMode="tel"
             className={fieldClass}
+            {...errors.a11y("phone")}
           />
-        </div>
-        <div>
-          <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
-          <input
-            id={id("empresa")}
-            name="empresa"
-            autoComplete="organization"
-            className={fieldClass}
-          />
-        </div>
-        <div className={clx(!product && "xsmall:col-span-2")}>
-          <FieldLabel htmlFor={id("localidade")}>Localidade</FieldLabel>
-          <input
-            id={id("localidade")}
-            name="localidade"
-            autoComplete="address-level2"
-            className={fieldClass}
-          />
+          <FieldError id={errors.errorId("phone")} message={errors.messageFor("phone")} />
         </div>
         {product && (
-          <div>
+          <div className={pair}>
             <FieldLabel htmlFor={id("quantidade")}>Quantidade estimada</FieldLabel>
             <input
               id={id("quantidade")}
@@ -248,6 +271,24 @@ export default function ContactRequestForm({
             />
           </div>
         )}
+        <div className={pair}>
+          <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
+          <input
+            id={id("empresa")}
+            name="empresa"
+            autoComplete="organization"
+            className={fieldClass}
+          />
+        </div>
+        <div className={product ? pair : "col-span-2"}>
+          <FieldLabel htmlFor={id("localidade")}>Localidade</FieldLabel>
+          <input
+            id={id("localidade")}
+            name="localidade"
+            autoComplete="address-level2"
+            className={fieldClass}
+          />
+        </div>
       </div>
 
       <ContactPrefField idPrefix={idPrefix} />
@@ -257,31 +298,42 @@ export default function ContactRequestForm({
         <textarea
           id={id("message")}
           name="message"
-          rows={product ? 3 : 5}
-          defaultValue={product ? PRODUCT_ENQUIRY_MESSAGE : undefined}
+          rows={product ? 2 : 5}
+          defaultValue={prefilledMessage}
           placeholder={product ? undefined : messagePlaceholder}
-          className={clx(fieldClass, "min-h-[96px] resize-y")}
+          className={clx(fieldClass, product ? "min-h-[72px]" : "min-h-[96px]", "resize-y")}
+          {...errors.a11y("message")}
         />
+        <FieldError id={errors.errorId("message")} message={errors.messageFor("message")} />
       </div>
 
       <Honeypot />
 
-      {(invalid || status === "error") && (
-        <p role="alert" className="text-sm font-medium text-rose-700">
-          {invalid ?? CONTACT_ERROR_MESSAGE}
-        </p>
-      )}
+      {sheet && <PrivacyNote />}
 
-      <button
-        type="submit"
-        disabled={status === "sending"}
-        data-testid="contact-request-submit"
-        className="flex h-12 w-full items-center justify-center rounded-pill bg-brand-cyan px-6 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:bg-brand-cyan-ink disabled:opacity-60"
+      <div
+        className={clx(
+          sheet &&
+            "sticky bottom-0 z-[1] -mx-5 mt-auto border-t border-hairline bg-white px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 small:-mx-7 small:px-7 small:pb-5"
+        )}
+        data-testid="contact-request-actions"
       >
-        {status === "sending" ? "A enviar…" : "Enviar pedido"}
-      </button>
+        {status === "error" && (
+          <p role="alert" className="mb-2 text-sm font-medium text-rose-700">
+            {CONTACT_ERROR_MESSAGE}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={status === "sending"}
+          data-testid="contact-request-submit"
+          className="flex h-12 w-full items-center justify-center rounded-pill bg-brand-cyan px-6 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:bg-brand-cyan-ink disabled:opacity-60"
+        >
+          {status === "sending" ? "A enviar…" : "Enviar pedido"}
+        </button>
+      </div>
 
-      <PrivacyNote />
+      {!sheet && <PrivacyNote />}
     </form>
   )
 }

@@ -1,69 +1,108 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Phone, Mail, MapPin, Check, ArrowRight } from "lucide-react"
 
 import { COMPANY } from "@lib/company"
 import {
+  buildAssistanceMessage,
   buildContactRequestPayload,
   CONTACT_ERROR_MESSAGE,
-  validateContactRequest,
+  ContactRequestFields,
+  validateContactRequestAll,
 } from "@lib/util/contact-request"
 import {
   ContactPrefField,
+  ErrorSummary,
+  FieldError,
   FieldLabel,
   fieldClass,
   Honeypot,
   PrivacyNote,
   submitContactRequest,
+  useFieldErrors,
 } from "@modules/common/components/contact-request-form/fields"
+
+/** Anchor of the form section on the assistência page. */
+export const REQUEST_ANCHOR = "pedir"
+
+const ID = "rf"
+
+/** What the customer typed (the message is their own description). */
+const readFields = (form: HTMLFormElement) => {
+  const fd = new FormData(form)
+  const get = (k: string) => ((fd.get(k) as string | null) ?? "").trim()
+  const fields: ContactRequestFields = {
+    name: get("name"),
+    email: get("email"),
+    phone: get("phone"),
+    empresa: get("empresa"),
+    localidade: get("localidade"),
+    contactPref: get("contactPref"),
+    message: get("message"),
+    modelo: get("modelo"),
+    urgente: fd.get("urgente") ? true : null,
+    company: get("company"), // honeypot
+  }
+  return { fields, tipo: get("tipo"), equipamento: get("equipamento") }
+}
 
 /**
  * "Pedir assistência" — technical-assistance request form. Posts to the
  * backend /store/contact-request with kind "assistencia" (e-mails the team via
- * Resend). Shares its fields, privacy note and submit logic with the enquiry
- * form (modules/common/components/contact-request-form). pt-PT.
+ * Resend; "[URGENTE]" in the subject when the equipment is stopped). Shares
+ * its fields, validation UI, privacy note and submit logic with the enquiry
+ * form (modules/common/components/contact-request-form). Arriving via
+ * `#pedir` (hero / PDP / contact links) focuses the first field. pt-PT.
  */
 const RequestForm = () => {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
   )
-  const [invalid, setInvalid] = useState<string | null>(null)
+  const [pref, setPref] = useState("telefone")
+  const [urgent, setUrgent] = useState(false)
+  const nameRef = useRef<HTMLInputElement>(null)
+  const id = (name: string) => `${ID}-${name}`
+
+  const errors = useFieldErrors(ID, (form) =>
+    validateContactRequestAll(readFields(form).fields, {
+      messageHint: "descreva o pedido",
+    })
+  )
+
+  // Focus the first field when the visitor comes for the form (#pedir), both
+  // on arrival and when an in-page "Pedir assistência" link is used again.
+  useEffect(() => {
+    const focusName = () =>
+      requestAnimationFrame(() => nameRef.current?.focus({ preventScroll: true }))
+    if (window.location.hash === `#${REQUEST_ANCHOR}`) focusName()
+    const onHash = () => {
+      if (window.location.hash === `#${REQUEST_ANCHOR}`) focusName()
+    }
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.("a")
+      if (a?.getAttribute("href") === `#${REQUEST_ANCHOR}`) focusName()
+    }
+    window.addEventListener("hashchange", onHash)
+    document.addEventListener("click", onClick)
+    return () => {
+      window.removeEventListener("hashchange", onHash)
+      document.removeEventListener("click", onClick)
+    }
+  }, [])
+
+  const onChange = (e: React.FormEvent<HTMLFormElement>) => {
+    const t = e.target as HTMLInputElement
+    if (t.name === "contactPref") setPref(t.value)
+    if (t.name === "urgente") setUrgent(t.checked)
+    errors.onChange(e)
+  }
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const get = (k: string) => ((fd.get(k) as string | null) ?? "").trim()
-
-    // Compose the free-text message so the team gets full context.
-    const tipo = get("tipo")
-    const equipamento = get("equipamento")
-    const descricao = get("mensagem")
-    const message = [
-      tipo ? `Tipo de serviço: ${tipo}` : null,
-      equipamento ? `Equipamento / marca: ${equipamento}` : null,
-      descricao ? `\n${descricao}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n")
-
-    const fields = {
-      name: get("name"),
-      email: get("email"),
-      phone: get("phone"),
-      empresa: get("empresa"),
-      localidade: get("localidade"),
-      contactPref: get("contactPref"),
-      message,
-      company: get("company"), // honeypot
-    }
-    const problem = validateContactRequest(fields)
-    setInvalid(problem?.message ?? null)
-    if (problem) {
-      const el = e.currentTarget.elements.namedItem(problem.field)
-      if (el instanceof HTMLElement) el.focus()
-      return
-    }
+    const form = e.currentTarget
+    if (!errors.check(form)) return
+    const { fields, tipo, equipamento } = readFields(form)
 
     setStatus("sending")
     try {
@@ -72,6 +111,12 @@ const RequestForm = () => {
           kind: "assistencia",
           // Kept for backends that infer the kind from the title.
           productTitle: "Assistência Técnica",
+          // The team gets the service type / equipment before the description.
+          message: buildAssistanceMessage({
+            tipo,
+            equipamento,
+            descricao: fields.message,
+          }),
           productUrl:
             typeof window !== "undefined" ? window.location.href : undefined,
         })
@@ -97,10 +142,10 @@ const RequestForm = () => {
           A nossa equipa responde em dias úteis. Para avarias urgentes,
           ligue-nos.
         </p>
-        <div className="mt-7 flex flex-col gap-[14px]">
+        <div className="mt-7 flex flex-col gap-2">
           <a
             href={COMPANY.phone.href}
-            className="flex items-center gap-3 text-[15px] font-semibold"
+            className="-mx-2 flex min-h-[44px] items-center gap-3 rounded-btn px-2 py-1 text-[15px] font-semibold transition-colors hover:bg-white/10"
           >
             <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-white/[0.16]">
               <Phone className="h-[18px] w-[18px]" aria-hidden="true" />
@@ -114,14 +159,14 @@ const RequestForm = () => {
           </a>
           <a
             href={`mailto:${COMPANY.email}`}
-            className="flex items-center gap-3 text-[15px] font-semibold"
+            className="-mx-2 flex min-h-[44px] items-center gap-3 rounded-btn px-2 py-1 text-[15px] font-semibold transition-colors hover:bg-white/10"
           >
             <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-white/[0.16]">
               <Mail className="h-[18px] w-[18px]" aria-hidden="true" />
             </span>
             {COMPANY.email}
           </a>
-          <div className="flex items-center gap-3 text-[15px] font-semibold">
+          <div className="flex min-h-[44px] items-center gap-3 py-1 text-[15px] font-semibold">
             <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-white/[0.16]">
               <MapPin className="h-[18px] w-[18px]" aria-hidden="true" />
             </span>
@@ -154,26 +199,36 @@ const RequestForm = () => {
           <form
             className="grid grid-cols-1 gap-4 sm:grid-cols-2"
             onSubmit={submit}
+            onChange={onChange}
             noValidate
+            data-testid="assistance-request-form"
           >
+            <ErrorSummary
+              problems={errors.problems}
+              fieldId={(f) => id(f)}
+              className="sm:col-span-2"
+            />
             <div>
-              <FieldLabel htmlFor="rf-name" required>
+              <FieldLabel htmlFor={id("name")} required>
                 Nome
               </FieldLabel>
               <input
-                id="rf-name"
+                ref={nameRef}
+                id={id("name")}
                 name="name"
                 required
                 autoComplete="name"
                 className={fieldClass}
+                {...errors.a11y("name")}
               />
+              <FieldError id={errors.errorId("name")} message={errors.messageFor("name")} />
             </div>
             <div>
-              <FieldLabel htmlFor="rf-email" required>
+              <FieldLabel htmlFor={id("email")} required>
                 E-mail
               </FieldLabel>
               <input
-                id="rf-email"
+                id={id("email")}
                 name="email"
                 type="email"
                 required
@@ -181,43 +236,49 @@ const RequestForm = () => {
                 inputMode="email"
                 placeholder="nome@empresa.pt"
                 className={fieldClass}
+                {...errors.a11y("email")}
               />
+              <FieldError id={errors.errorId("email")} message={errors.messageFor("email")} />
             </div>
             <div>
-              <FieldLabel htmlFor="rf-phone">Telefone</FieldLabel>
+              <FieldLabel htmlFor={id("phone")} required={pref === "telefone"}>
+                Telefone
+              </FieldLabel>
               <input
-                id="rf-phone"
+                id={id("phone")}
                 name="phone"
                 type="tel"
                 autoComplete="tel"
                 inputMode="tel"
                 className={fieldClass}
+                {...errors.a11y("phone")}
               />
+              <FieldError id={errors.errorId("phone")} message={errors.messageFor("phone")} />
             </div>
             <div>
-              <FieldLabel htmlFor="rf-empresa">Empresa</FieldLabel>
+              <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
               <input
-                id="rf-empresa"
+                id={id("empresa")}
                 name="empresa"
                 autoComplete="organization"
                 className={fieldClass}
               />
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="rf-localidade">
+              <FieldLabel htmlFor={id("localidade")}>
                 Localidade / código postal
               </FieldLabel>
               <input
-                id="rf-localidade"
+                id={id("localidade")}
                 name="localidade"
                 placeholder="Ex.: Mirandela, 5370-565"
                 className={fieldClass}
               />
             </div>
             <div>
-              <FieldLabel htmlFor="rf-tipo">Tipo de serviço</FieldLabel>
+              <FieldLabel htmlFor={id("tipo")}>Tipo de serviço</FieldLabel>
               <select
-                id="rf-tipo"
+                id={id("tipo")}
                 name="tipo"
                 className={fieldClass}
                 defaultValue="Reparação"
@@ -229,34 +290,80 @@ const RequestForm = () => {
               </select>
             </div>
             <div>
-              <FieldLabel htmlFor="rf-equipamento">Equipamento / marca</FieldLabel>
+              <FieldLabel htmlFor={id("equipamento")}>Equipamento / marca</FieldLabel>
               <input
-                id="rf-equipamento"
+                id={id("equipamento")}
                 name="equipamento"
                 placeholder="Ex.: Fagor, Sammic, Nilfisk"
                 className={fieldClass}
               />
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="rf-mensagem">Descrição do pedido</FieldLabel>
+              <FieldLabel htmlFor={id("modelo")}>
+                Modelo / n.º de série{" "}
+                <span className="font-normal text-grey-50">(opcional)</span>
+              </FieldLabel>
+              <input
+                id={id("modelo")}
+                name="modelo"
+                placeholder="Consta da chapa de características do equipamento"
+                className={fieldClass}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel htmlFor={id("message")}>Descrição do pedido</FieldLabel>
               <textarea
-                id="rf-mensagem"
-                name="mensagem"
+                id={id("message")}
+                name="message"
                 rows={3}
                 placeholder="Ex.: a máquina de lavar louça não aquece a água."
                 className={`${fieldClass} min-h-[96px] resize-y`}
+                {...errors.a11y("message")}
+              />
+              <FieldError
+                id={errors.errorId("message")}
+                message={errors.messageFor("message")}
               />
             </div>
 
             <div className="sm:col-span-2">
-              <ContactPrefField idPrefix="rf" accent="orange" />
+              <label
+                htmlFor={id("urgente")}
+                className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-btn border-[1.5px] border-hairline px-4 py-3 transition-colors hover:border-[#cdd5dd] has-[:checked]:border-svc-signal has-[:checked]:bg-svc-signal/10"
+              >
+                <input
+                  id={id("urgente")}
+                  name="urgente"
+                  type="checkbox"
+                  value="sim"
+                  aria-describedby={id("urgente-hint")}
+                  className="mt-0.5 h-5 w-5 flex-none cursor-pointer accent-svc-signal-ink"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-brand-ink">
+                    Equipamento parado (urgente)
+                  </span>
+                  <span
+                    id={id("urgente-hint")}
+                    className="mt-0.5 block text-xs leading-relaxed text-grey-60"
+                  >
+                    {urgent
+                      ? `O pedido segue assinalado como urgente. Para uma resposta imediata, ligue também para ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()}).`
+                      : "Assinale se o equipamento não está a funcionar e a sua atividade está afetada."}
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="sm:col-span-2">
+              <ContactPrefField idPrefix={ID} accent="orange" />
             </div>
 
             <Honeypot />
 
-            {(invalid || status === "error") && (
+            {status === "error" && (
               <p role="alert" className="text-sm font-medium text-rose-700 sm:col-span-2">
-                {invalid ?? CONTACT_ERROR_MESSAGE}
+                {CONTACT_ERROR_MESSAGE}
               </p>
             )}
 
@@ -264,6 +371,7 @@ const RequestForm = () => {
               <button
                 type="submit"
                 disabled={status === "sending"}
+                data-testid="assistance-request-submit"
                 className="flex h-12 w-full items-center justify-center gap-[10px] rounded-pill bg-svc-signal px-7 text-[13px] font-bold uppercase tracking-[0.04em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.32)] transition hover:bg-svc-signal-ink disabled:opacity-60"
               >
                 {status === "sending" ? (

@@ -47,10 +47,12 @@ const Hero = () => {
       />
 
       <div className="content-container relative z-[2] grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-        <div>
+        {/* On phones the CTAs move up under the headline (order-*) so
+            "Pedir assistência" is visible without scrolling. */}
+        <div className="flex flex-col">
           <LocalizedClientLink
             href="/store"
-            className="mb-6 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.03em] text-svc-fg-muted transition hover:text-white"
+            className="mb-6 inline-flex min-h-[24px] items-center gap-1.5 self-start text-xs font-semibold uppercase tracking-[0.03em] text-svc-fg-muted transition hover:text-white"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Voltar ao catálogo
@@ -63,32 +65,37 @@ const Hero = () => {
             A sua equipa de <span className="text-svc-signal">manutenção</span>,
             a partir de Mirandela.
           </h1>
-          <p className="mt-5 max-w-[48ch] text-lg leading-relaxed text-svc-fg-muted">
+          <p className="order-2 mt-6 max-w-[48ch] text-base leading-relaxed text-svc-fg-muted sm:order-none sm:mt-5 sm:text-lg">
             Instalamos, reparamos e mantemos o seu equipamento profissional de
             cozinha, lavandaria e limpeza, com peças originais e contratos de
-            manutenção. Técnicos especializados, sediados em Mirandela.
-            Resposta prioritária no Norte.
+            manutenção. Técnicos especializados, sediados em Mirandela. Resposta
+            prioritária no Norte.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href="#pedir"
-              className="inline-flex items-center gap-[10px] rounded-pill bg-svc-signal px-7 py-[15px] text-[13px] font-bold uppercase tracking-[0.04em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.32)] transition hover:-translate-y-0.5 hover:bg-svc-signal-ink"
-            >
-              Pedir assistência
-              <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href={COMPANY.phone.href}
-              aria-label={`Ligar para ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()})`}
-              className="inline-flex items-center gap-[10px] rounded-pill border-[1.5px] border-svc-line bg-transparent px-7 py-[15px] text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:-translate-y-0.5 hover:bg-svc-ground-2"
-            >
-              <Phone className="h-4 w-4" /> {COMPANY.phone.display}
-            </a>
+          <div className="order-1 mt-6 sm:order-none sm:mt-8">
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="#pedir"
+                data-testid="assist-hero-cta"
+                className="inline-flex items-center gap-[10px] rounded-pill bg-svc-signal px-7 py-[15px] text-[13px] font-bold uppercase tracking-[0.04em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.32)] transition hover:-translate-y-0.5 hover:bg-svc-signal-ink"
+              >
+                Pedir assistência
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              <a
+                href={COMPANY.phone.href}
+                aria-label={`Ligar para ${
+                  COMPANY.phone.display
+                } (${COMPANY.phone.costNote.toLowerCase()})`}
+                className="inline-flex items-center gap-[10px] rounded-pill border-[1.5px] border-svc-line bg-transparent px-7 py-[15px] text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:-translate-y-0.5 hover:bg-svc-ground-2"
+              >
+                <Phone className="h-4 w-4" /> {COMPANY.phone.display}
+              </a>
+            </div>
+            <p className="mt-2 text-[11px] text-svc-fg-muted">
+              {COMPANY.phone.costNote}
+            </p>
           </div>
-          <p className="mt-2 text-[11px] text-svc-fg-muted">
-            {COMPANY.phone.costNote}
-          </p>
-          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-svc-line pt-6 sm:flex sm:flex-wrap sm:gap-[26px] sm:border-0 sm:pt-0">
+          <div className="order-3 mt-8 grid grid-cols-3 gap-3 border-t border-svc-line pt-6 sm:order-none sm:flex sm:flex-wrap sm:gap-[26px] sm:border-0 sm:pt-0">
             {getStats().map((s) => (
               <div key={s.value} className="min-w-0">
                 <b className="block text-xl font-extrabold leading-none tracking-[-0.02em] text-white sm:text-[26px]">
