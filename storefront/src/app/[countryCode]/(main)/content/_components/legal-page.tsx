@@ -30,6 +30,7 @@ export function LegalPage({
   intro,
   sections,
   current,
+  lastUpdated = LEGAL_LAST_UPDATED,
 }: {
   eyebrow?: string
   title: string
@@ -37,6 +38,8 @@ export function LegalPage({
   sections: LegalSection[]
   /** href of this page, to mark it in the "other documents" list. */
   current: string
+  /** Overrides the shared LEGAL_LAST_UPDATED for this document. */
+  lastUpdated?: string
 }) {
   return (
     <div className="content-container py-10 small:py-16">
@@ -50,7 +53,7 @@ export function LegalPage({
             {title}
           </h1>
           <p className="mt-3 text-sm text-grey-50">
-            Última atualização: {LEGAL_LAST_UPDATED}
+            Última atualização: {lastUpdated}
           </p>
           {intro && <div className="mt-6 text-base text-grey-60">{intro}</div>}
 
