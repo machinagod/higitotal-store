@@ -4,9 +4,11 @@ import { getRegion } from "@lib/data/regions"
 import {
   LISTING_FIELDS,
   getBoughtTogether,
+  getComplementCandidates,
   getProductsList,
 } from "@lib/data/products"
-import { imagesFirst, inIdOrder } from "@lib/util/listing-order"
+import { inIdOrder } from "@lib/util/listing-order"
+import { rankSuggestions } from "@lib/util/complements"
 import { HttpTypes } from "@medusajs/types"
 
 type BoughtTogetherProps = {
@@ -19,11 +21,17 @@ const BOUGHT_TOGETHER_LIMIT = 4
 const CANDIDATE_LIMIT = 12
 
 /**
- * "Complementos habituais" — real co-purchase recommendations from the
- * bought-together plugin (seeded from Moloni sales history, then self-maintaining
- * from live orders). Falls back to the collection/tags `RelatedProducts` rail when
- * a product has no co-purchase data yet (cold start) or none of its partners are
- * currently available in this region.
+ * "Complementos habituais" — real co-purchase partners from the
+ * bought-together plugin (seeded from Moloni sales history, then
+ * self-maintaining from live orders), made relevant: products in a category
+ * complementary to this one come first (a jumbo roll → the jumbo dispenser,
+ * even when that dispenser isn't among the co-purchases), then partners from
+ * the same family, then the same category, then the remaining partners by
+ * co-purchase frequency — see `rankSuggestions` / `COMPLEMENT_PAIRS` in
+ * @lib/util/complements. Photos first within each step.
+ *
+ * Falls back to the `RelatedProducts` rail when a product has no co-purchase
+ * data yet (cold start) or none of its partners are available in this region.
  */
 export default async function BoughtTogether({
   product,
@@ -60,24 +68,26 @@ export default async function BoughtTogether({
 
   // Hydrate with the card fields; the Store API only returns published,
   // in-region products, so this also drops drafts / discontinued partners.
-  const { response } = await getProductsList({
-    queryParams: {
-      id: candidateIds,
-      limit: candidateIds.length,
-      fields: LISTING_FIELDS,
-    },
-    countryCode,
-  })
+  const [{ response }, complements] = await Promise.all([
+    getProductsList({
+      queryParams: {
+        id: candidateIds,
+        limit: candidateIds.length,
+        fields: LISTING_FIELDS,
+      },
+      countryCode,
+    }),
+    getComplementCandidates({ product, countryCode }),
+  ])
 
-  // Frequency order (the list endpoint doesn't keep input order), then
-  // partners with a photo ahead of those without.
-  const ordered = imagesFirst(
-    inIdOrder(response.products, candidateIds).filter((p) => p.id !== product.id)
-  ).slice(0, BOUGHT_TOGETHER_LIMIT)
-
-  if (!ordered.length) {
+  const partners = inIdOrder(response.products, candidateIds)
+  if (!partners.length) {
     return <RelatedProducts product={product} countryCode={countryCode} />
   }
+
+  const ordered = rankSuggestions(product, [...partners, ...complements], {
+    frequency: ranked,
+  }).slice(0, BOUGHT_TOGETHER_LIMIT)
 
   return (
     <ProductRail

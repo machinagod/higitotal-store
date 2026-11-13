@@ -13,6 +13,11 @@ import {
 import { isCatalogMode } from "@lib/util/catalog-mode"
 import { stripVariantPrices } from "@lib/util/strip-variant-prices"
 import { stripSensitiveMetadata } from "@lib/util/strip-sensitive-metadata"
+import {
+  categoryIdsForKeys,
+  categoryNames,
+  complementNameKeys,
+} from "@lib/util/complements"
 
 /**
  * In catalog mode, drop the computed prices from product payloads before they
@@ -307,4 +312,55 @@ export const getProductsListWithSort = cache(async function ({
     queryParams,
   }
 })
+
+/** Every category's id + name (the tree is ~60 nodes), for name-keyed lookups. */
+const getCategoryRefs = cache(async function () {
+  return sdk.store.category
+    .list({ limit: 1000, fields: "id,name" }, { next: { tags: ["categories"] } })
+    .then(({ product_categories }) => product_categories ?? [])
+    .catch(() => [] as HttpTypes.StoreProductCategory[])
+})
+
+/**
+ * Suggestion candidates (card fields) for `product`'s PDP rails: products from
+ * the categories complementary to its own — paper ↔ its dispensers, detergents
+ * ↔ doseadores (see `COMPLEMENT_PAIRS` in @lib/util/complements) — plus, with
+ * `sameCategory`, products from its own categories. Rank them with
+ * `rankSuggestions`. Fails soft to [].
+ */
+export async function getComplementCandidates({
+  product,
+  countryCode,
+  sameCategory = false,
+  limit = 12,
+}: {
+  product: HttpTypes.StoreProduct
+  countryCode: string
+  sameCategory?: boolean
+  limit?: number
+}): Promise<HttpTypes.StoreProduct[]> {
+  const keys = complementNameKeys(categoryNames(product))
+  const complementIds = keys.size
+    ? categoryIdsForKeys(await getCategoryRefs(), keys)
+    : []
+  const ownIds = sameCategory
+    ? (product.categories ?? []).map((c) => c.id).filter(Boolean)
+    : []
+
+  const fetchFrom = (category_id: string[]) =>
+    category_id.length
+      ? getProductsList({
+          queryParams: { category_id, limit, fields: LISTING_FIELDS },
+          countryCode,
+        })
+          .then(({ response }) => response.products)
+          .catch(() => [] as HttpTypes.StoreProduct[])
+      : Promise.resolve([] as HttpTypes.StoreProduct[])
+
+  const [complements, own] = await Promise.all([
+    fetchFrom(complementIds),
+    fetchFrom(ownIds),
+  ])
+  return [...complements, ...own]
+}
 
