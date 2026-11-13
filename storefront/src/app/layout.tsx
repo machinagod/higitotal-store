@@ -21,7 +21,7 @@ import {
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
   title: {
-    default: `${SITE_NAME} · Higiene profissional & assistência técnica`,
+    default: `${SITE_NAME} · Higiene profissional e assistência técnica`,
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -50,12 +50,12 @@ export const metadata: Metadata = {
     type: "website",
     siteName: SITE_NAME,
     locale: SITE_LOCALE,
-    title: `${SITE_NAME} · Higiene profissional & assistência técnica`,
+    title: `${SITE_NAME} · Higiene profissional e assistência técnica`,
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} · Higiene profissional & assistência técnica`,
+    title: `${SITE_NAME} · Higiene profissional e assistência técnica`,
     description: SITE_DESCRIPTION,
   },
   robots: {

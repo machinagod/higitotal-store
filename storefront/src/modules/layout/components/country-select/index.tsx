@@ -15,6 +15,23 @@ type CountryOption = {
   label: string
 }
 
+// Country names in Portuguese (the region data carries English display names).
+const ptRegionNames =
+  typeof Intl !== "undefined" && "DisplayNames" in Intl
+    ? new Intl.DisplayNames(["pt-PT"], { type: "region" })
+    : null
+
+function countryLabel(iso2?: string, fallback?: string) {
+  if (iso2 && ptRegionNames) {
+    try {
+      return ptRegionNames.of(iso2.toUpperCase()) ?? fallback
+    } catch {
+      /* fall through */
+    }
+  }
+  return fallback
+}
+
 type CountrySelectProps = {
   toggleState: StateType
   regions: HttpTypes.StoreRegion[]
@@ -37,11 +54,11 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
         return r.countries?.map((c) => ({
           country: c.iso_2,
           region: r.id,
-          label: c.display_name,
+          label: countryLabel(c.iso_2, c.display_name),
         }))
       })
       .flat()
-      .sort((a, b) => (a?.label ?? "").localeCompare(b?.label ?? ""))
+      .sort((a, b) => (a?.label ?? "").localeCompare(b?.label ?? "", "pt"))
   }, [regions])
 
   useEffect(() => {

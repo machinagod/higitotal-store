@@ -14,14 +14,14 @@ const AtFeature = () => {
           </span>
 
           <h2 className="mt-4 max-w-[16ch] text-[26px] font-extrabold leading-[1.06] tracking-tight text-white small:text-[42px]">
-            A sua equipa de manutenção, em todo o país.
+            A sua equipa de manutenção, sediada em Mirandela.
           </h2>
 
           <p className="mt-4 max-w-[46ch] text-sm leading-relaxed text-svc-fg-muted small:mt-5 small:text-base">
             Instalamos, reparamos e mantemos o seu equipamento profissional —
             cozinhas Fagor, preparação Sammic, máquinas Nilfisk e muito mais.
-            Contratos de manutenção que garantem o funcionamento do seu negócio,
-            sem paragens.
+            Com contratos de manutenção preventiva, ajudamos a reduzir paragens
+            no seu negócio.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2 small:mt-7 small:gap-2.5">
@@ -64,15 +64,16 @@ const AtFeature = () => {
               Mirandela
             </span>
             <small className="mt-1 block text-[11px] font-medium normal-case tracking-[0.04em] text-svc-fg-muted">
-              Sede &amp; equipa técnica
+              Sede e equipa técnica
             </small>
           </div>
           <div className="absolute bottom-7 right-7 min-w-[170px] rounded-large border border-svc-line bg-[rgba(15,17,21,0.72)] px-5 py-4 text-white backdrop-blur">
             <b className="text-3xl font-extrabold tracking-tight text-white">
-              ≈200<em className="not-italic text-svc-signal">km</em>
+              ≈200{"\u00a0"}
+              <em className="not-italic text-svc-signal">km</em>
             </b>
-            <span className="mt-1.5 block text-xs font-medium leading-snug text-svc-fg-muted">
-              Resposta prioritária na região Norte — cobertura nacional.
+            <span className="mt-1.5 block max-w-[24ch] text-xs font-medium leading-snug text-svc-fg-muted">
+              Raio de resposta prioritária a partir de Mirandela
             </span>
           </div>
         </div>

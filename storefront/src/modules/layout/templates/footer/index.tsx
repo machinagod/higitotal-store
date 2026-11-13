@@ -1,176 +1,292 @@
-import { MapPin, Phone, Mail } from "lucide-react"
+import type { ReactNode } from "react"
+import {
+  BookOpen,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  Mail,
+  MapPin,
+  Phone,
+  Wrench,
+} from "lucide-react"
 
-import { getCategoriesList } from "@lib/data/categories"
-import { getCollectionsList } from "@lib/data/collections"
+import { getNavGroups } from "@lib/data/categories"
+import { COMPANY } from "@lib/company"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import BlackCat from "@modules/layout/components/black-cat"
-import { isCatalogMode } from "@lib/util/catalog-mode"
+
+type FooterLink = { label: string; href: string }
+
+const SERVICE_LINKS = ["Instalação", "Reparação", "Contratos de manutenção"]
+
+const LEGAL_LINKS: FooterLink[] = [
+  { label: "Política de Privacidade", href: "/content/privacy-policy" },
+  { label: "Termos de Utilização", href: "/content/terms-of-use" },
+  { label: "Política de Cookies", href: "/content/cookie-policy" },
+]
+
+const headingClass =
+  "text-[11px] font-bold uppercase leading-none tracking-[0.12em] text-white"
+const linkClass =
+  "text-[13px] font-medium leading-snug text-svc-fg-muted transition-colors hover:text-white"
+
+function LinkList({
+  links,
+  testId,
+  itemTestId,
+}: {
+  links: FooterLink[]
+  testId?: string
+  itemTestId?: string
+}) {
+  return (
+    <ul className="m-0 flex list-none flex-col gap-[11px] p-0" data-testid={testId}>
+      {links.map((l) => (
+        <li key={l.href}>
+          <LocalizedClientLink
+            className={linkClass}
+            href={l.href}
+            data-testid={itemTestId}
+          >
+            {l.label}
+          </LocalizedClientLink>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ServiceColumn() {
+  return (
+    <div className="flex flex-col items-start gap-4">
+      <ul className="m-0 flex list-none flex-col gap-[11px] p-0">
+        {SERVICE_LINKS.map((item) => (
+          <li key={item}>
+            <LocalizedClientLink className={linkClass} href="/assistencia-tecnica">
+              {item}
+            </LocalizedClientLink>
+          </li>
+        ))}
+      </ul>
+      <LocalizedClientLink
+        href="/assistencia-tecnica"
+        className="inline-flex items-center justify-center gap-2 rounded-pill bg-svc-signal px-[18px] py-[11px] text-[12px] font-bold uppercase leading-none tracking-[0.04em] text-white transition-colors hover:bg-svc-signal-ink"
+      >
+        <Wrench className="h-3.5 w-3.5" aria-hidden />
+        Pedir assistência
+      </LocalizedClientLink>
+    </div>
+  )
+}
+
+function ContactColumn() {
+  const { address, phone, email, hours } = COMPANY
+  const icon = "mt-0.5 h-4 w-4 flex-none text-brand-cyan"
+  return (
+    <address className="flex flex-col gap-[14px] text-[13px] font-medium not-italic leading-[1.5] text-svc-fg">
+      <div className="flex items-start gap-3">
+        <MapPin className={icon} aria-hidden />
+        <span>
+          {address.street}
+          <br />
+          {address.postalCode} {address.city}
+        </span>
+      </div>
+      <div className="flex items-start gap-3">
+        <Phone className={icon} aria-hidden />
+        <span>
+          <a href={phone.href} className="transition-colors hover:text-white">
+            {phone.display}
+          </a>
+          <span className="block text-[12px] text-svc-fg-muted">
+            ({phone.costNote.toLowerCase()})
+          </span>
+        </span>
+      </div>
+      <div className="flex items-start gap-3">
+        <Mail className={icon} aria-hidden />
+        <a href={`mailto:${email}`} className="transition-colors hover:text-white">
+          {email}
+        </a>
+      </div>
+      <div className="flex items-start gap-3">
+        <Clock className={icon} aria-hidden />
+        <span className="text-svc-fg-muted">{hours}</span>
+      </div>
+    </address>
+  )
+}
+
+/** Mobile accordion section (native <details>, no JS). */
+function MobileSection({
+  title,
+  open,
+  children,
+}: {
+  title: string
+  open?: boolean
+  children: ReactNode
+}) {
+  return (
+    <details className="group border-b border-svc-line" open={open}>
+      <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
+        <span className={headingClass}>{title}</span>
+        <ChevronDown
+          className="h-4 w-4 text-svc-fg-muted transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="pb-5">{children}</div>
+    </details>
+  )
+}
 
 export default async function Footer() {
-  const { collections } = await getCollectionsList(0, 6)
-  const { product_categories } = await getCategoriesList(0, 6)
+  const { categories, brands } = await getNavGroups().catch(() => ({
+    categories: [] as FooterLink[],
+    brands: [] as FooterLink[],
+  }))
+  const catalogMode = isCatalogMode()
+
+  const brandBlock = (
+    <div className="flex flex-col items-start">
+      <LocalizedClientLink href="/" className="inline-block" aria-label="Higitotal — página inicial">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/higitotal/logo-reversed-trim.png"
+          alt="Higitotal"
+          width={560}
+          height={150}
+          className="mb-5 h-[34px] w-auto"
+        />
+      </LocalizedClientLink>
+      <p className="text-[13px] leading-[1.65] text-svc-fg-muted small:max-w-[30ch]">
+        Distribuição de produtos de higiene profissional, equipamento hoteleiro
+        e máquinas de limpeza, com assistência técnica própria. Em Mirandela,
+        desde {COMPANY.since}.
+      </p>
+      <LocalizedClientLink
+        href="/contact"
+        className="mt-5 inline-flex items-center justify-center rounded-pill bg-brand-cyan px-[18px] py-[11px] text-[12px] font-bold uppercase leading-none tracking-[0.04em] text-white transition-colors hover:bg-brand-cyan-ink"
+      >
+        Pedir orçamento
+      </LocalizedClientLink>
+    </div>
+  )
 
   return (
     <footer className="w-full bg-svc-ground text-svc-fg-muted font-sans">
       <div className="content-container">
-        <div className="grid grid-cols-1 gap-x-5 gap-y-6 py-9 xsmall:grid-cols-2 xsmall:gap-6 small:grid-cols-[1.5fr_1fr_1fr_1.2fr] small:gap-10 small:py-14">
-          {/* Brand + blurb */}
-          <div>
-            <LocalizedClientLink href="/" className="inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/higitotal/logo-reversed.png"
-                alt="Higitotal"
-                className="mb-5 h-[42px] w-auto"
-              />
-            </LocalizedClientLink>
-            <p className="max-w-none text-[13px] leading-[1.65] text-svc-fg-muted small:max-w-[34ch]">
-              Higitotal — Sistemas e Produtos de Higiene, Lda. Distribuição e
-              assistência técnica de equipamento profissional de higiene e
-              cozinha, desde 1999.
-            </p>
-          </div>
+        {/* Desktop / tablet: balanced columns */}
+        <div className="hidden small:grid small:grid-cols-4 small:gap-x-8 small:gap-y-10 small:py-14 medium:grid-cols-[1.25fr_1fr_0.8fr_1fr_1.15fr] medium:gap-x-10">
+          <div className="small:col-span-4 medium:col-span-1">{brandBlock}</div>
 
-          {/* Categorias (dynamic) */}
-          {product_categories && product_categories.length > 0 && (
+          {categories.length > 0 && (
             <div>
-              <h4 className="mb-4 text-[11px] font-bold uppercase leading-none tracking-[0.12em] text-white">
-                Categorias
-              </h4>
-              <ul
-                className="m-0 list-none p-0"
-                data-testid="footer-categories"
-              >
-                {product_categories.slice(0, 6).map((c) => {
-                  if (c.parent_category) {
-                    return null
-                  }
-
-                  return (
-                    <li key={c.id} className="mb-[11px]">
-                      <LocalizedClientLink
-                        className="text-[13px] font-medium leading-none text-svc-fg-muted transition-colors hover:text-white"
-                        href={`/categories/${c.handle}`}
-                        data-testid="category-link"
-                      >
-                        {c.name}
-                      </LocalizedClientLink>
-                    </li>
-                  )
-                })}
-              </ul>
+              <h2 className={`mb-4 ${headingClass}`}>Categorias</h2>
+              <LinkList
+                links={categories}
+                testId="footer-categories"
+                itemTestId="category-link"
+              />
             </div>
           )}
 
-          {/* Assistência Técnica */}
+          {brands.length > 0 && (
+            <div>
+              <h2 className={`mb-4 ${headingClass}`}>Marcas</h2>
+              <LinkList links={brands} testId="footer-brands" />
+            </div>
+          )}
+
           <div>
-            <h4 className="mb-4 text-[11px] font-bold uppercase leading-none tracking-[0.12em] text-white">
-              Assistência Técnica
-            </h4>
-            <ul className="m-0 list-none p-0">
-              {["Instalação", "Reparação", "Contratos de manutenção"].map(
-                (item) => (
-                  <li key={item} className="mb-[11px]">
-                    <LocalizedClientLink
-                      className="text-[13px] font-medium leading-none text-svc-fg-muted transition-colors hover:text-white"
-                      href="/assistencia-tecnica"
-                    >
-                      {item}
-                    </LocalizedClientLink>
-                  </li>
-                )
-              )}
-            </ul>
+            <h2 className={`mb-4 ${headingClass}`}>Assistência Técnica</h2>
+            <ServiceColumn />
           </div>
 
-          {/* Collections (dynamic) + Contactos */}
-          <div className="flex flex-col gap-8">
-            {collections && collections.length > 0 && (
-              <div>
-                <h4 className="mb-4 text-[11px] font-bold uppercase leading-none tracking-[0.12em] text-white">
-                  Coleções
-                </h4>
-                <ul className="m-0 list-none p-0">
-                  {collections.slice(0, 6).map((c) => (
-                    <li key={c.id} className="mb-[11px]">
-                      <LocalizedClientLink
-                        className="text-[13px] font-medium leading-none text-svc-fg-muted transition-colors hover:text-white"
-                        href={`/collections/${c.handle}`}
-                      >
-                        {c.title}
-                      </LocalizedClientLink>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div>
-              <h4 className="mb-4 text-[11px] font-bold uppercase leading-none tracking-[0.12em] text-white">
-                Contactos
-              </h4>
-              <div className="flex flex-col gap-[14px] text-[13px] font-medium leading-[1.5] text-svc-fg">
-                <div className="flex items-start gap-3">
-                  <span className="mt-px shrink-0 text-brand-cyan">
-                    <MapPin className="h-4 w-4" />
-                  </span>
-                  <span>
-                    Zona Industrial, Rua J nº 137
-                    <br />
-                    5370-565 Mirandela, Portugal
-                  </span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="mt-px shrink-0 text-brand-cyan">
-                    <Phone className="h-4 w-4" />
-                  </span>
-                  <a
-                    href="tel:+351278262913"
-                    className="transition-colors hover:text-white"
-                  >
-                    +351 278 262 913
-                  </a>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="mt-px shrink-0 text-brand-cyan">
-                    <Mail className="h-4 w-4" />
-                  </span>
-                  <a
-                    href="mailto:higitotal@higitotal.pt"
-                    className="transition-colors hover:text-white"
-                  >
-                    higitotal@higitotal.pt
-                  </a>
-                </div>
-                <LocalizedClientLink
-                  href="/assistencia-tecnica"
-                  className="mt-1 inline-flex items-center gap-2 self-start rounded-btn bg-svc-signal px-[18px] py-[11px] text-[12px] font-bold uppercase leading-none tracking-[0.04em] text-white transition-colors hover:bg-svc-signal-ink"
-                >
-                  <span className="ind amber" /> Pedir assistência
-                </LocalizedClientLink>
-              </div>
-            </div>
+          <div>
+            <h2 className={`mb-4 ${headingClass}`}>Contactos</h2>
+            <ContactColumn />
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-svc-line py-7">
+        {/* Mobile: brand block + collapsible sections */}
+        <div className="pt-9 small:hidden">
+          {brandBlock}
+          <div className="mt-7 border-t border-svc-line">
+            {categories.length > 0 && (
+              <MobileSection title="Categorias">
+                <LinkList links={categories} />
+              </MobileSection>
+            )}
+            {brands.length > 0 && (
+              <MobileSection title="Marcas">
+                <LinkList links={brands} />
+              </MobileSection>
+            )}
+            <MobileSection title="Assistência Técnica">
+              <ServiceColumn />
+            </MobileSection>
+            <MobileSection title="Contactos" open>
+              <ContactColumn />
+            </MobileSection>
+          </div>
+        </div>
+
+        {/* Bottom bar — legal links + company identification */}
+        <div className="border-t border-svc-line py-7 small:border-t">
           {/* No prices are shown in catalog mode, so the VAT note is moot. */}
-          {!isCatalogMode() && (
-            <p className="mb-3 text-[12px] leading-relaxed text-svc-fg-muted">
+          {!catalogMode && (
+            <p className="mb-4 text-[12px] leading-relaxed text-svc-fg-muted">
               Todos os preços apresentados não incluem IVA à taxa legal em vigor.
             </p>
           )}
-          <div className="flex flex-col gap-2 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
+          <nav aria-label="Informação legal">
+            <ul className="m-0 flex list-none flex-wrap items-center gap-x-5 gap-y-2.5 p-0 text-[12px] font-medium">
+              {LEGAL_LINKS.map((l) => (
+                <li key={l.href}>
+                  <LocalizedClientLink
+                    href={l.href}
+                    className="text-svc-fg transition-colors hover:text-white"
+                  >
+                    {l.label}
+                  </LocalizedClientLink>
+                </li>
+              ))}
+              <li>
+                <a
+                  href={COMPANY.complaintsBookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-svc-fg transition-colors hover:text-white"
+                  data-testid="footer-complaints-book"
+                >
+                  <BookOpen className="h-3.5 w-3.5" aria-hidden />
+                  Livro de Reclamações
+                  <ExternalLink className="h-3 w-3 text-svc-fg-muted" aria-hidden />
+                  <span className="sr-only">(abre numa nova janela)</span>
+                </a>
+              </li>
+              <li>
+                <LocalizedClientLink
+                  href="/contact"
+                  className="text-svc-fg transition-colors hover:text-white"
+                >
+                  Contactos
+                </LocalizedClientLink>
+              </li>
+            </ul>
+          </nav>
+          <div className="mt-5 flex flex-col gap-2 text-[12px] text-svc-fg-muted xsmall:flex-row xsmall:items-center xsmall:justify-between">
             <span>
-              © {new Date().getFullYear()} Higitotal — Sistemas e Produtos de
-              Higiene, Lda. · NIF 504297040
+              © {new Date().getFullYear()} {COMPANY.legalName} · NIPC{" "}
+              {COMPANY.nipc}
             </span>
             <span className="inline-flex items-center gap-x-1.5">
-              Mirandela
-              <BlackCat className="h-[18px] w-auto" />
-              · Portugal
+              {COMPANY.address.city}
+              <BlackCat className="h-[18px] w-auto" />· {COMPANY.address.country}
             </span>
           </div>
         </div>

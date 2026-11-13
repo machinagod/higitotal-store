@@ -35,9 +35,15 @@ module.exports = {
           90: "#111827",
         },
         // Higitotal design system
+        // Colour roles: cyan = product enquiry / catalogue actions ("Pedir
+        // orçamento", "Ver catálogo", links, focus); svc-signal (orange) =
+        // technical assistance only ("Pedir assistência"); ink = text.
         brand: {
           cyan: "#00adef",
           "cyan-ink": "#0094cc",
+          // Tints for icon tiles, hover grounds and selected states.
+          "cyan-50": "#eaf7fe",
+          "cyan-100": "#d3effc",
           ink: "#231f20",
           "ink-soft": "#1a1a1a",
           navy: "#0a4d7a",

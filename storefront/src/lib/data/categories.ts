@@ -1,6 +1,8 @@
 import { sdk } from "@lib/config"
 import { cache } from "react"
 import { getProductsList } from "./products"
+import { splitNavRoots, stripBrands, type NavLink } from "@lib/brands"
+import { displayCategoryName } from "@lib/util/category-display"
 
 export const listCategories = cache(async function () {
   return sdk.store.category
@@ -72,22 +74,57 @@ export const getCategoryById = cache(async function (categoryId: string) {
 
 /**
  * Top-level categories for the header nav + home cards, resolved straight from
- * Medusa (dynamic — new product categories appear automatically). Non-product
- * roots (the deactivated bucket, supplier-brand groupings) are excluded at the
- * data source: the bucket is marked `is_internal` (so the store API omits it),
- * and brand groupings carry `metadata.nav_hidden` (so they stay reachable via
- * their /categories pages but drop out of the nav). Each entry resolves to its
- * real /categories/<handle> filtered page and carries a Lucide-style icon name.
+ * Medusa (dynamic — new product categories appear automatically) and split into
+ * real product categories and brands (see `splitNavRoots` in @lib/brands):
+ * supplier-brand roots ("Diversey", "Unilever", "SCJohnson (DEB)" …) are
+ * presented as Marcas, internal bookkeeping groups are dropped, and other roots
+ * flagged `metadata.nav_hidden` stay reachable via their /categories pages but
+ * drop out of the nav. Categories carry their customer-facing display name and
+ * a Lucide-style icon name; brands link to their collection when it exists.
  */
-export const getNavCategories = cache(async function () {
-  const roots = await getRootCategories()
-  return (roots || [])
-    .filter((c: any) => !isNavHidden(c))
-    .map((c: any) => ({
-      label: c.name as string,
+export const getNavGroups = cache(async function (): Promise<{
+  categories: NavLink[]
+  brands: NavLink[]
+}> {
+  const [roots, collectionHandles] = await Promise.all([
+    getRootCategories(),
+    getCollectionHandles(),
+  ])
+  const { categories, brands } = splitNavRoots(roots || [], {
+    collectionHandles,
+  })
+  return {
+    categories: categories.map((c: any) => ({
+      label: displayCategoryName(c.name),
       href: `/categories/${c.handle}`,
       icon: resolveCategoryIcon(c),
-    }))
+    })),
+    brands,
+  }
+})
+
+/** Real product categories only (no brands), in nav order. */
+export const getNavCategories = cache(async function () {
+  return (await getNavGroups()).categories
+})
+
+/** Live collection handles (fails soft to undefined → trust static config). */
+const getCollectionHandles = cache(async function (): Promise<
+  Set<string> | undefined
+> {
+  return sdk.store.collection
+    .list({ limit: 100, fields: "handle" }, { next: { tags: ["collections"] } })
+    .then(({ collections }) => new Set(collections.map((c) => c.handle)))
+    .catch(() => undefined)
+})
+
+/** Homepage brand strip entries with their resolved landing pages. */
+export const getStripBrands = cache(async function () {
+  const [roots, collectionHandles] = await Promise.all([
+    getRootCategories(),
+    getCollectionHandles(),
+  ])
+  return stripBrands({ roots: roots || [], collectionHandles })
 })
 
 /** The Lucide icon id for a category: an explicit choice in `metadata.icon`
@@ -96,11 +133,6 @@ export function resolveCategoryIcon(c: any): string {
   const chosen = c?.metadata?.icon
   if (typeof chosen === "string" && chosen.trim()) return chosen.trim()
   return categoryIconName(c?.name || "")
-}
-
-function isNavHidden(c: any): boolean {
-  const v = c?.metadata?.nav_hidden
-  return v === true || v === "true" || v === 1 || v === "1"
 }
 
 /** Keyword-derived default Lucide icon id (kebab-case) for a category name.
@@ -207,16 +239,16 @@ export type NavCategoryCard = {
   label: string
   href: string
   icon: string
-  /** Up to CARD_IMAGE_COUNT primary product thumbnails for the card carousel. */
+  /** Up to CARD_IMAGE_COUNT primary product thumbnails (the card shows the first). */
   images: string[]
 }
 
-/** How many representative product images each home category card rotates. */
-const CARD_IMAGE_COUNT = 5
+/** How many representative product images to resolve per home category card. */
+const CARD_IMAGE_COUNT = 3
 
 /**
  * Nav categories (same set/order as {@link getNavCategories}) enriched with a
- * few representative product images for the home cards' bottom-right carousel.
+ * few representative product images for the home category cards.
  * Images are the products' primary thumbnails, pulled from the category AND all
  * of its sub-categories — most products live on the leaves, so we walk the
  * descendant tree to collect ids. Resolved per-category in parallel; any
@@ -227,10 +259,10 @@ export const getNavCategoriesWithImages = cache(async function (
   countryCode: string
 ): Promise<NavCategoryCard[]> {
   const roots = await getRootCategories()
-  const visible = (roots || []).filter((c: any) => !isNavHidden(c))
+  const { categories: visible } = splitNavRoots(roots || [])
   return Promise.all(
     visible.map(async (c: any) => ({
-      label: c.name as string,
+      label: displayCategoryName(c.name),
       href: `/categories/${c.handle}`,
       icon: resolveCategoryIcon(c),
       images: await getCategoryThumbnails(c.handle, countryCode).catch(
@@ -259,13 +291,17 @@ async function getCategoryThumbnails(
   const {
     response: { products },
   } = await getProductsList({
-    queryParams: { category_id: ids, limit: 12, fields: "id,thumbnail" },
+    queryParams: {
+      category_id: ids,
+      limit: 24,
+      fields: "id,thumbnail,collection_id",
+    },
     countryCode,
   })
 
   const images: string[] = []
   const seen = new Set<string>()
-  for (const p of products) {
+  for (const p of preferCurated(products)) {
     const url = p.thumbnail
     if (!url || seen.has(url)) continue
     seen.add(url)
@@ -273,4 +309,18 @@ async function getCategoryThumbnails(
     if (images.length >= CARD_IMAGE_COUNT) break
   }
   return images
+}
+
+/**
+ * Stable re-order putting products that belong to a curated collection (brand
+ * ranges, "Fornos profissionais"…) first — their photos are the most
+ * representative of a category, so cards/rails pick them over odd one-offs.
+ */
+export function preferCurated<T extends { collection_id?: string | null }>(
+  products: T[]
+): T[] {
+  return [
+    ...products.filter((p) => p.collection_id),
+    ...products.filter((p) => !p.collection_id),
+  ]
 }

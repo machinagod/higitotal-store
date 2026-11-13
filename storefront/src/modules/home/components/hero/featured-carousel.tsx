@@ -16,7 +16,8 @@ type FeaturedCarouselProps = {
 }
 
 /**
- * Hero "Em destaque" card as an auto-rotating carousel over a few collections.
+ * Hero side card: an auto-rotating carousel over a few product ranges
+ * (collections).
  * Slides are stacked + cross-faded (fixed height, no layout shift); auto-advance
  * pauses on hover, and the dots let you jump. Each slide shows a product image
  * (when available) on all breakpoints, so mobile gets imagery the desktop-only
@@ -62,7 +63,7 @@ const FeaturedCarousel = ({ images }: FeaturedCarouselProps) => {
               <div className="min-w-0 flex-1">
                 <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-cyan">
                   <span className="ind" />
-                  Em destaque
+                  {s.eyebrow}
                 </span>
                 <h3 className="mt-2.5 max-w-[14ch] text-xl font-bold leading-tight tracking-tight text-brand-ink small:text-2xl">
                   {s.title}
@@ -74,7 +75,7 @@ const FeaturedCarousel = ({ images }: FeaturedCarouselProps) => {
                   href={s.href}
                   className="mt-4 inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.04em] text-brand-ink"
                 >
-                  Comprar
+                  Ver gama
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-cyan text-white">
                     <ArrowRight className="h-3.5 w-3.5" />
                   </span>

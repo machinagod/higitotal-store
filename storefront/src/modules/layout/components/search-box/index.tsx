@@ -177,7 +177,7 @@ const SearchBox = ({
                   onClick={close}
                   className={itemCls}
                 >
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-btn bg-[#eaf7fe] text-brand-cyan">
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-btn bg-brand-cyan-50 text-brand-cyan">
                     {c.type === "subcategory" ? "↳" : "#"}
                   </span>
                   <span className="min-w-0">
@@ -205,7 +205,7 @@ const SearchBox = ({
                   onClick={close}
                   className={itemCls}
                 >
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-btn bg-[#eaf7fe] text-brand-cyan">
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-btn bg-brand-cyan-50 text-brand-cyan">
                     <FileText className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
