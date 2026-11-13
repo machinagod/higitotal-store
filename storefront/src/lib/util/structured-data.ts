@@ -1,20 +1,101 @@
 import { HttpTypes } from "@medusajs/types"
 
+import { COMPANY, MAPS_URL } from "@lib/company"
+
 import { getProductPrice } from "./get-product-price"
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from "./seo"
 
 type Json = Record<string, any>
+
+/** schema.org PostalAddress for the company address. */
+function postalAddress(): Json {
+  const { address } = COMPANY
+  return {
+    "@type": "PostalAddress",
+    streetAddress: address.street,
+    postalCode: address.postalCode,
+    addressLocality: address.city,
+    addressCountry: "PT",
+  }
+}
+
+/** Stable node id, so other schema objects can reference the organization. */
+export const organizationId = () => `${absoluteUrl("/")}#organization`
 
 /** schema.org Organization for the brand — rendered once, site-wide. */
 export function organizationSchema(): Json {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": organizationId(),
     name: SITE_NAME,
+    legalName: COMPANY.legalName,
     url: absoluteUrl("/"),
     logo: absoluteUrl("/higitotal/logo-full.png"),
     description: SITE_DESCRIPTION,
+    foundingDate: String(COMPANY.since),
+    taxID: COMPANY.nipc,
+    email: COMPANY.email,
+    telephone: COMPANY.phone.href.replace(/^tel:/, ""),
+    address: postalAddress(),
     sameAs: [] as string[],
+  }
+}
+
+/** schema.org AboutPage whose subject is the organization. */
+export function aboutPageSchema({
+  url,
+  name,
+  description,
+}: {
+  url: string
+  name: string
+  description: string
+}): Json {
+  // Nested node: drop the top-level @context.
+  const organization = organizationSchema()
+  delete organization["@context"]
+  return {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    url,
+    name,
+    description,
+    inLanguage: "pt-PT",
+    about: organization,
+  }
+}
+
+/**
+ * schema.org LocalBusiness for the shop in Mirandela: address, coordinates
+ * and opening hours, all from {@link COMPANY}. `url` is the page describing
+ * the location.
+ */
+export function localBusinessSchema({ url }: { url: string }): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "@id": `${url}#local-business`,
+    name: SITE_NAME,
+    legalName: COMPANY.legalName,
+    url,
+    image: absoluteUrl("/higitotal/logo-full.png"),
+    email: COMPANY.email,
+    telephone: COMPANY.phone.href.replace(/^tel:/, ""),
+    address: postalAddress(),
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: COMPANY.geo.latitude,
+      longitude: COMPANY.geo.longitude,
+    },
+    hasMap: MAPS_URL,
+    openingHoursSpecification: COMPANY.openingHours.map((slot) => ({
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: slot.days.map((d) => `https://schema.org/${d}`),
+      opens: slot.opens,
+      closes: slot.closes,
+    })),
+    parentOrganization: { "@id": organizationId() },
   }
 }
 

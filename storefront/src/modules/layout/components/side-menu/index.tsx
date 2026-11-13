@@ -4,11 +4,13 @@ import { Dialog, Transition } from "@headlessui/react"
 import { useToggleState } from "@medusajs/ui"
 import { Fragment, useId, useRef, useState, type ReactNode } from "react"
 import {
+  Building2,
   ChevronRight,
   ClipboardList,
   Clock,
   LayoutGrid,
   Mail,
+  MapPin,
   Phone,
   ShoppingBag,
   User,
@@ -40,7 +42,7 @@ function SectionTitle({ id, children }: { id?: string; children: ReactNode }) {
 }
 
 const rowClass =
-  "flex items-center gap-3 rounded-[12px] px-2 py-2.5 text-[17px] font-semibold leading-snug text-white transition-colors hover:bg-white/[0.06] hover:text-brand-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+  "flex min-h-[44px] items-center gap-3 rounded-[12px] px-2 py-2.5 text-[17px] font-semibold leading-snug text-white transition-colors hover:bg-white/[0.06] hover:text-brand-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
 
 /**
  * Mobile menu — a modal dialog (Headless UI `Dialog`): focus moves to the
@@ -268,6 +270,30 @@ const SideMenu = ({
                     >
                       <Mail className="mx-2 h-5 w-5 text-svc-fg-muted" aria-hidden />
                       <span className="flex-1">Contactos</span>
+                      <ChevronRight className="h-4 w-4 text-svc-fg-muted" aria-hidden />
+                    </LocalizedClientLink>
+                  </li>
+                  <li>
+                    <LocalizedClientLink
+                      href="/a-nossa-loja"
+                      className={rowClass}
+                      onClick={close}
+                      data-testid="store-location-link"
+                    >
+                      <MapPin className="mx-2 h-5 w-5 text-svc-fg-muted" aria-hidden />
+                      <span className="flex-1">A nossa loja</span>
+                      <ChevronRight className="h-4 w-4 text-svc-fg-muted" aria-hidden />
+                    </LocalizedClientLink>
+                  </li>
+                  <li>
+                    <LocalizedClientLink
+                      href="/sobre-nos"
+                      className={rowClass}
+                      onClick={close}
+                      data-testid="about-link"
+                    >
+                      <Building2 className="mx-2 h-5 w-5 text-svc-fg-muted" aria-hidden />
+                      <span className="flex-1">Sobre nós</span>
                       <ChevronRight className="h-4 w-4 text-svc-fg-muted" aria-hidden />
                     </LocalizedClientLink>
                   </li>
