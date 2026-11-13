@@ -17,7 +17,7 @@ export type NativeSelectProps = {
 
 const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
   (
-    { placeholder = "Select...", defaultValue, className, children, ...props },
+    { placeholder = "Selecione…", defaultValue, className, children, ...props },
     ref
   ) => {
     const innerRef = useRef<HTMLSelectElement>(null)
