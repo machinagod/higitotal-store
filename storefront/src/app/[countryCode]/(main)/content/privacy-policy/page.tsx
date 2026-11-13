@@ -1,70 +1,245 @@
 import { Metadata } from "next"
 
+import { COMPANY } from "@lib/company"
+import { isCatalogMode } from "@lib/util/catalog-mode"
+import {
+  CompanyContacts,
+  CompanyIdentification,
+  LegalLink,
+  LegalList,
+  LegalPage,
+  type LegalSection,
+} from "../_components/legal-page"
+
 export const metadata: Metadata = {
-  title: "Política de Privacidade · Higitotal",
+  title: "Política de Privacidade",
   description:
     "Como a Higitotal recolhe, utiliza e protege os seus dados pessoais.",
 }
 
+const B = ({ children }: { children: React.ReactNode }) => (
+  <span className="font-semibold text-brand-ink">{children}</span>
+)
+
 export default function PrivacyPolicyPage() {
+  const catalog = isCatalogMode()
+
+  const sections: LegalSection[] = [
+    {
+      id: "responsavel",
+      title: "Responsável pelo tratamento",
+      body: (
+        <>
+          <p>
+            A <CompanyIdentification />, é a responsável pelo tratamento dos
+            dados pessoais recolhidos através deste site.
+          </p>
+          <p>
+            Para qualquer questão sobre os seus dados pessoais, contacte-nos:{" "}
+            <CompanyContacts />.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "dados",
+      title: "Que dados recolhemos",
+      body: (
+        <LegalList>
+          <li>
+            <B>Pedidos de orçamento, informação e assistência técnica:</B>{" "}
+            nome, e-mail, telefone, empresa, localidade e a mensagem que nos
+            envia; nos pedidos de assistência, também o tipo de serviço, o
+            equipamento ou marca e a forma de contacto preferida.
+          </li>
+          <li>
+            <B>Área de cliente:</B> nome, e-mail, telefone, palavra-passe e as
+            moradas que guardar na sua conta.
+          </li>
+          {!catalog && (
+            <li>
+              <B>Encomendas online:</B> moradas de entrega e faturação, artigos
+              encomendados e informação de pagamento necessária ao
+              processamento da encomenda.
+            </li>
+          )}
+          <li>
+            <B>Dados de navegação:</B> cookies e informação técnica, conforme
+            descrito na{" "}
+            <LegalLink href="/content/cookie-policy">
+              Política de Cookies
+            </LegalLink>
+            .
+          </li>
+        </LegalList>
+      ),
+    },
+    {
+      id: "finalidades",
+      title: "Finalidades e fundamento jurídico",
+      body: (
+        <LegalList>
+          <li>
+            <B>Responder a pedidos de orçamento, informação e assistência</B> —
+            diligências pré-contratuais a pedido do titular dos dados (art. 6.º,
+            n.º 1, al. b), do RGPD).
+          </li>
+          <li>
+            <B>Gerir a sua área de cliente</B> — execução do contrato de
+            utilização da conta (art. 6.º, n.º 1, al. b), do RGPD).
+          </li>
+          <li>
+            <B>
+              {catalog
+                ? "Executar contratos e cumprir obrigações fiscais e contabilísticas, quando aplicável"
+                : "Processar, entregar e faturar encomendas"}
+            </B>{" "}
+            — execução do contrato e cumprimento de obrigações legais (art.
+            6.º, n.º 1, als. b) e c), do RGPD).
+          </li>
+          <li>
+            <B>Medição de audiências e marketing</B> — apenas com o seu
+            consentimento (art. 6.º, n.º 1, al. a), do RGPD), através das
+            ferramentas carregadas pelo Google Tag Manager. Ver a{" "}
+            <LegalLink href="/content/cookie-policy">
+              Política de Cookies
+            </LegalLink>
+            .
+          </li>
+          <li>
+            <B>Segurança e funcionamento do site</B> — interesse legítimo da
+            Higitotal (art. 6.º, n.º 1, al. f), do RGPD).
+          </li>
+        </LegalList>
+      ),
+    },
+    {
+      id: "destinatarios",
+      title: "Subcontratantes e destinatários",
+      body: (
+        <>
+          <p>
+            Não vendemos os seus dados pessoais. Para o funcionamento do site
+            recorremos aos seguintes subcontratantes, que tratam dados apenas
+            por nossa conta e segundo as nossas instruções:
+          </p>
+          <LegalList>
+            <li>
+              <B>Railway</B> — alojamento do site e da base de dados.
+            </li>
+            <li>
+              <B>Resend</B> — envio dos e-mails gerados pelos formulários e
+              pela área de cliente.
+            </li>
+            <li>
+              <B>Google</B> (Google Tag Manager e ferramentas associadas) —
+              apenas se der o seu consentimento a cookies de análise ou
+              marketing.
+            </li>
+          </LegalList>
+          <p>
+            A Railway e a Resend podem tratar dados fora do Espaço Económico
+            Europeu, nomeadamente nos Estados Unidos. Essas transferências
+            assentam em Cláusulas Contratuais-Tipo aprovadas pela Comissão
+            Europeia (art. 46.º do RGPD).
+          </p>
+          <p>
+            Os dados podem ainda ser comunicados a autoridades públicas quando
+            a lei o exija.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "conservacao",
+      title: "Conservação",
+      body: (
+        <LegalList>
+          <li>
+            Os pedidos de orçamento, informação e assistência são conservados
+            até 24 meses após o último contacto, salvo se derem origem a um
+            contrato.
+          </li>
+          <li>
+            Havendo contrato, os dados são conservados durante a sua vigência
+            e pelos prazos legais aplicáveis, nomeadamente em matéria
+            contabilística e fiscal.
+          </li>
+          <li>
+            Os dados da área de cliente são conservados enquanto a conta
+            estiver ativa e eliminados quando pedir o seu encerramento, sem
+            prejuízo das obrigações legais de conservação.
+          </li>
+          <li>
+            Os prazos dos cookies constam da{" "}
+            <LegalLink href="/content/cookie-policy">
+              Política de Cookies
+            </LegalLink>
+            .
+          </li>
+        </LegalList>
+      ),
+    },
+    {
+      id: "direitos",
+      title: "Os seus direitos",
+      body: (
+        <>
+          <p>
+            Nos termos do RGPD, tem o direito de acesso, retificação,
+            apagamento, limitação do tratamento, oposição e portabilidade dos
+            seus dados. Quando o tratamento se basear no consentimento, pode
+            retirá-lo a qualquer momento, sem afetar a licitude do tratamento
+            efetuado até então.
+          </p>
+          <p>
+            Para exercer estes direitos, escreva para{" "}
+            <LegalLink href={`mailto:${COMPANY.email}`}>{COMPANY.email}</LegalLink>
+            . Respondemos no prazo de um mês, prorrogável nos casos previstos
+            na lei.
+          </p>
+          <p>
+            Tem ainda o direito de apresentar reclamação à Comissão Nacional de
+            Proteção de Dados (CNPD) —{" "}
+            <LegalLink href="https://www.cnpd.pt">www.cnpd.pt</LegalLink>.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "seguranca",
+      title: "Segurança",
+      body: (
+        <p>
+          Adotamos medidas técnicas e organizativas adequadas para proteger os
+          seus dados contra perda, acesso não autorizado ou divulgação,
+          incluindo ligações cifradas (HTTPS) e acesso restrito à informação.
+        </p>
+      ),
+    },
+    {
+      id: "alteracoes",
+      title: "Alterações",
+      body: (
+        <p>
+          Esta política pode ser atualizada. A versão em vigor é a publicada
+          nesta página, com a data da última atualização indicada no topo.
+        </p>
+      ),
+    },
+  ]
+
   return (
-    <div className="content-container py-10 small:py-16">
-      <article className="max-w-[760px] text-[15px] leading-relaxed text-grey-70">
-        <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink small:text-[40px]">
-          Política de Privacidade
-        </h1>
-        <p className="mt-2 text-sm text-grey-50">
-          Última atualização: junho de 2026
+    <LegalPage
+      title="Política de Privacidade"
+      current="/content/privacy-policy"
+      intro={
+        <p>
+          Esta política explica que dados pessoais recolhemos através do site,
+          para que fins os utilizamos e como pode exercer os seus direitos.
         </p>
-
-        <h2 className="mt-8 text-xl font-bold text-brand-ink">
-          1. Responsável pelo tratamento
-        </h2>
-        <p className="mt-2">
-          A Higitotal — Sistemas e Produtos de Higiene, Lda. (NIF 504297040), com
-          sede na Zona Industrial, Rua J nº 137, 5370-565 Mirandela, Portugal, é
-          responsável pelo tratamento dos dados pessoais recolhidos através deste
-          sítio. Contacto: higitotal@higitotal.pt · +351 278 262 913.
-        </p>
-
-        <h2 className="mt-8 text-xl font-bold text-brand-ink">
-          2. Que dados recolhemos
-        </h2>
-        <p className="mt-2">
-          Dados de identificação e contacto (nome, email, telefone, empresa),
-          morada de envio e faturação, e informação relativa a encomendas e
-          pedidos de assistência que nos submeta.
-        </p>
-
-        <h2 className="mt-8 text-xl font-bold text-brand-ink">
-          3. Finalidades e fundamento
-        </h2>
-        <p className="mt-2">
-          Os dados são tratados para processar e entregar encomendas, prestar
-          assistência técnica, responder a contactos e cumprir obrigações legais
-          (designadamente fiscais). O tratamento assenta na execução do contrato,
-          no cumprimento de obrigações legais e no interesse legítimo da Higitotal.
-        </p>
-
-        <h2 className="mt-8 text-xl font-bold text-brand-ink">
-          4. Conservação
-        </h2>
-        <p className="mt-2">
-          Os dados são conservados pelo período necessário às finalidades acima e
-          pelos prazos legais aplicáveis (nomeadamente em matéria contabilística e
-          fiscal).
-        </p>
-
-        <h2 className="mt-8 text-xl font-bold text-brand-ink">
-          5. Os seus direitos
-        </h2>
-        <p className="mt-2">
-          Pode exercer os direitos de acesso, retificação, apagamento, limitação,
-          portabilidade e oposição, bem como retirar consentimentos, contactando
-          higitotal@higitotal.pt. Tem ainda o direito de apresentar reclamação à
-          Comissão Nacional de Proteção de Dados (CNPD).
-        </p>
-      </article>
-    </div>
+      }
+      sections={sections}
+    />
   )
 }

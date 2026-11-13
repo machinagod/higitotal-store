@@ -45,12 +45,18 @@ export const SITE_PAGES: SitePage[] = [
   {
     name: "Apoio ao Cliente",
     href: "/customer-service",
-    description: "Ajuda, devoluções e suporte",
+    description: "Pedidos, orçamentos e pós-venda",
     keywords: [
       "apoio",
       "cliente",
       "ajuda",
       "suporte",
+      "orçamento",
+      "orcamento",
+      "pedidos",
+      "encomendas",
+      "pós-venda",
+      "pos-venda",
       "devoluções",
       "devolucoes",
       "contacto",
@@ -59,7 +65,7 @@ export const SITE_PAGES: SitePage[] = [
   {
     name: "Contactos",
     href: "/contact",
-    description: "Morada, telefone e email",
+    description: "Morada, telefone e e-mail",
     keywords: [
       "contacto",
       "contactos",
@@ -73,7 +79,7 @@ export const SITE_PAGES: SitePage[] = [
     name: "A minha conta",
     href: "/account",
     description: "Encomendas e dados pessoais",
-    keywords: ["conta", "encomendas", "login", "sessão", "perfil"],
+    keywords: ["conta", "encomendas", "login", "sessão", "sessao", "perfil", "registo"],
   },
   {
     name: "Política de Privacidade",
@@ -82,9 +88,24 @@ export const SITE_PAGES: SitePage[] = [
     keywords: ["privacidade", "rgpd", "dados", "politica", "política"],
   },
   {
-    name: "Termos e Condições",
+    name: "Termos de Utilização",
     href: "/content/terms-of-use",
-    description: "Condições de utilização e venda",
-    keywords: ["termos", "condições", "condicoes", "venda", "utilização"],
+    description: "Condições de utilização do site",
+    keywords: [
+      "termos",
+      "condições",
+      "condicoes",
+      "utilização",
+      "utilizacao",
+      "legal",
+      "litígios",
+      "reclamações",
+    ],
+  },
+  {
+    name: "Política de Cookies",
+    href: "/content/cookie-policy",
+    description: "Cookies e gestão do consentimento",
+    keywords: ["cookies", "consentimento", "rgpd", "politica", "política"],
   },
 ]

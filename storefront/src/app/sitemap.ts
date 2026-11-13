@@ -3,16 +3,12 @@ import { MetadataRoute } from "next"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import { getProductsList } from "@lib/data/products"
+import { isInternalCategory } from "@lib/util/category-display"
 import { absoluteUrl, getCanonicalCountryCode } from "@lib/util/seo"
 
 // Regenerate hourly so newly published products/categories appear without a
 // redeploy, while still serving a cached sitemap to crawlers.
 export const revalidate = 3600
-
-// Moloni bookkeeping groups (EQ_/ML_ prefixes, "Maquinas / Acessórios") are not
-// browsable categories — the nav and search hide them too.
-const isInternalCategory = (name: string) =>
-  /^(EQ_|ML_)/.test(name) || name.includes("Maquinas / Acessórios")
 
 const PAGE_SIZE = 100
 const MAX_PAGES = 100 // hard cap (~10k products) to bound build/crawl cost
@@ -53,6 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: prefix("customer-service"), changeFrequency: "yearly", priority: 0.4 },
       { url: prefix("content/privacy-policy"), changeFrequency: "yearly", priority: 0.2 },
       { url: prefix("content/terms-of-use"), changeFrequency: "yearly", priority: 0.2 },
+      { url: prefix("content/cookie-policy"), changeFrequency: "yearly", priority: 0.2 },
     ] satisfies MetadataRoute.Sitemap
   ).map((e) => ({ lastModified: now, ...e }))
 
