@@ -135,7 +135,7 @@ export default async function Nav() {
 
         {/* Main header — logo, search, phone + quote CTA (account/cart when
             selling). On mobile only the logo row; search is its own row below. */}
-        <header className="sticky top-0 z-50 bg-white border-b border-hairline small:static">
+        <header className="glass sticky top-0 z-50 border-b border-hairline/80 small:static">
           <div
             className={`content-container flex items-center small:gap-x-6 h-[60px] small:h-[84px] ${
               catalogMode ? "gap-x-2 min-[360px]:gap-x-3" : "gap-x-3"

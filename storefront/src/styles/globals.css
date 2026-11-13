@@ -300,3 +300,27 @@ body {
     transform: scaleX(1);
   }
 }
+
+/* Frosted glass for the pinned header bars (logo/search row, category bar,
+   mobile search row): content scrolling underneath shows through, blurred.
+   85% white keeps text contrast close to solid white; solid white where
+   backdrop-filter is unsupported or the visitor asks for less transparency. */
+@layer components {
+  .glass {
+    background-color: rgb(255 255 255 / 0.85);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    backdrop-filter: saturate(180%) blur(24px);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      background-color: #fff;
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      background-color: #fff;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}

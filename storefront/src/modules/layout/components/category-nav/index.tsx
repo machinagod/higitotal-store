@@ -125,7 +125,7 @@ const CategoryNav = ({
     // Hidden on mobile — the hamburger side-menu lists categories and brands.
     <nav
       aria-label="Categorias"
-      className="hidden small:block bg-white border-b border-hairline"
+      className="glass hidden small:block border-b border-hairline/80"
     >
       <div
         ref={rowRef}

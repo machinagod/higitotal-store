@@ -105,7 +105,7 @@ export function MobileSearchRow({ children }: { children: ReactNode }) {
       ref={rowRef}
       data-collapsed={collapsed || undefined}
       inert={collapsed || undefined}
-      className={`sticky top-[60px] z-40 border-b border-hairline bg-white transition-transform duration-200 ease-out motion-reduce:transition-none small:hidden ${
+      className={`glass sticky top-[60px] z-40 border-b border-hairline/80 transition-transform duration-200 ease-out motion-reduce:transition-none small:hidden ${
         collapsed ? "-translate-y-full" : "translate-y-0"
       }`}
       data-testid="mobile-search-row"
