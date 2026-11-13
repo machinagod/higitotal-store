@@ -97,7 +97,7 @@ const VALUES: (Item & { text: string })[] = [
 ]
 
 const PHOTO_ALT =
-  "Instalações da Higitotal na Zona Industrial de Mirandela, com o painel das marcas e as viaturas de assistência técnica"
+  "Fachada das instalações da Higitotal na Zona Industrial de Mirandela, com o logótipo e o painel das marcas com que trabalhamos"
 
 /* Shared type scale for the page sections. */
 const eyebrow =
