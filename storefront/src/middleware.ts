@@ -136,7 +136,11 @@ function accessTokenGate(request: NextRequest): NextResponse | null {
   })
 }
 
-const ROOT_METADATA_FILES = new Set(["/sitemap.xml", "/robots.txt"])
+const ROOT_METADATA_FILES = new Set([
+  "/sitemap.xml",
+  "/robots.txt",
+  "/manifest.webmanifest",
+])
 
 /**
  * Catalog mode (STOREFRONT_CATALOG_MODE): there is no cart, so send the cart

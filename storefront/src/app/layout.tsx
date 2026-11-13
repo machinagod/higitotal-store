@@ -68,12 +68,15 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
   formatDetection: { email: false, address: false, telephone: false },
+  // The H mark: SVG for modern browsers (turns white on dark tabs), a
+  // multi-size .ico fallback, a square 180px touch icon, and the manifest's
+  // 192/512 icons (app/manifest.ts).
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
       { url: "/higitotal/favicon.svg", type: "image/svg+xml" },
     ],
-    apple: "/higitotal/logo-full.png",
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
   },
   openGraph: {
     type: "website",
