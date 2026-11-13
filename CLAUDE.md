@@ -102,6 +102,10 @@ Fix failures before committing — including pre-existing ones in files you touc
   change makes `db:migrate` wait on an interactive prompt, which hangs the
   non-TTY container forever. Link **updates/deletes** are therefore never
   applied on boot — run `medusa db:sync-links` deliberately when one is pending.
+- **CORS**: `STORE_CORS` / `AUTH_CORS` always include `https://www.higitotal.pt`,
+  `https://higitotal.pt` and `https://store.higitotal.pt` (merged in code,
+  `backend/src/lib/cors.ts`) — the forms post from the browser, so every
+  storefront domain must be allowed. The Railway env value adds anything else.
 - **Search**: Meilisearch is a provider of Medusa's Search Module (index
   declarations in `backend/src/search/`). Physical indexes are versioned
   (`products_v1`, …), so the storefront must search via `POST /store/search`

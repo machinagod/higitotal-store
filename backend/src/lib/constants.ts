@@ -3,6 +3,7 @@ import { loadEnv } from '@medusajs/framework/utils'
 // Relative path (not the bare "utils/assert-value" alias) so this resolves
 // under `medusa db:migrate`'s plain dynamic import too — see medusa-config.js.
 import { assertValue } from '../utils/assert-value'
+import { withOrigins } from './cors'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -37,12 +38,12 @@ export const ADMIN_CORS = process.env.ADMIN_CORS;
 /**
  * Auth CORS origins
  */
-export const AUTH_CORS = process.env.AUTH_CORS;
+export const AUTH_CORS = withOrigins(process.env.AUTH_CORS);
 
 /**
- * Store/frontend CORS origins
+ * Store/frontend CORS origins (env value + the storefront's public domains, see ./cors)
  */
-export const STORE_CORS = process.env.STORE_CORS;
+export const STORE_CORS = withOrigins(process.env.STORE_CORS);
 
 /**
  * JWT Secret used for signing JWT tokens
