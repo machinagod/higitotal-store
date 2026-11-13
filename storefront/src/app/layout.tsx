@@ -2,6 +2,10 @@ import { Metadata } from "next"
 import "styles/globals.css"
 
 import GoogleAnalytics from "@modules/common/components/analytics/google-analytics"
+import {
+  GoogleTagManagerNoScript,
+  GoogleTagManagerScript,
+} from "@modules/common/components/analytics/google-tag-manager"
 import JsonLd from "@modules/common/components/json-ld"
 import { getBaseURL } from "@lib/util/env"
 import {
@@ -71,9 +75,11 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="pt-PT" data-mode="light">
       <body>
+        <GoogleTagManagerNoScript />
         <JsonLd data={[organizationSchema(), websiteSchema()]} />
         <main className="relative">{props.children}</main>
         <GoogleAnalytics />
+        <GoogleTagManagerScript />
       </body>
     </html>
   )
