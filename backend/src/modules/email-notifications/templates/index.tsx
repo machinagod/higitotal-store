@@ -3,11 +3,13 @@ import { MedusaError } from '@medusajs/framework/utils'
 import { InviteUserEmail, INVITE_USER, isInviteUserData } from './invite-user'
 import { OrderPlacedTemplate, ORDER_PLACED, isOrderPlacedTemplateData } from './order-placed'
 import { ContactRequestEmail, CONTACT_REQUEST, isContactRequestData } from './contact-request'
+import { ContactRequestAckEmail, CONTACT_REQUEST_ACK, isContactRequestAckData } from './contact-request-ack'
 
 export const EmailTemplates = {
   INVITE_USER,
   ORDER_PLACED,
-  CONTACT_REQUEST
+  CONTACT_REQUEST,
+  CONTACT_REQUEST_ACK
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -41,6 +43,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <ContactRequestEmail {...data} />
 
+    case EmailTemplates.CONTACT_REQUEST_ACK:
+      if (!isContactRequestAckData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.CONTACT_REQUEST_ACK}"`
+        )
+      }
+      return <ContactRequestAckEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -49,4 +60,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, ContactRequestEmail }
+export { InviteUserEmail, OrderPlacedTemplate, ContactRequestEmail, ContactRequestAckEmail }

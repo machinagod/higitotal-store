@@ -25,7 +25,7 @@ export default async function userInviteHandler({
           subject: 'Convite para o painel de administração Higitotal'
         },
         inviteLink: `${BACKEND_URL}/app/invite?token=${invite.token}`,
-        preview: 'Foi convidado para o painel de administração da loja Higitotal'
+        preview: 'Foi convidado(a) para administrar a loja Higitotal'
       }
     })
   } catch (error) {

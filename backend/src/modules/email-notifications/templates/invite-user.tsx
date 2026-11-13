@@ -1,4 +1,4 @@
-import { Button, Link, Section, Text, Img, Hr } from '@react-email/components'
+import { Button, Link, Section, Text, Hr } from '@react-email/components'
 import { Base } from './base'
 
 /**
@@ -29,35 +29,33 @@ export const isInviteUserData = (data: any): data is InviteUserEmailProps =>
   typeof data.inviteLink === 'string' && (typeof data.preview === 'string' || !data.preview)
 
 /**
- * The InviteUserEmail template component built with react-email
+ * Admin invitation e-mail (pt-PT, Higitotal branding).
  */
 export const InviteUserEmail = ({
   inviteLink,
-  preview = `You've been invited to Medusa!`,
+  preview = 'Foi convidado(a) para administrar a loja Higitotal',
 }: InviteUserEmailProps) => {
   return (
     <Base preview={preview}>
-      <Section className="mt-[32px]">
-        <Img
-          src="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg"
-          alt="Medusa"
-          className="mx-auto w-28"
-        />
+      <Section className="mt-[24px] text-center">
+        <Text className="text-[#00adef] text-[20px] font-extrabold tracking-[-0.5px] m-0">
+          Higitotal
+        </Text>
       </Section>
       <Section className="text-center">
         <Text className="text-black text-[14px] leading-[24px]">
-          You&apos;ve been invited to be an administrator on <strong>Medusa</strong>.
+          Foi convidado(a) para administrar a loja <strong>Higitotal</strong>.
         </Text>
         <Section className="mt-4 mb-[32px]">
           <Button
-            className="bg-[#000000] rounded text-white text-[12px] font-semibold no-underline px-5 py-3"
+            className="bg-[#00adef] rounded text-white text-[12px] font-semibold no-underline px-5 py-3"
             href={inviteLink}
           >
-            Accept Invitation
+            Aceitar convite
           </Button>
         </Section>
         <Text className="text-black text-[14px] leading-[24px]">
-          or copy and paste this URL into your browser:
+          Ou copie e cole este endereço no seu navegador:
         </Text>
         <Text style={{
           maxWidth: '100%',
@@ -66,7 +64,7 @@ export const InviteUserEmail = ({
         }}>
           <Link
             href={inviteLink}
-            className="text-blue-600 no-underline"
+            className="text-[#0094cc] no-underline"
           >
             {inviteLink}
           </Link>
@@ -74,16 +72,16 @@ export const InviteUserEmail = ({
       </Section>
       <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
       <Text className="text-[#666666] text-[12px] leading-[24px]">
-        If you were not expecting this invitation, you can ignore this email, as the
-        invitation will expire in 24 hours. If you are concerned about your account's safety,
-        please reply to this email to get in touch with us.
+        Se não esperava este convite, pode ignorar este e-mail. O convite expira
+        automaticamente ao fim de 24 horas. Se tiver alguma preocupação com a
+        segurança da sua conta, responda a este e-mail.
       </Text>
     </Base>
   )
 }
 
 InviteUserEmail.PreviewProps = {
-  inviteLink: 'https://mywebsite.com/app/invite?token=abc123ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd'
+  inviteLink: 'https://storeadmin.higitotal.pt/app/invite?token=abc123'
 } as InviteUserEmailProps
 
 export default InviteUserEmail

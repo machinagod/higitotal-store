@@ -24,7 +24,7 @@ export default async function orderPlacedHandler({
         },
         order,
         shippingAddress,
-        preview: 'Obrigado pela sua encomenda!'
+        preview: 'Obrigado pela sua encomenda.'
       }
     })
   } catch (error) {
