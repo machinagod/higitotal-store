@@ -1,10 +1,12 @@
 import { Dialog, Transition } from "@headlessui/react"
 import { clx } from "@medusajs/ui"
-import { ArrowRight, Phone } from "lucide-react"
+import { ArrowRight, ClipboardList, Phone } from "lucide-react"
 import React, { Fragment } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
 import { COMPANY } from "@lib/company"
+import { productCountLabel } from "@lib/quote-list/state"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ChevronDown from "@modules/common/icons/chevron-down"
 import X from "@modules/common/icons/x"
 
@@ -24,6 +26,16 @@ type MobileActionsProps = {
   /** No prices / cart: "Ligar" + "Pedir orçamento". */
   catalogMode?: boolean
   onRequestInfo?: (e?: React.MouseEvent<HTMLElement>) => void
+  /**
+   * Catalog mode with the quote list: the main button adds to the list and a
+   * count chip links to it once it isn't empty.
+   */
+  quote?: {
+    count: number
+    onAdd: () => void
+    disabled: boolean
+    needsVariant: boolean
+  }
 }
 
 /** Height of the bar's button row (+ padding) — reserved at the page bottom. */
@@ -54,6 +66,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   optionsDisabled,
   catalogMode = false,
   onRequestInfo,
+  quote,
 }) => {
   const { state, open, close } = useToggleState()
   const hasVariants = (product.variants?.length ?? 0) > 1
@@ -82,7 +95,67 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             className="w-full border-t border-hairline bg-white/95 px-4 pt-3 shadow-[0_-8px_24px_rgba(35,31,32,0.08)] backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))]"
             data-testid="mobile-actions"
           >
-            {catalogMode ? (
+            {catalogMode && quote ? (
+              <div
+                className={clx(
+                  "grid gap-2",
+                  quote.count > 0
+                    ? "grid-cols-[auto_minmax(0,1fr)_auto]"
+                    : "grid-cols-[auto_minmax(0,1fr)]"
+                )}
+              >
+                <a
+                  href={COMPANY.phone.href}
+                  aria-label={`Ligar ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()})`}
+                  className={clx(
+                    barButton,
+                    "border-[1.5px] border-hairline bg-white px-3.5 text-brand-ink hover:border-brand-cyan hover:text-brand-cyan"
+                  )}
+                  data-testid="mobile-call-button"
+                >
+                  <Phone className="h-4 w-4 flex-none" aria-hidden="true" />
+                  Ligar
+                </a>
+                <button
+                  type="button"
+                  onClick={quote.onAdd}
+                  disabled={quote.disabled}
+                  className={clx(
+                    barButton,
+                    "bg-brand-cyan px-3 text-white hover:bg-brand-cyan-ink disabled:opacity-60"
+                  )}
+                  data-testid="mobile-add-to-quote"
+                >
+                  {quote.needsVariant ? (
+                    <span className="truncate">Selecione uma opção</span>
+                  ) : (
+                    <>
+                      {/* Full label from 390px (iPhone 12+); "Adicionar" below. */}
+                      <span className="whitespace-nowrap min-[390px]:hidden">
+                        Adicionar
+                      </span>
+                      <span className="hidden whitespace-nowrap min-[390px]:inline">
+                        Adicionar ao orçamento
+                      </span>
+                    </>
+                  )}
+                </button>
+                {quote.count > 0 && (
+                  <LocalizedClientLink
+                    href="/orcamento"
+                    aria-label={`Ver orçamento: ${productCountLabel(quote.count)}`}
+                    className={clx(
+                      barButton,
+                      "gap-1 border-[1.5px] border-brand-cyan bg-brand-cyan-50 px-3 text-brand-cyan-ink hover:bg-brand-cyan-100"
+                    )}
+                    data-testid="mobile-quote-chip"
+                  >
+                    <ClipboardList className="h-4 w-4 flex-none" aria-hidden="true" />
+                    <span>{quote.count > 99 ? "99+" : quote.count}</span>
+                  </LocalizedClientLink>
+                )}
+              </div>
+            ) : catalogMode ? (
               <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
                 <a
                   href={COMPANY.phone.href}

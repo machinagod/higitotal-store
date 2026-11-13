@@ -3,6 +3,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
 import ProductCardAddButton from "./add-button"
+import QuoteCardButton from "@modules/quote/components/quote-card-button"
 import { getProductsById } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 import { isCatalogMode } from "@lib/util/catalog-mode"
@@ -129,17 +130,21 @@ export default async function ProductPreview({
             Preço sob consulta
           </span>
           {/* Secondary (outline) on cards so a grid of 24 doesn't shout over
-              the product names; the solid button stays on the PDP/header. */}
-          <LocalizedClientLink
-            href={`${href}?pedido=1`}
-            aria-label={`Pedir orçamento: ${product.title}`}
-            data-testid="card-request-quote"
-            // 320px phones leave ~100px for the label: semibold + tight
-            // tracking + no side padding keeps it on one line without clipping.
-            className="relative z-10 flex h-11 w-full items-center justify-center whitespace-nowrap rounded-pill border-[1.5px] border-brand-cyan bg-white px-0.5 text-xs font-semibold tracking-[-0.02em] text-brand-cyan-ink transition-colors hover:bg-brand-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 xsmall:px-2 xsmall:text-[13px] xsmall:font-bold xsmall:tracking-normal small:px-3 small:text-sm"
-          >
-            Pedir orçamento
-          </LocalizedClientLink>
+              the product names; the solid button stays on the PDP/header.
+              Adds 1 unit to the quote list ("carrinho de orçamento"). */}
+          <QuoteCardButton
+            product={{
+              productId: product.id!,
+              handle: product.handle!,
+              title: product.title!,
+              // The reference only when it is unambiguous (single variant).
+              sku:
+                (pricedProduct.variants?.length ?? 0) === 1
+                  ? variant?.sku ?? undefined
+                  : undefined,
+              thumbnail: product.thumbnail ?? undefined,
+            }}
+          />
         </div>
       ) : (
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">

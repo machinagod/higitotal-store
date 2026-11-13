@@ -16,6 +16,10 @@ import {
   MobileSearchRow,
   MobileSearchToggle,
 } from "@modules/layout/components/mobile-header"
+import {
+  QuoteNavIcon,
+  QuoteNavPill,
+} from "@modules/quote/components/quote-nav-link"
 import { Mail, Phone, User, ShoppingBag, Wrench } from "lucide-react"
 import { isCatalogMode } from "@lib/util/catalog-mode"
 import { COMPANY } from "@lib/company"
@@ -122,7 +126,11 @@ export default async function Nav() {
         {/* Main header — logo, search, phone + quote CTA (account/cart when
             selling). On mobile only the logo row; search is its own row below. */}
         <header className="sticky top-0 z-50 bg-white border-b border-hairline small:static">
-          <div className="content-container flex items-center gap-x-3 small:gap-x-6 h-[60px] small:h-[84px]">
+          <div
+            className={`content-container flex items-center small:gap-x-6 h-[60px] small:h-[84px] ${
+              catalogMode ? "gap-x-2 min-[360px]:gap-x-3" : "gap-x-3"
+            }`}
+          >
             <LocalizedClientLink
               href="/"
               className="flex items-center shrink-0"
@@ -136,7 +144,11 @@ export default async function Nav() {
                 alt="Higitotal"
                 width={560}
                 height={148}
-                className="h-[30px] w-auto small:h-[35px]"
+                className={`w-auto small:h-[35px] ${
+                  // Catalog mode adds the quote icon to the mobile row: a
+                  // slightly smaller logo keeps the row inside 320px.
+                  catalogMode ? "h-[26px] min-[360px]:h-[30px]" : "h-[30px]"
+                }`}
               />
             </LocalizedClientLink>
 
@@ -151,6 +163,7 @@ export default async function Nav() {
               >
                 <Phone className="h-[21px] w-[21px]" />
               </a>
+              {catalogMode && <QuoteNavIcon />}
               <SideMenu
                 regions={regions}
                 categories={categories}
@@ -186,13 +199,18 @@ export default async function Nav() {
                 </span>
               </a>
 
-              <LocalizedClientLink
-                href="/contact"
-                data-testid="nav-quote-link"
-                className="inline-flex items-center whitespace-nowrap rounded-pill bg-brand-cyan px-5 py-3 text-xs font-bold uppercase tracking-[0.04em] text-white shadow-[0_8px_20px_rgba(0,173,239,0.25)] transition-colors hover:bg-brand-cyan-ink"
-              >
-                Pedir orçamento
-              </LocalizedClientLink>
+              {catalogMode ? (
+                // Quote list: "Pedir orçamento" / "Orçamento (N)" → /orcamento
+                <QuoteNavPill />
+              ) : (
+                <LocalizedClientLink
+                  href="/contact"
+                  data-testid="nav-quote-link"
+                  className="inline-flex items-center whitespace-nowrap rounded-pill bg-brand-cyan px-5 py-3 text-xs font-bold uppercase tracking-[0.04em] text-white shadow-[0_8px_20px_rgba(0,173,239,0.25)] transition-colors hover:bg-brand-cyan-ink"
+                >
+                  Pedir orçamento
+                </LocalizedClientLink>
+              )}
 
               {!catalogMode && (
                 <div className="flex items-center gap-x-1">

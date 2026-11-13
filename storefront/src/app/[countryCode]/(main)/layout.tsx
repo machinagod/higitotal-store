@@ -2,6 +2,9 @@ import { Metadata } from "next"
 
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
+import QuoteToast from "@modules/quote/components/quote-toast"
+import { QuoteListProvider } from "@lib/quote-list/context"
+import { isCatalogMode } from "@lib/util/catalog-mode"
 import { getBaseURL } from "@lib/util/env"
 
 export const metadata: Metadata = {
@@ -9,8 +12,10 @@ export const metadata: Metadata = {
 }
 
 export default async function PageLayout(props: { children: React.ReactNode }) {
+  // The quote list ("carrinho de orçamento") exists only in catalog mode.
+  const catalogMode = isCatalogMode()
   return (
-    <>
+    <QuoteListProvider enabled={catalogMode}>
       {/* First focusable element: lets keyboard / screen-reader users jump
           past the header and category navigation. */}
       <a
@@ -30,6 +35,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
         {props.children}
       </main>
       <Footer />
-    </>
+      <QuoteToast />
+    </QuoteListProvider>
   )
 }

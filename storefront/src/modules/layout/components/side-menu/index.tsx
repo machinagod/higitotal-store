@@ -5,6 +5,7 @@ import { useToggleState } from "@medusajs/ui"
 import { Fragment, useId, useRef, useState, type ReactNode } from "react"
 import {
   ChevronRight,
+  ClipboardList,
   Clock,
   LayoutGrid,
   Mail,
@@ -20,6 +21,8 @@ import CategoryIcon from "@modules/common/icons/category-icon"
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 import { COMPANY } from "@lib/company"
+import { useQuoteList } from "@lib/quote-list/context"
+import { productCountLabel } from "@lib/quote-list/state"
 import { shortHours } from "./hours"
 
 type NavLink = { label: string; href: string; icon?: string }
@@ -64,6 +67,10 @@ const SideMenu = ({
   const uid = useId()
   const panelId = `${uid}-menu`
   const close = () => setOpen(false)
+  // Quote list (catalog mode only — null otherwise).
+  const quoteList = useQuoteList()
+  const quote = catalogMode ? quoteList : null
+  const quoteCount = quote?.count ?? 0
 
   return (
     <>
@@ -199,6 +206,34 @@ const SideMenu = ({
                 )}
 
                 <ul className="mt-6 border-t border-svc-line px-0 pt-4">
+                  {quote && (
+                    <li>
+                      <LocalizedClientLink
+                        href="/orcamento"
+                        className={rowClass}
+                        onClick={close}
+                        data-testid="menu-quote-list-link"
+                        aria-label={
+                          quoteCount
+                            ? `O meu orçamento: ${productCountLabel(quoteCount)}`
+                            : "O meu orçamento (lista vazia)"
+                        }
+                      >
+                        <ClipboardList className="mx-2 h-5 w-5 text-brand-cyan-bright" aria-hidden />
+                        <span className="flex-1">O meu orçamento</span>
+                        {quoteCount > 0 && (
+                          <span
+                            className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-pill bg-brand-cyan-bright px-1.5 text-xs font-extrabold text-svc-ground"
+                            aria-hidden
+                            data-testid="menu-quote-count"
+                          >
+                            {quoteCount > 99 ? "99+" : quoteCount}
+                          </span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-svc-fg-muted" aria-hidden />
+                      </LocalizedClientLink>
+                    </li>
+                  )}
                   <li>
                     <LocalizedClientLink
                       href="/store"
@@ -311,7 +346,7 @@ const SideMenu = ({
                   </span>
                 </p>
                 <LocalizedClientLink
-                  href="/contact"
+                  href={catalogMode ? "/orcamento" : "/contact"}
                   onClick={close}
                   data-testid="menu-quote-link"
                   className="mt-4 flex w-full items-center justify-center rounded-pill bg-brand-cyan px-5 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-brand-cyan-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-white"

@@ -1,7 +1,10 @@
 import { HttpTypes } from "@medusajs/types"
 import { notFound } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
-import { catalogModeFromEnv } from "@lib/util/catalog-mode-flag"
+import {
+  catalogModeFromEnv,
+  catalogModeRedirectPath,
+} from "@lib/util/catalog-mode-flag"
 import { legacyRedirect } from "@lib/legacy-redirects"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
@@ -144,10 +147,11 @@ function catalogModeRedirect(request: NextRequest): NextResponse | null {
   if (!catalogModeFromEnv()) {
     return null
   }
-  const [, country, section] = request.nextUrl.pathname.split("/")
-  if (country && (section === "cart" || section === "checkout")) {
+  // The quote list (/{country}/orcamento) is never redirected.
+  const target = catalogModeRedirectPath(request.nextUrl.pathname)
+  if (target) {
     const url = request.nextUrl.clone()
-    url.pathname = `/${country}`
+    url.pathname = target
     url.search = ""
     return NextResponse.redirect(url, 307)
   }
