@@ -31,7 +31,7 @@ type SearchBoxProps = {
 
 const SearchBoxWrapper = ({
   children,
-  placeholder = "Search products...",
+  placeholder = "Pesquisar produtos…",
   ...rest
 }: SearchBoxProps) => {
   const { query, refine } = useSearchBox(rest)
@@ -50,7 +50,7 @@ const SearchBoxWrapper = ({
 
   const onSubmit = () => {
     if (value) {
-      router.push(`/results/${value}`)
+      router.push(`/results/${encodeURIComponent(value)}`)
     }
   }
 

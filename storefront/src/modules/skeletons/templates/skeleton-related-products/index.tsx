@@ -1,19 +1,17 @@
 import repeat from "@lib/util/repeat"
 import SkeletonProductPreview from "@modules/skeletons/components/skeleton-product-preview"
 
+/** Loading stand-in for the PDP suggestion rail (eyebrow + h2 + one row). */
 const SkeletonRelatedProducts = () => {
   return (
-    <div className="product-page-constraint">
-      <div className="flex flex-col gap-8 items-center text-center mb-8">
-        <div className="w-20 h-6 animate-pulse bg-gray-100"></div>
-        <div className="flex flex-col gap-4 items-center text-center mb-16">
-          <div className="w-96 h-10 animate-pulse bg-gray-100"></div>
-          <div className="w-48 h-10 animate-pulse bg-gray-100"></div>
-        </div>
+    <div>
+      <div className="mb-6 flex flex-col gap-2 small:mb-7">
+        <div className="h-3 w-24 animate-pulse rounded-pill bg-grey-10" />
+        <div className="h-7 w-72 max-w-full animate-pulse rounded-pill bg-grey-10" />
       </div>
-      <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8 flex-1">
-        {repeat(3).map((index) => (
-          <li key={index}>
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-4 small:grid-cols-4 small:gap-x-6 small:gap-y-8">
+        {repeat(4).map((index) => (
+          <li key={index} className={index >= 2 ? "hidden small:block" : undefined}>
             <SkeletonProductPreview />
           </li>
         ))}

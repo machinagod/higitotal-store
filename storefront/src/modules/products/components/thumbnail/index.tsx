@@ -1,8 +1,8 @@
-import { Container, clx } from "@medusajs/ui"
+import { clx } from "@medusajs/ui"
 import Image from "next/image"
 import React from "react"
 
-import PlaceholderImage from "@modules/common/icons/placeholder-image"
+import ImagePlaceholder from "@modules/products/components/image-placeholder"
 
 type ThumbnailProps = {
   thumbnail?: string | null
@@ -13,60 +13,68 @@ type ThumbnailProps = {
   className?: string
   /** Accessible/SEO alt text — pass the product title when available. */
   alt?: string
+  /** Optional glyph for the no-image placeholder (e.g. a category icon). */
+  placeholderIcon?: React.ReactNode
   "data-testid"?: string
 }
 
+/** Rendered width per size, for `next/image` `sizes`. */
+const SIZES: Record<NonNullable<ThumbnailProps["size"]>, string> = {
+  small: "180px",
+  medium: "290px",
+  large: "440px",
+  // Product cards: 2 columns on phones, 3 on tablets/small laptops, 4 above.
+  full: "(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 340px",
+  square: "(max-width: 640px) 120px, 240px",
+}
+
+/**
+ * Product image tile: square, light background, the pack shot fitted inside
+ * (`object-contain` with ~8% breathing room) and multiplied onto the tile so
+ * white photo backgrounds blend in. One background only — no card shadow.
+ */
 const Thumbnail: React.FC<ThumbnailProps> = ({
   thumbnail,
   images,
   size = "small",
-  isFeatured,
+  isFeatured: _isFeatured,
   className,
   alt,
+  placeholderIcon,
   "data-testid": dataTestid,
 }) => {
   const initialImage = thumbnail || images?.[0]?.url
 
   return (
-    <Container
+    <div
       className={clx(
-        "relative w-full overflow-hidden p-4 bg-ui-bg-subtle shadow-elevation-card-rest rounded-large group-hover:shadow-elevation-card-hover transition-shadow ease-in-out duration-150",
-        className,
+        "relative aspect-square w-full overflow-hidden rounded-btn bg-[#f5f7f9]",
         {
-          "aspect-[11/14]": isFeatured,
-          "aspect-[9/16]": !isFeatured && size !== "square",
-          "aspect-[1/1]": size === "square",
           "w-[180px]": size === "small",
           "w-[290px]": size === "medium",
           "w-[440px]": size === "large",
           "w-full": size === "full",
-        }
+        },
+        className
       )}
       data-testid={dataTestid}
     >
-      <ImageOrPlaceholder image={initialImage} size={size} alt={alt} />
-    </Container>
-  )
-}
-
-const ImageOrPlaceholder = ({
-  image,
-  size,
-  alt,
-}: Pick<ThumbnailProps, "size" | "alt"> & { image?: string }) => {
-  return image ? (
-    <Image
-      src={image}
-      alt={alt || "Imagem do produto"}
-      className="absolute inset-0 object-cover object-center"
-      draggable={false}
-      quality={50}
-      sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
-      fill
-    />
-  ) : (
-    <div className="w-full h-full absolute inset-0 flex items-center justify-center">
-      <PlaceholderImage size={size === "small" ? 16 : 24} />
+      {initialImage ? (
+        <Image
+          src={initialImage}
+          alt={alt || "Imagem do produto"}
+          className="absolute inset-0 h-full w-full object-contain object-center p-[8%] mix-blend-multiply"
+          draggable={false}
+          quality={50}
+          sizes={SIZES[size]}
+          fill
+        />
+      ) : (
+        <ImagePlaceholder
+          icon={placeholderIcon}
+          showLabel={size === "full" || size === "medium" || size === "large"}
+        />
+      )}
     </div>
   )
 }

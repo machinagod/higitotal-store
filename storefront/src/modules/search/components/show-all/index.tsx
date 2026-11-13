@@ -25,7 +25,7 @@ const ShowAll = () => {
   return (
     <Container className="flex sm:flex-col small:flex-row gap-2 justify-center items-center h-fit py-4 small:py-2">
       <Text>A mostrar os primeiros {width > 640 ? 6 : 3} resultados.</Text>
-      <InteractiveLink href={`/results/${query}`}>Ver tudo</InteractiveLink>
+      <InteractiveLink href={`/results/${encodeURIComponent(query)}`}>Ver tudo</InteractiveLink>
     </Container>
   )
 }

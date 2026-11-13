@@ -1,54 +1,42 @@
-"use client"
-
-import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
-
-const VISIBLE = 3
+import {
+  displayCategoryName,
+  isInternalCategory,
+} from "@lib/util/category-display"
 
 const chipCls =
-  "rounded-pill border border-hairline bg-white px-3.5 py-1.5 text-sm font-medium text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan"
+  "inline-flex min-h-[36px] items-center rounded-pill border border-hairline bg-white px-3 py-1.5 text-[13px] font-medium leading-tight text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan small:px-3.5 small:text-sm"
 
 /**
- * Subcategory chips — shows the first few and collapses the rest behind a
- * "+N mais" tag that expands on click (keeps the toolbar compact on mobile).
+ * Sub-category chips — all of them (there are at most ~11 per category), with
+ * customer-facing names; internal bookkeeping groups ("EQ_…") are left out.
  */
 const SubcategoryChips = ({
   categories,
 }: {
   categories?: HttpTypes.StoreProductCategory[]
 }) => {
-  const [expanded, setExpanded] = useState(false)
+  const visible = (categories ?? []).filter(
+    (c) => c?.handle && !isInternalCategory(c.name)
+  )
 
-  if (!categories?.length) {
+  if (!visible.length) {
     return null
   }
 
-  const shown = expanded ? categories : categories.slice(0, VISIBLE)
-  const hidden = categories.length - VISIBLE
-
   return (
-    <div className="mb-6 flex flex-wrap gap-2">
-      {shown.map((c) => (
-        <LocalizedClientLink
-          key={c.id}
-          href={`/categories/${c.handle}`}
-          className={chipCls}
-        >
-          {c.name}
-        </LocalizedClientLink>
-      ))}
-      {hidden > 0 && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          className="rounded-pill border border-dashed border-hairline bg-transparent px-3.5 py-1.5 text-sm font-semibold text-grey-60 transition-colors hover:border-brand-cyan hover:text-brand-cyan"
-        >
-          {expanded ? "Menos" : `+${hidden} mais`}
-        </button>
-      )}
-    </div>
+    <nav aria-label="Subcategorias" className="mb-6">
+      <ul className="flex flex-wrap gap-2">
+        {visible.map((c) => (
+          <li key={c.id}>
+            <LocalizedClientLink href={`/categories/${c.handle}`} className={chipCls}>
+              {displayCategoryName(c.name)}
+            </LocalizedClientLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }
 

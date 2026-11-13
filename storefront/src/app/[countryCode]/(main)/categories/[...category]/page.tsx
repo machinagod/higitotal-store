@@ -1,7 +1,16 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import { getCategoryByHandle, listCategories } from "@lib/data/categories"
+import {
+  getCategoryByHandle,
+  getCategoryById,
+  listCategories,
+} from "@lib/data/categories"
+import {
+  displayCategoryName,
+  isInternalCategory,
+} from "@lib/util/category-display"
+import { categoryMetaDescription } from "@lib/util/listing-copy"
 import { listRegions } from "@lib/data/regions"
 import { StoreProductCategory, StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
@@ -51,17 +60,32 @@ export async function generateStaticParams() {
   }
 }
 
+/**
+ * Parent chain (root first) of a category reached by its own handle — the
+ * route usually names only the leaf (`/categories/toalhas-de-maos`), so the
+ * breadcrumb walks up via `parent_category`. Bounded and fail-soft.
+ */
+async function getAncestors(
+  category: StoreProductCategory | undefined
+): Promise<{ name: string; handle: string | null }[]> {
+  const chain: { name: string; handle: string | null }[] = []
+  let current = category ? await getCategoryById(category.id) : null
+  for (let depth = 0; depth < 5 && current?.parent_category; depth++) {
+    const parent = await getCategoryById(current.parent_category.id)
+    if (!parent) break
+    chain.unshift({ name: parent.name, handle: parent.handle ?? null })
+    current = parent
+  }
+  return chain
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const { product_categories } = await getCategoryByHandle(params.category)
-
-    const title = product_categories
-      .map((category: StoreProductCategory) => category.name)
-      .join(" | ")
-
+    const category = product_categories[product_categories.length - 1]
+    const title = displayCategoryName(category.name)
     const description =
-      product_categories[product_categories.length - 1].description ??
-      `Explore ${title} — ${SITE_NAME}.`
+      category.description?.trim() || categoryMetaDescription(title)
 
     const canonical = await canonicalUrl(
       `categories/${params.category.join("/")}`
@@ -88,17 +112,24 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const { product_categories } = await getCategoryByHandle(params.category)
 
-  if (!product_categories) {
+  if (!product_categories?.length) {
     notFound()
   }
+
+  const ancestors =
+    product_categories.length === 1
+      ? await getAncestors(product_categories[0]).catch(() => [])
+      : []
 
   const trail = [
     { name: SITE_NAME, url: await canonicalUrl("") },
     ...(await Promise.all(
-      (product_categories as StoreProductCategory[]).map(async (c) => ({
-        name: c.name,
-        url: await canonicalUrl(`categories/${c.handle}`),
-      }))
+      [...ancestors, ...(product_categories as StoreProductCategory[])]
+        .filter((c) => c.handle && !isInternalCategory(c.name))
+        .map(async (c) => ({
+          name: displayCategoryName(c.name),
+          url: await canonicalUrl(`categories/${c.handle}`),
+        }))
     )),
   ]
 
@@ -107,6 +138,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <JsonLd data={breadcrumbSchema(trail)} />
       <CategoryTemplate
         categories={product_categories}
+        ancestors={ancestors}
         sortBy={sortBy}
         page={page}
         countryCode={params.countryCode}
@@ -114,3 +146,4 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     </>
   )
 }
+

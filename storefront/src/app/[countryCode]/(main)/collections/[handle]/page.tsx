@@ -10,6 +10,7 @@ import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
+import { collectionMetaDescription } from "@lib/util/listing-copy"
 
 type Props = {
   params: { handle: string; countryCode: string }
@@ -65,7 +66,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
-  const description = `Descubra a gama ${collection.title} — ${SITE_NAME}.`
+  const description = collectionMetaDescription(collection.title)
   const canonical = await canonicalUrl(`collections/${collection.handle}`)
 
   return {

@@ -1,114 +1,132 @@
 "use client"
 
 import { clx } from "@medusajs/ui"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { usePathname, useSearchParams } from "next/navigation"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
+import { pageWindow } from "@lib/util/pagination"
+
+const itemCls =
+  "flex h-11 min-w-[44px] items-center justify-center rounded-pill px-3 text-sm font-semibold transition-colors"
+
+/**
+ * Listing pagination: previous / next plus a compact window of page numbers.
+ * Real links (crawlable, open-in-new-tab), 44px tap targets, and the current
+ * page marked both visually and with aria-current.
+ */
 export function Pagination({
   page,
   totalPages,
-  'data-testid': dataTestid
+  "data-testid": dataTestid,
 }: {
   page: number
   totalPages: number
-  'data-testid'?: string
+  "data-testid"?: string
 }) {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Helper function to generate an array of numbers within a range
-  const arrayRange = (start: number, stop: number) =>
-    Array.from({ length: stop - start + 1 }, (_, index) => start + index)
-
-  // Function to handle page changes
-  const handlePageChange = (newPage: number) => {
+  const hrefFor = (p: number) => {
     const params = new URLSearchParams(searchParams)
-    params.set("page", newPage.toString())
-    router.push(`${pathname}?${params.toString()}`)
+    if (p <= 1) params.delete("page")
+    else params.set("page", String(p))
+    const qs = params.toString()
+    return qs ? `${pathname}?${qs}` : pathname
   }
 
-  // Function to render a page button
-  const renderPageButton = (
-    p: number,
-    label: string | number,
-    isCurrent: boolean
-  ) => (
-    <button
-      key={p}
-      className={clx("txt-xlarge-plus text-ui-fg-muted", {
-        "text-ui-fg-base hover:text-ui-fg-subtle": isCurrent,
-      })}
-      disabled={isCurrent}
-      onClick={() => handlePageChange(p)}
-    >
-      {label}
-    </button>
-  )
+  const current = Math.min(Math.max(page, 1), totalPages)
+  const items = pageWindow(current, totalPages)
 
-  // Function to render ellipsis
-  const renderEllipsis = (key: string) => (
-    <span
-      key={key}
-      className="txt-xlarge-plus text-ui-fg-muted items-center cursor-default"
-    >
-      ...
-    </span>
-  )
-
-  // Function to render page buttons based on the current page and total pages
-  const renderPageButtons = () => {
-    const buttons = []
-
-    if (totalPages <= 7) {
-      // Show all pages
-      buttons.push(
-        ...arrayRange(1, totalPages).map((p) =>
-          renderPageButton(p, p, p === page)
-        )
-      )
-    } else {
-      // Handle different cases for displaying pages and ellipses
-      if (page <= 4) {
-        // Show 1, 2, 3, 4, 5, ..., lastpage
-        buttons.push(
-          ...arrayRange(1, 5).map((p) => renderPageButton(p, p, p === page))
-        )
-        buttons.push(renderEllipsis("ellipsis1"))
-        buttons.push(
-          renderPageButton(totalPages, totalPages, totalPages === page)
-        )
-      } else if (page >= totalPages - 3) {
-        // Show 1, ..., lastpage - 4, lastpage - 3, lastpage - 2, lastpage - 1, lastpage
-        buttons.push(renderPageButton(1, 1, 1 === page))
-        buttons.push(renderEllipsis("ellipsis2"))
-        buttons.push(
-          ...arrayRange(totalPages - 4, totalPages).map((p) =>
-            renderPageButton(p, p, p === page)
-          )
-        )
-      } else {
-        // Show 1, ..., page - 1, page, page + 1, ..., lastpage
-        buttons.push(renderPageButton(1, 1, 1 === page))
-        buttons.push(renderEllipsis("ellipsis3"))
-        buttons.push(
-          ...arrayRange(page - 1, page + 1).map((p) =>
-            renderPageButton(p, p, p === page)
-          )
-        )
-        buttons.push(renderEllipsis("ellipsis4"))
-        buttons.push(
-          renderPageButton(totalPages, totalPages, totalPages === page)
-        )
-      }
-    }
-
-    return buttons
+  const PrevNext = ({ dir }: { dir: "prev" | "next" }) => {
+    const target = dir === "prev" ? current - 1 : current + 1
+    const disabled = target < 1 || target > totalPages
+    const label = dir === "prev" ? "Anterior" : "Seguinte"
+    const content = (
+      <>
+        {dir === "prev" && <ChevronLeft className="h-4 w-4" aria-hidden />}
+        <span className="hidden xsmall:inline">{label}</span>
+        {dir === "next" && <ChevronRight className="h-4 w-4" aria-hidden />}
+      </>
+    )
+    const cls = clx(
+      itemCls,
+      "gap-1 border border-hairline bg-white",
+      disabled
+        ? "cursor-not-allowed text-grey-30"
+        : "text-brand-ink hover:border-brand-cyan hover:text-brand-cyan"
+    )
+    return disabled ? (
+      <span className={cls} aria-disabled="true">
+        {content}
+      </span>
+    ) : (
+      <Link
+        href={hrefFor(target)}
+        className={cls}
+        aria-label={dir === "prev" ? "Página anterior" : "Página seguinte"}
+        rel={dir}
+      >
+        {content}
+      </Link>
+    )
   }
 
-  // Render the component
   return (
-    <div className="flex justify-center w-full mt-12">
-      <div className="flex gap-3 items-end" data-testid={dataTestid}>{renderPageButtons()}</div>
-    </div>
+    <nav
+      aria-label="Paginação"
+      className="mt-12 flex w-full justify-center"
+      data-testid={dataTestid}
+    >
+      <ul className="flex items-center justify-center gap-1.5">
+        <li>
+          <PrevNext dir="prev" />
+        </li>
+        {/* Phones: "Página 2 de 8" instead of a row of numbers that would wrap. */}
+        <li
+          className="flex h-11 items-center whitespace-nowrap px-3 text-sm font-semibold text-brand-ink xsmall:hidden"
+          aria-current="page"
+        >
+          Página {current} de {totalPages}
+        </li>
+        {items.map((item, i) =>
+          item === "gap" ? (
+            <li
+              key={`gap-${i}`}
+              aria-hidden
+              className="hidden h-11 w-6 items-center justify-center text-sm text-grey-40 xsmall:flex"
+            >
+              …
+            </li>
+          ) : (
+            <li key={item} className="hidden xsmall:block">
+              {item === current ? (
+                <span
+                  aria-current="page"
+                  aria-label={`Página ${item}, atual`}
+                  className={clx(itemCls, "bg-brand-ink text-white")}
+                >
+                  {item}
+                </span>
+              ) : (
+                <Link
+                  href={hrefFor(item)}
+                  aria-label={`Página ${item}`}
+                  className={clx(
+                    itemCls,
+                    "text-brand-ink hover:bg-grey-10 hover:text-brand-cyan"
+                  )}
+                >
+                  {item}
+                </Link>
+              )}
+            </li>
+          )
+        )}
+        <li>
+          <PrevNext dir="next" />
+        </li>
+      </ul>
+    </nav>
   )
 }

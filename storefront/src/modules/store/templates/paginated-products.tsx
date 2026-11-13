@@ -1,5 +1,7 @@
 import { getProductsListWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { productCountLabel } from "@lib/util/listing-copy"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -11,7 +13,6 @@ type PaginatedProductsParams = {
   collection_id?: string[]
   category_id?: string[]
   id?: string[]
-  order?: string
 }
 
 export default async function PaginatedProducts({
@@ -21,6 +22,7 @@ export default async function PaginatedProducts({
   categoryId,
   productsIds,
   countryCode,
+  showCount = true,
 }: {
   sortBy?: SortOptions
   page: number
@@ -28,9 +30,11 @@ export default async function PaginatedProducts({
   categoryId?: string | string[]
   productsIds?: string[]
   countryCode: string
+  /** Show the "123 produtos" line above the grid. */
+  showCount?: boolean
 }) {
   const queryParams: PaginatedProductsParams = {
-    limit: 12,
+    limit: PRODUCT_LIMIT,
   }
 
   if (collectionId) {
@@ -49,17 +53,13 @@ export default async function PaginatedProducts({
     queryParams["id"] = productsIds
   }
 
-  if (sortBy === "created_at") {
-    queryParams["order"] = "created_at"
-  }
-
   const region = await getRegion(countryCode)
 
   if (!region) {
     return null
   }
 
-  let {
+  const {
     response: { products, count },
   } = await getProductsListWithSort({
     page,
@@ -70,10 +70,48 @@ export default async function PaginatedProducts({
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 
+  if (!count) {
+    return (
+      <div className="rounded-card border border-hairline bg-white px-6 py-12 text-center">
+        <p className="text-base font-semibold text-brand-ink">
+          Ainda não há produtos publicados nesta secção.
+        </p>
+        <p className="mt-2 text-sm text-grey-60">
+          Veja o catálogo completo ou contacte-nos para saber o que temos disponível.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <LocalizedClientLink
+            href="/store"
+            className="flex h-11 items-center rounded-pill bg-brand-cyan px-5 text-sm font-bold text-white transition-colors hover:bg-brand-cyan-ink"
+          >
+            Ver catálogo
+          </LocalizedClientLink>
+          <LocalizedClientLink
+            href="/contact"
+            className="flex h-11 items-center rounded-pill border border-hairline px-5 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-cyan hover:text-brand-cyan"
+          >
+            Fale connosco
+          </LocalizedClientLink>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
+      {showCount && (
+        <p className="mb-4 text-sm text-grey-60" data-testid="products-count">
+          {productCountLabel(count)}
+          {totalPages > 1 && (
+            <span className="text-grey-40">
+              {" "}
+              · página {Math.min(Math.max(page, 1), totalPages)} de {totalPages}
+            </span>
+          )}
+        </p>
+      )}
       <ul
-        className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
+        className="grid w-full grid-cols-2 gap-x-3 gap-y-4 small:grid-cols-3 small:gap-x-6 small:gap-y-8 medium:grid-cols-4"
         data-testid="products-list"
       >
         {products.map((p) => {

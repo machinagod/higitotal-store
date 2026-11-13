@@ -3,8 +3,11 @@ import { Suspense } from "react"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
 import { isCatalogMode } from "@lib/util/catalog-mode"
+import { resolveSort } from "@lib/util/sort-products"
+import { parsePage } from "@lib/util/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import PaginatedProducts from "@modules/store/templates/paginated-products"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
 
 export default function CollectionTemplate({
@@ -18,25 +21,46 @@ export default function CollectionTemplate({
   page?: string
   countryCode: string
 }) {
-  const pageNumber = page ? parseInt(page) : 1
-  const sort = sortBy || "created_at"
+  const catalogMode = isCatalogMode()
+  const pageNumber = parsePage(page)
+  const sort = resolveSort(sortBy, { catalogMode, hasIds: false })
 
   return (
-    <div className="flex flex-col small:flex-row small:items-start py-6 content-container">
-      {!isCatalogMode() && <RefinementList sortBy={sort} />}
-      <div className="w-full">
-        <div className="mb-8 text-2xl-semi">
-          <h1>{collection.title}</h1>
-        </div>
-        <Suspense fallback={<SkeletonProductGrid />}>
-          <PaginatedProducts
-            sortBy={sort}
-            page={pageNumber}
-            collectionId={collection.id}
-            countryCode={countryCode}
-          />
-        </Suspense>
+    <div className="content-container py-6 small:py-8" data-testid="collection-container">
+      <nav aria-label="Navegação estrutural" className="mb-2">
+        <ol className="flex flex-wrap items-center gap-x-1.5 text-[13px] text-grey-50">
+          <li>
+            <LocalizedClientLink href="/store" className="hover:text-brand-cyan">
+              Catálogo
+            </LocalizedClientLink>
+          </li>
+          <li className="flex items-center gap-x-1.5">
+            <span aria-hidden className="text-grey-30">/</span>
+            <span aria-current="page" className="text-grey-60">
+              {collection.title}
+            </span>
+          </li>
+        </ol>
+      </nav>
+
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 small:mb-5">
+        <h1
+          className="text-2xl font-extrabold tracking-tight text-brand-ink small:text-[28px]"
+          data-testid="collection-page-title"
+        >
+          {collection.title}
+        </h1>
+        <RefinementList sortBy={sort} catalogMode={catalogMode} />
       </div>
+
+      <Suspense key={`${sort}-${pageNumber}`} fallback={<SkeletonProductGrid />}>
+        <PaginatedProducts
+          sortBy={sort}
+          page={pageNumber}
+          collectionId={collection.id}
+          countryCode={countryCode}
+        />
+      </Suspense>
     </div>
   )
 }
