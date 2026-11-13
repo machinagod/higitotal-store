@@ -1,5 +1,5 @@
 /* Higitotal design system — Montserrat (matches the live brand). The font is
-   self-hosted via next/font in app/layout.tsx (exposed as --font-montserrat);
+   self-hosted via next/font/local in app/layout.tsx (app/fonts) (exposed as --font-montserrat);
    no render-blocking third-party stylesheet. */
 @import "tailwindcss/base";
 @import "tailwindcss/components";

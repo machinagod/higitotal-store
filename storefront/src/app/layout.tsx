@@ -1,5 +1,5 @@
 import { Metadata, Viewport } from "next"
-import { Montserrat } from "next/font/google"
+import localFont from "next/font/local"
 import "styles/globals.css"
 
 import ConsentModeDefaults from "@modules/common/components/analytics/consent-mode"
@@ -20,14 +20,19 @@ import {
   websiteSchema,
 } from "@lib/util/structured-data"
 
-// Self-hosted at build time by next/font (no render-blocking request to
-// fonts.googleapis.com, no third-party font host at runtime). Exposed as
+// Montserrat, committed to the repo (./fonts, SIL OFL 1.1, from
+// @fontsource-variable/montserrat 5.2.5): one variable woff2 for the Latin
+// subset (all Portuguese, €, typographic punctuation), every weight 100–900.
+// Local on purpose: next/font/google downloads at build time, and a flaky
+// fetch can fail the build or ship mismatched font CSS. Exposed as
 // --font-montserrat, which tailwind's `font-sans` and globals.css use.
-const montserrat = Montserrat({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700", "800"],
+const montserrat = localFont({
+  src: "./fonts/montserrat-latin-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
   display: "swap",
   variable: "--font-montserrat",
+  fallback: ["system-ui", "Segoe UI", "Helvetica Neue", "Arial", "sans-serif"],
 })
 
 export const viewport: Viewport = {
