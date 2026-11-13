@@ -7,7 +7,6 @@ import Script from "next/script"
  *
  * Consent Mode v2 defaults everything (incl. analytics) to denied, as Portuguese law
  * requires consent first; the consent banner flips it with gtag('consent','update').
- * calls `gtag('consent', 'update', …)` to flip advertising storage on acceptance.
  */
 export default function GoogleAnalytics() {
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
