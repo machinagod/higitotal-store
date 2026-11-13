@@ -9,6 +9,10 @@ describe("convertToLocale", () => {
   it("formats an amount in the given currency", () => {
     expect(convertToLocale({ amount: 12.5, currency_code: "EUR", locale: "en-US" })).toBe("€12.50")
   })
+  it("defaults to Portuguese formatting (comma decimals, euro after the amount)", () => {
+    expect(convertToLocale({ amount: 0.7, currency_code: "eur" }).replace(/\s/g, " ")).toBe("0,70 €")
+    expect(convertToLocale({ amount: 1234.5, currency_code: "EUR" }).replace(/\s/g, " ")).toMatch(/^1.?234,50 €$/)
+  })
   it("falls back to the raw amount when no currency", () => {
     expect(convertToLocale({ amount: 12.5, currency_code: "" })).toBe("12.5")
   })
