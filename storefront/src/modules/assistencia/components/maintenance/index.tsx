@@ -3,7 +3,7 @@ import { Check, ArrowRight } from "lucide-react"
 const POINTS = [
   {
     title: "Manutenção preventiva",
-    body: "Visitas planeadas que antecipam avarias antes de pararem a operação.",
+    body: "Visitas planeadas que detetam problemas antes que parem a operação.",
   },
   {
     title: "Prioridade de resposta",
@@ -20,25 +20,25 @@ const POINTS = [
 ]
 
 /**
- * Maintenance-contract highlight block — the strategic recurring offer. Uses the
- * cyan family link as accent (eyebrow) to tie it to the brand.
+ * Maintenance-contract highlight block — the strategic recurring offer. Amber
+ * eyebrow, consistent with the rest of the Assistência Técnica page.
  */
 const Maintenance = () => {
   return (
     <section className="content-container pb-16 sm:pb-[74px]">
       <div className="grid grid-cols-1 overflow-hidden rounded-hero border border-svc-line bg-svc-ground-2 lg:grid-cols-2">
         <div className="p-8 sm:p-[50px]">
-          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-brand-cyan">
-            <span className="ind" />
+          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-svc-signal">
+            <span className="ind amber" />
             Contrato de manutenção
           </span>
           <h2 className="mt-4 max-w-[16ch] text-3xl font-extrabold leading-[1.1] tracking-[-0.025em] text-white sm:text-[34px]">
             Menos paragens. Mais tranquilidade.
           </h2>
           <p className="mt-3.5 max-w-[44ch] text-[15px] leading-relaxed text-svc-fg-muted">
-            O contrato de manutenção é a forma mais inteligente de proteger o
-            investimento em equipamento profissional. Nós tratamos da
-            manutenção; você concentra-se no negócio.
+            O contrato de manutenção protege o investimento em equipamento
+            profissional. Nós tratamos da manutenção; a sua equipa concentra-se
+            no negócio.
           </p>
           <div className="mt-6">
             <a

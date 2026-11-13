@@ -7,9 +7,9 @@ import Maintenance from "@modules/assistencia/components/maintenance"
 import RequestForm from "@modules/assistencia/components/request-form"
 
 export const metadata: Metadata = {
-  title: "Assistência Técnica · Higitotal",
+  title: "Assistência Técnica",
   description:
-    "Instalação, reparação e contratos de manutenção de equipamento profissional de cozinha, lavandaria e limpeza. Cobertura em todo o Portugal Continental, resposta prioritária no Norte a partir de Mirandela.",
+    "Instalação, reparação e contratos de manutenção de equipamento profissional de cozinha, lavandaria e limpeza. Técnicos especializados, sediados em Mirandela, com resposta prioritária no Norte.",
 }
 
 type Params = {
@@ -32,6 +32,11 @@ export default function AssistenciaTecnicaPage({}: Params) {
       >
         <RequestForm />
       </section>
+
+      {/* Separator before the (also dark) site footer */}
+      <div aria-hidden className="relative border-t border-svc-line">
+        <span className="absolute left-1/2 top-[-2px] h-[3px] w-16 -translate-x-1/2 rounded-full bg-svc-signal" />
+      </div>
     </div>
   )
 }

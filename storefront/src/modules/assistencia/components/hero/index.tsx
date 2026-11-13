@@ -1,7 +1,24 @@
 import { Phone, ArrowRight, ArrowLeft } from "lucide-react"
 
+import { COMPANY, yearsInBusiness } from "@lib/company"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { IberiaMap } from "@modules/assistencia/components/iberia-map"
+
+/** Hero stats. The ≈200 km priority radius is a business figure — confirm. */
+const getStats = () => [
+  {
+    value: `${yearsInBusiness()} anos`,
+    label: "de experiência no terreno",
+  },
+  {
+    value: "≈200 km",
+    label: "raio de resposta prioritária a partir de Mirandela",
+  },
+  {
+    value: "No local",
+    label: "ou em oficina, com peças originais",
+  },
+]
 
 /**
  * Assistência Técnica hero — dark "pro" register. Headline about keeping
@@ -31,18 +48,26 @@ const Hero = () => {
 
       <div className="content-container relative z-[2] grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
-          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-svc-signal">
+          <LocalizedClientLink
+            href="/store"
+            className="mb-6 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.03em] text-svc-fg-muted transition hover:text-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar ao catálogo
+          </LocalizedClientLink>
+          <span className="flex items-center gap-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-svc-signal">
             <span className="ind amber" />
             Assistência Técnica Higitotal
           </span>
           <h1 className="mt-5 max-w-[15ch] text-4xl font-extrabold leading-[1.04] tracking-[-0.03em] text-white sm:text-5xl lg:text-[56px]">
             A sua equipa de <span className="text-svc-signal">manutenção</span>,
-            em todo o país.
+            a partir de Mirandela.
           </h1>
           <p className="mt-5 max-w-[48ch] text-lg leading-relaxed text-svc-fg-muted">
             Instalamos, reparamos e mantemos o seu equipamento profissional de
-            cozinha, lavandaria e limpeza. Técnicos experientes, peças originais
-            e contratos de manutenção que mantêm o seu negócio a funcionar.
+            cozinha, lavandaria e limpeza, com peças originais e contratos de
+            manutenção. Técnicos especializados, sediados em Mirandela.
+            Resposta prioritária no Norte.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
@@ -53,37 +78,27 @@ const Hero = () => {
               <ArrowRight className="h-4 w-4" />
             </a>
             <a
-              href="tel:+351278262913"
+              href={COMPANY.phone.href}
+              aria-label={`Ligar para ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()})`}
               className="inline-flex items-center gap-[10px] rounded-pill border-[1.5px] border-svc-line bg-transparent px-7 py-[15px] text-[13px] font-bold uppercase tracking-[0.04em] text-white transition hover:-translate-y-0.5 hover:bg-svc-ground-2"
             >
-              <Phone className="h-4 w-4" /> +351 278 262 913
+              <Phone className="h-4 w-4" /> {COMPANY.phone.display}
             </a>
           </div>
-          <div className="mt-8 flex flex-wrap gap-[26px]">
-            <div>
-              <b className="block text-[26px] font-extrabold leading-none tracking-[-0.02em] text-white">
-                27 anos
-              </b>
-              <span className="mt-1.5 block text-xs font-medium leading-snug text-svc-fg-muted">
-                de experiência no terreno
-              </span>
-            </div>
-            <div>
-              <b className="block text-[26px] font-extrabold leading-none tracking-[-0.02em] text-white">
-                ≈200 km
-              </b>
-              <span className="mt-1.5 block text-xs font-medium leading-snug text-svc-fg-muted">
-                resposta prioritária no Norte
-              </span>
-            </div>
-            <div>
-              <b className="block text-[26px] font-extrabold leading-none tracking-[-0.02em] text-white">
-                Nacional
-              </b>
-              <span className="mt-1.5 block text-xs font-medium leading-snug text-svc-fg-muted">
-                cobertura em Portugal Continental
-              </span>
-            </div>
+          <p className="mt-2 text-[11px] text-svc-fg-muted">
+            {COMPANY.phone.costNote}
+          </p>
+          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-svc-line pt-6 sm:flex sm:flex-wrap sm:gap-[26px] sm:border-0 sm:pt-0">
+            {getStats().map((s) => (
+              <div key={s.value} className="min-w-0">
+                <b className="block text-xl font-extrabold leading-none tracking-[-0.02em] text-white sm:text-[26px]">
+                  {s.value}
+                </b>
+                <span className="mt-1.5 block text-[11px] font-medium leading-snug text-svc-fg-muted sm:max-w-[22ch] sm:text-xs">
+                  {s.label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -104,9 +119,9 @@ const Hero = () => {
           />
           {/* label */}
           <span className="absolute left-6 top-6 z-[2] rounded-[14px] border border-svc-line bg-[#0f1115]/70 px-4 py-3 text-xs font-bold leading-snug text-white backdrop-blur">
-            Cobertura
+            Sede em Mirandela
             <span className="mt-1 block font-medium text-svc-fg-muted">
-              Sede em Mirandela
+              Resposta prioritária no Norte
             </span>
           </span>
           {/* real map */}
@@ -114,17 +129,6 @@ const Hero = () => {
             <IberiaMap />
           </div>
         </div>
-      </div>
-
-      {/* keep the localized-link import meaningful: family link back to shop */}
-      <div className="content-container relative z-[2] mt-8">
-        <LocalizedClientLink
-          href="/store"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.03em] text-svc-fg-muted transition hover:text-white"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Voltar à loja
-        </LocalizedClientLink>
       </div>
     </div>
   )

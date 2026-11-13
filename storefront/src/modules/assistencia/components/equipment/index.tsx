@@ -17,7 +17,7 @@ const Equipment = () => {
       <div className="mx-auto mb-12 max-w-[640px] text-center">
         <span className="inline-flex items-center justify-center gap-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-svc-signal">
           <span className="ind amber" />
-          Equipamento que assistimos
+          Equipamento a que damos assistência
         </span>
         <h2 className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.025em] text-white sm:text-[38px]">
           As marcas com que trabalha, assistidas por quem as conhece
@@ -53,7 +53,7 @@ const Equipment = () => {
           )
         )}
         <span className="rounded-pill border border-dashed border-svc-line bg-svc-ground-2 px-[26px] py-[13px] text-base font-semibold tracking-[-0.01em] text-svc-fg-muted">
-          + equipamento geral de higiene e catering
+          + equipamento geral de higiene, hotelaria e restauração
         </span>
       </div>
     </section>

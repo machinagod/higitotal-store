@@ -24,10 +24,10 @@ const SERVICES: Service[] = [
     num: "02",
     Icon: Cog,
     title: "Reparação",
-    body: "Diagnóstico e reparação no local ou em oficina, com peças originais e garantia do serviço.",
+    body: "Diagnóstico e reparação no local ou em oficina, com peças originais. Serviço com garantia.",
     points: [
-      "Resposta rápida a avarias",
-      "Peças originais em stock",
+      "Resposta prioritária a avarias",
+      "Peças originais",
       "Orçamento sem compromisso",
     ],
   },
@@ -56,7 +56,7 @@ const Services = () => {
           <span className="ind amber" />O que fazemos
         </span>
         <h2 className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.025em] text-white sm:text-[38px]">
-          Três formas de o manter a trabalhar
+          Três formas de manter o seu equipamento a trabalhar
         </h2>
         <p className="mt-3.5 text-base leading-relaxed text-svc-fg-muted">
           Do primeiro arranque à manutenção planeada, acompanhamos o ciclo de
@@ -85,7 +85,7 @@ const Services = () => {
               </h3>
               {featured && (
                 <span className="mt-2 inline-block rounded-pill bg-svc-signal/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-svc-signal">
-                  O nosso serviço estratégico
+                  Recomendado
                 </span>
               )}
               <p className="mt-3 text-sm leading-relaxed text-svc-fg-muted">
