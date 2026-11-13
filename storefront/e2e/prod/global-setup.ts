@@ -2,6 +2,8 @@ import { test as setup } from "@playwright/test"
 import fs from "fs"
 import path from "path"
 
+import { consentCookie } from "../consent"
+
 const PROD_STATE = path.join(process.cwd(), "playwright/.auth/prod.json")
 
 /**
@@ -11,8 +13,14 @@ const PROD_STATE = path.join(process.cwd(), "playwright/.auth/prod.json")
  * configured (gate disabled), this still writes an empty state so the test
  * project can run.
  */
-setup("authenticate via access token", async ({ page, context }) => {
+setup("authenticate via access token", async ({ page, context, baseURL }) => {
   fs.mkdirSync(path.dirname(PROD_STATE), { recursive: true })
+
+  // Stored cookie choice (statistics refused): no banner over what the tests
+  // click, and CI traffic never sets GA cookies.
+  if (baseURL) {
+    await context.addCookies([consentCookie(baseURL)])
+  }
 
   const token = process.env.STOREFRONT_ACCESS_TOKEN
   if (token) {

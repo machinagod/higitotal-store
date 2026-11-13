@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test"
 import path from "path"
 import "dotenv/config.js"
+import { consentStorageState } from "./e2e/consent"
 
 export const STORAGE_STATE = path.join(__dirname, "playwright/.auth/user.json")
 
@@ -52,7 +53,11 @@ export default defineConfig({
       name: "chromium public",
       dependencies: ["public setup"],
       testMatch: "public/*.spec.ts",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // Stored cookie choice: the banner never covers what tests click.
+        storageState: consentStorageState(process.env.NEXT_PUBLIC_BASE_URL),
+      },
     },
 
     /*
