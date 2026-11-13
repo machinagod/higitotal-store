@@ -19,6 +19,34 @@ const DISPLAY_NAMES: Record<string, string> = {
   "Marquesa": "Rolos de Marquesa",
 }
 
+/**
+ * Supplier-brand root categories (the Moloni sync files products under the
+ * supplier group). `display` is the brand's own casing, used everywhere the
+ * brand is named (nav "Marcas", H1, breadcrumbs); `short` is the brand alone,
+ * used to qualify generic sub-groups ("Produtos" → "Produtos SC Johnson").
+ * Keep in sync with `BRANDS` in @lib/brands (names there must match `display`).
+ */
+const BRAND_CATEGORY_NAMES: Record<string, { display: string; short: string }> = {
+  "SCJohnson (DEB)": { display: "SC Johnson (Deb)", short: "SC Johnson" },
+  "SC Johnson (DEB)": { display: "SC Johnson (Deb)", short: "SC Johnson" },
+  Diversey: { display: "Diversey", short: "Diversey" },
+  Unilever: { display: "Unilever", short: "Unilever" },
+  Vileda: { display: "Vileda", short: "Vileda" },
+  "Vileda Swep": { display: "Vileda Swep", short: "Vileda Swep" },
+  Taski: { display: "Taski", short: "Taski" },
+}
+
+/**
+ * Generic sub-groups qualified by a NON-brand parent, where "<name> <parent>"
+ * would read badly in Portuguese ("Outros Papel").
+ */
+const GENERIC_WITH_PARENT: Record<string, Record<string, string>> = {
+  Outros: {
+    Detergentes: "Outros detergentes",
+    Papel: "Outros produtos de papel",
+  },
+}
+
 /** Bookkeeping groups that are not real browsable categories. */
 export function isInternalCategory(name: string | null | undefined): boolean {
   const n = (name ?? "").trim()
@@ -33,8 +61,38 @@ export function isGenericCategory(name: string | null | undefined): boolean {
   return ["Outros", "Produtos", "Acessórios e Complementos"].includes((name ?? "").trim())
 }
 
-/** Customer-facing display name for a category. */
-export function displayCategoryName(name: string | null | undefined): string {
+/** The brand a (root) category name stands for, if it is a supplier group. */
+export function brandCategoryName(
+  name: string | null | undefined
+): { display: string; short: string } | undefined {
+  return BRAND_CATEGORY_NAMES[(name ?? "").trim()]
+}
+
+/**
+ * Customer-facing display name for a category.
+ *
+ * Pass the parent category's (raw) name when you have it: generic sub-groups
+ * ("Produtos", "Acessórios e Complementos", "Outros") are then qualified by it,
+ * so a page/breadcrumb never reads just "Produtos":
+ *   - under a brand → "Produtos SC Johnson", "Acessórios e Complementos Diversey"
+ *   - "Outros" under Papel → "Outros produtos de papel"; other parents →
+ *     "Outros · <Parent>".
+ */
+export function displayCategoryName(
+  name: string | null | undefined,
+  parentName?: string | null
+): string {
   const n = (name ?? "").trim()
-  return DISPLAY_NAMES[n] ?? n
+  const brand = BRAND_CATEGORY_NAMES[n]
+  const base = brand?.display ?? DISPLAY_NAMES[n] ?? n
+
+  const parent = (parentName ?? "").trim()
+  if (!parent || !isGenericCategory(n)) return base
+
+  const parentBrand = BRAND_CATEGORY_NAMES[parent]
+  if (parentBrand) return `${base} ${parentBrand.short}`
+
+  const special = GENERIC_WITH_PARENT[n]?.[parent]
+  if (special) return special
+  return `${base} · ${displayCategoryName(parent)}`
 }

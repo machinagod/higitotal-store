@@ -4,10 +4,26 @@ import { getProductsList } from "./products"
 import { splitNavRoots, stripBrands, type NavLink } from "@lib/brands"
 import { displayCategoryName } from "@lib/util/category-display"
 
+/**
+ * Every category (with its direct children). The Store API pages at 50 by
+ * default and the catalogue has more than that (62 at the time of writing), so
+ * ask for a generous page explicitly — otherwise the search suggestions, the
+ * sitemap and the static params silently miss the tail.
+ */
 export const listCategories = cache(async function () {
   return sdk.store.category
-    .list({ fields: "+category_children" }, { next: { tags: ["categories"] } })
+    .list(
+      { fields: "+category_children", limit: 1000 },
+      { next: { tags: ["categories"] } }
+    )
     .then(({ product_categories }) => product_categories)
+})
+
+/** Non-root categories (fails soft to []), used to place brand ranges. */
+const getDescendantCategories = cache(async function () {
+  return listCategories()
+    .then((all) => (all || []).filter((c: any) => c.parent_category_id))
+    .catch(() => [] as any[])
 })
 
 export const getCategoriesList = cache(async function (
@@ -80,18 +96,21 @@ export const getCategoryById = cache(async function (categoryId: string) {
  * presented as Marcas, internal bookkeeping groups are dropped, and other roots
  * flagged `metadata.nav_hidden` stay reachable via their /categories pages but
  * drop out of the nav. Categories carry their customer-facing display name and
- * a Lucide-style icon name; brands link to their collection when it exists.
+ * a Lucide-style icon name; brands link per `brandHref` (category with
+ * sub-ranges → collection → category → search).
  */
 export const getNavGroups = cache(async function (): Promise<{
   categories: NavLink[]
   brands: NavLink[]
 }> {
-  const [roots, collectionHandles] = await Promise.all([
+  const [roots, collectionHandles, descendants] = await Promise.all([
     getRootCategories(),
     getCollectionHandles(),
+    getDescendantCategories(),
   ])
   const { categories, brands } = splitNavRoots(roots || [], {
     collectionHandles,
+    descendants,
   })
   return {
     categories: categories.map((c: any) => ({
@@ -120,11 +139,12 @@ const getCollectionHandles = cache(async function (): Promise<
 
 /** Homepage brand strip entries with their resolved landing pages. */
 export const getStripBrands = cache(async function () {
-  const [roots, collectionHandles] = await Promise.all([
+  const [roots, collectionHandles, descendants] = await Promise.all([
     getRootCategories(),
     getCollectionHandles(),
+    getDescendantCategories(),
   ])
-  return stripBrands({ roots: roots || [], collectionHandles })
+  return stripBrands({ roots: roots || [], descendants, collectionHandles })
 })
 
 /** The Lucide icon id for a category: an explicit choice in `metadata.icon`
@@ -185,7 +205,8 @@ export const getRootCategories = cache(async function () {
       // @ts-ignore — parent_category_id filter is supported by the store API
       {
         parent_category_id: "null",
-        fields: "id,name,handle,rank,metadata",
+        // Child ids only tell the brand links whether a brand has sub-ranges.
+        fields: "id,name,handle,rank,metadata,category_children.id",
         limit: 100,
       },
       { next: { tags: ["categories"] } }
@@ -205,12 +226,14 @@ export const getRootCategories = cache(async function () {
  * A merchant can override any position from the admin "Storefront nav" widget
  * without touching code; new categories fall through to rank/name.
  */
+// Papel (the highest-volume consumable) sits second so it stays inline in the
+// header nav even at the narrowest desktop width.
 const DEFAULT_NAV_PRIORITY: Record<string, number> = {
   detergentes: 1,
-  "utensilios-limpeza": 2,
-  "maquinas-de-limpeza": 3,
-  "equipamento-hoteleiro": 4,
-  papel: 5,
+  papel: 2,
+  "utensilios-limpeza": 3,
+  "maquinas-de-limpeza": 4,
+  "equipamento-hoteleiro": 5,
   descartaveis: 6,
   sacos: 7,
   "ambientador-e-inseticidas": 8,
