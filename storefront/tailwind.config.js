@@ -21,14 +21,18 @@ module.exports = {
         padding: "padding-top padding-right padding-bottom padding-left",
       },
       colors: {
+        // Neutral scale. 40/50 are used for real (small) text, so both clear
+        // WCAG AA 4.5:1 on white and on the #f5f7f9 page tint
+        // (40 = 5.2:1, 50 = 6.0:1). 30 and below are borders/dividers/
+        // disabled only — never body text.
         grey: {
           0: "#FFFFFF",
           5: "#F9FAFB",
           10: "#F3F4F6",
           20: "#E5E7EB",
           30: "#D1D5DB",
-          40: "#9CA3AF",
-          50: "#6B7280",
+          40: "#646D79",
+          50: "#5B6470",
           60: "#4B5563",
           70: "#374151",
           80: "#1F2937",
@@ -38,9 +42,21 @@ module.exports = {
         // Colour roles: cyan = product enquiry / catalogue actions ("Pedir
         // orçamento", "Ver catálogo", links, focus); svc-signal (orange) =
         // technical assistance only ("Pedir assistência"); ink = text.
+        //
+        // Contrast (WCAG AA, measured):
+        //  - `cyan` is the deep, accessible cyan used for filled CTAs (white
+        //    text 5.1:1) and cyan text/links on light grounds (≥4.6:1 on
+        //    white, #f5f7f9 and cyan-50).
+        //  - `cyan-ink` is darker still (7.5:1): hover state of cyan fills and
+        //    small link text.
+        //  - `cyan-bright` is the original logo cyan (#00adef). Only 2.55:1
+        //    with white, so it is for DECORATIVE large areas, dots, rules,
+        //    and for text/icons on the dark svc grounds (6.9:1 on #16181d).
+        //    Never put white text on it, never use it for text on white.
         brand: {
-          cyan: "#00adef",
-          "cyan-ink": "#0094cc",
+          cyan: "#0074b3",
+          "cyan-ink": "#005a87",
+          "cyan-bright": "#00adef",
           // Tints for icon tiles, hover grounds and selected states.
           "cyan-50": "#eaf7fe",
           "cyan-100": "#d3effc",
@@ -49,14 +65,21 @@ module.exports = {
           navy: "#0a4d7a",
         },
         // Assistência Técnica (dark "pro" register)
+        //  - `signal` is the accessible orange for filled CTAs (white text
+        //    4.85:1) and orange text on light grounds (4.5:1 on #f5f7f9).
+        //  - `signal-ink` is the darker hover state (6.3:1 with white).
+        //  - `signal-bright` is the original vivid orange (#ff7a1a): text,
+        //    icons and accents on the dark svc grounds (6.8:1 on #16181d).
+        //    Never put white text on it.
         svc: {
           ground: "#16181d",
           "ground-2": "#1f242b",
           line: "#2c333c",
           fg: "#e7ecf1",
           "fg-muted": "#8b95a1",
-          signal: "#ff7a1a",
-          "signal-ink": "#e0660a",
+          signal: "#c04e00",
+          "signal-ink": "#a34200",
+          "signal-bright": "#ff7a1a",
           ok: "#3ecf8e",
         },
         hairline: "#e2e6ea",
@@ -90,7 +113,11 @@ module.exports = {
         "3xl": "2rem",
       },
       fontFamily: {
+        // `--font-montserrat` is set on <html> by next/font (self-hosted
+        // Montserrat, see app/layout.tsx); the literal family name is a
+        // fallback for contexts without the variable.
         sans: [
+          "var(--font-montserrat)",
           "Montserrat",
           "Inter",
           "-apple-system",

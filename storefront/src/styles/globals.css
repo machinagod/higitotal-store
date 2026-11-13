@@ -1,5 +1,6 @@
-/* Higitotal design system — Montserrat (matches the live brand) */
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap");
+/* Higitotal design system — Montserrat (matches the live brand). The font is
+   self-hosted via next/font in app/layout.tsx (exposed as --font-montserrat);
+   no render-blocking third-party stylesheet. */
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
@@ -7,31 +8,43 @@
 /* Higitotal token layer — brand colours, motif. Components use these via the
    tailwind brand-* / svc-* colours and CSS vars for inline styles. */
 :root {
-  --brand-cyan: #00adef;
-  --brand-cyan-ink: #0094cc;
+  /* Mirrors tailwind.config.js. `--brand-cyan` / `--svc-signal` are the
+     accessible (AA with white) values; the *-bright originals are for
+     decorative accents and text on the dark svc grounds only. */
+  --brand-cyan: #0074b3;
+  --brand-cyan-ink: #005a87;
+  --brand-cyan-bright: #00adef;
   --brand-cyan-50: #eaf7fe;
   --brand-ink: #231f20;
   --hairline: #e2e6ea;
   --svc-ground: #16181d;
-  --svc-signal: #ff7a1a;
+  --svc-signal: #c04e00;
+  --svc-signal-bright: #ff7a1a;
+  /* Surface-aware values (see "Surfaces" below): text colour used by the
+     text-brand-cyan / text-svc-signal utilities, and the keyboard focus
+     ring. Light-surface values here; dark surfaces override them. */
+  --text-brand-cyan: var(--brand-cyan);
+  --text-svc-signal: var(--svc-signal);
+  --focus-ring: var(--brand-cyan);
 }
 
 body {
-  font-family: "Montserrat", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", sans-serif;
+  font-family: var(--font-montserrat), "Montserrat", Inter, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-/* Signature cyan dot before eyebrow labels (.ind / .ind.amber). */
+/* Signature cyan dot before eyebrow labels (.ind / .ind.amber). Purely
+   decorative, so it keeps the vivid logo colours. */
 .ind {
   display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 9999px;
-  background: var(--brand-cyan);
+  background: var(--brand-cyan-bright);
   vertical-align: middle;
 }
 .ind.amber {
-  background: var(--svc-signal);
+  background: var(--svc-signal-bright);
 }
 
 /* Brand form field (contact modal etc.) */
@@ -118,7 +131,7 @@ body {
   /* Brand form control — matches the header search field (white, hairline
      border, 14px radius, cyan focus ring). */
   .ht-field {
-    @apply w-full rounded-btn border-[1.5px] border-hairline bg-white px-4 text-brand-ink outline-none transition-colors placeholder:text-[#98a0a8] hover:border-[#cdd5dd] focus:border-brand-cyan focus:shadow-[0_0_0_4px_rgba(0,173,239,0.12)];
+    @apply w-full rounded-btn border-[1.5px] border-hairline bg-white px-4 text-brand-ink outline-none transition-colors placeholder:text-[#6b7480] hover:border-[#cdd5dd] focus:border-brand-cyan focus:shadow-[0_0_0_4px_rgba(0,173,239,0.12)];
   }
 
   .text-xsmall-regular {
@@ -183,6 +196,81 @@ body {
   textarea {
     font-size: 16px !important;
   }
+}
+
+/* ------------------------------------------------------------------------
+   Surfaces. The accessible `brand-cyan` / `svc-signal` tokens are deep enough
+   for white text and for text on white, but too dark for text on the
+   near-black svc grounds. Dark surfaces therefore switch the text colour of
+   `text-brand-cyan` / `text-svc-signal` to the vivid originals (6.8–6.9:1 on
+   #16181d) and the focus ring to white; a white card nested in a dark
+   section switches them back. CSS variables inherit from the NEAREST
+   surface, so nesting works both ways. Mark other containers with
+   `data-surface="dark"` / `data-surface="light"`.
+   ------------------------------------------------------------------------ */
+:where(.bg-svc-ground, .bg-svc-ground-2, [data-surface="dark"]) {
+  --text-brand-cyan: var(--brand-cyan-bright);
+  --text-svc-signal: var(--svc-signal-bright);
+  --focus-ring: #ffffff;
+}
+/* The home / assistência hero gradient (navy → cyan): white ring. */
+:where(.from-brand-navy) {
+  --focus-ring: #ffffff;
+}
+:where(.bg-white, [data-surface="light"]) {
+  --text-brand-cyan: var(--brand-cyan);
+  --text-svc-signal: var(--svc-signal);
+}
+/* The ring is drawn OUTSIDE the element (offset 2px), on its parent's
+   ground, so a white button/link on a dark ground keeps the white ring. */
+:where(.bg-white:not(a, button, [role="button"]), [data-surface="light"]) {
+  --focus-ring: var(--brand-cyan);
+}
+/* Same specificity as the generated utilities and later in the sheet, so
+   these win over them, while `hover:text-white` etc. (higher specificity)
+   still apply. */
+.text-brand-cyan,
+.hover\:text-brand-cyan:hover {
+  color: var(--text-brand-cyan);
+}
+.text-svc-signal,
+.hover\:text-svc-signal:hover {
+  color: var(--text-svc-signal);
+}
+
+/* ------------------------------------------------------------------------
+   Keyboard focus. One visible ring for every interactive element reached by
+   keyboard (:focus-visible, so mouse clicks on buttons/links stay clean):
+   2px, offset 2px, brand cyan on light grounds and white on dark ones
+   (--focus-ring, above). Text fields keep their own border/shadow focus
+   style (browsers match :focus-visible on click for them). Elements that
+   draw their own `focus-visible:ring-*` are left alone. The :is() list lifts
+   specificity above Tailwind's `focus:outline-none`, which would otherwise
+   hide it.
+   ------------------------------------------------------------------------ */
+:is(
+    a[href],
+    button,
+    summary,
+    [role="button"],
+    [role="link"],
+    [role="tab"],
+    [role="menuitem"],
+    [role="option"],
+    [role="checkbox"],
+    [role="radio"],
+    [role="switch"],
+    input[type="checkbox"],
+    input[type="radio"],
+    [tabindex]
+  ):focus-visible:not([class*="focus-visible:ring"]) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Skip-link target: focus lands here programmatically; no ring needed. */
+#conteudo:focus {
+  outline: none;
 }
 
 /* Hero "Em destaque" carousel — active indicator fills to show time-to-next. */

@@ -2,9 +2,11 @@ import Script from "next/script"
 import { resolveGtmId } from "@lib/util/gtm"
 
 /**
- * Google Tag Manager container (standard snippet). Consent Mode defaults and the
- * cookie banner are managed inside the GTM container (a CMP template), as
- * Portuguese law requires consent before analytics/marketing cookies.
+ * Google Tag Manager container (standard snippet). The cookie banner is a CMP
+ * template inside the GTM container; the Consent Mode v2 defaults (all
+ * non-essential storage denied) are pushed earlier, from <head>, by
+ * ConsentModeDefaults — Portuguese law requires consent before
+ * analytics/marketing cookies.
  */
 export function GoogleTagManagerScript() {
   const id = resolveGtmId()
@@ -15,8 +17,6 @@ export function GoogleTagManagerScript() {
       strategy="afterInteractive"
       dangerouslySetInnerHTML={{
         __html: `
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
