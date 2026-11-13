@@ -14,7 +14,7 @@ import { Popover, Transition } from "@headlessui/react"
 import { ArrowRight, ChevronDown } from "lucide-react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CategoryIcon from "@modules/common/icons/category-icon"
-import type { NavLink } from "@lib/brands"
+import { logoRestStyle, type NavLink } from "@lib/brands"
 import { fallbackInlineClass, fallbackMoreClass, fitCount } from "./fit"
 
 // Gap between inline items (Tailwind gap-x-1) — keep in sync with the markup.
@@ -280,11 +280,14 @@ const CategoryNav = ({
 function BrandMark({ brand }: { brand: NavLink }) {
   const box = "flex h-6 w-14 flex-none items-center justify-center"
   if (brand.logo) {
-    const scale = Math.min(56 / brand.logo.width, 20 / brand.logo.height)
+    // Height cap 20px, lifted by `logo.scale` for compact marks (round /
+    // square / stacked); the 48px row leaves room for up to 30px.
+    const maxH = Math.min(30, 20 * (brand.logo.scale ?? 1))
+    const scale = Math.min(56 / brand.logo.width, maxH / brand.logo.height)
     const w = Math.round(brand.logo.width * scale)
     const h = Math.round(brand.logo.height * scale)
     return (
-      <span className={box} aria-hidden>
+      <span className={box} style={{ height: Math.max(24, h) }} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={brand.logo.src}
@@ -292,8 +295,8 @@ function BrandMark({ brand }: { brand: NavLink }) {
           width={w}
           height={h}
           loading="lazy"
-          className="block opacity-70 [filter:grayscale(1)_brightness(0.35)] transition-[filter,opacity] group-hover:opacity-100 group-hover:[filter:none]"
-          style={{ width: w, height: h }}
+          className="block object-contain opacity-70 [filter:var(--logo-rest,grayscale(1)_brightness(0.35))] transition-[filter,opacity] group-hover:opacity-100 group-hover:[filter:none]"
+          style={{ width: w, height: h, ...logoRestStyle(brand.logo) }}
         />
       </span>
     )

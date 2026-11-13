@@ -1,6 +1,7 @@
 // Equipment brands we service (machines/appliances) — distinct from the homepage
 // "brands we represent" list. SVG logos render white on the dark section; brands
-// without a clean SVG fall back to a styled wordmark.
+// whose logo doesn't survive that white-silhouette treatment (Sammic's round
+// badge would become a plain white disc) fall back to a styled wordmark.
 const BRANDS: { name: string; logo?: string }[] = [
   { name: "Fagor", logo: "/brands/fagor.svg" },
   { name: "Sammic" },

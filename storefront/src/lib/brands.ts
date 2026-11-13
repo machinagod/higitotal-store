@@ -1,7 +1,35 @@
+import type { CSSProperties } from "react"
 import {
   displayCategoryName,
   isInternalCategory,
 } from "@lib/util/category-display"
+
+export type BrandLogo = {
+  src: string
+  width: number
+  height: number
+  /**
+   * Optical size tweak for compact marks (round badges, square or stacked
+   * logos): lets the mark grow this many times taller than the shared height
+   * cap of the strip / Marcas menu, so it reads at a similar weight to the
+   * wide wordmarks. Default 1.
+   */
+  scale?: number
+  /**
+   * CSS `filter` for the muted, at-rest state of the strip / Marcas menu,
+   * replacing the default `grayscale(1) brightness(0.35)` ink treatment. Only
+   * for marks whose own contrast that treatment flattens — dark lettering on a
+   * coloured field (Viper), or white lettering on one (Taski, Sammic).
+   */
+  restFilter?: string
+}
+
+/** Inline style carrying a logo's at-rest filter override, if any. */
+export function logoRestStyle(logo: BrandLogo): CSSProperties {
+  return logo.restFilter
+    ? ({ "--logo-rest": logo.restFilter } as CSSProperties)
+    : {}
+}
 
 /**
  * Single source of truth for the brands we work with — shared by the header /
@@ -17,8 +45,12 @@ import {
 export type Brand = {
   /** Customer-facing name, with the brand's own casing. */
   name: string
-  /** Monochrome-friendly logo in /public/brands, with its intrinsic aspect. */
-  logo?: { src: string; width: number; height: number }
+  /**
+   * Official logo in /public/brands, with its intrinsic aspect (the SVG
+   * viewBox / PNG pixel size). Keep the brand's own artwork and colours —
+   * never redraw a mark; each entry notes where its file came from.
+   */
+  logo?: BrandLogo
   /** Collection handle — a landing page when the brand has no sub-ranges. */
   collection?: string
   /** Category names/handles that are really this brand (normalised on match). */
@@ -36,20 +68,62 @@ export const BRANDS: Brand[] = [
     name: "Fagor",
     logo: { src: "/brands/fagor.svg", width: 180, height: 61 },
   },
-  { name: "Sammic" },
+  {
+    // sammic.com header logo (assets/logo-sammic-115px.svg) — round badge.
+    name: "Sammic",
+    logo: {
+      src: "/brands/sammic.svg",
+      width: 113.39,
+      height: 113.39,
+      scale: 1.3,
+      restFilter: "grayscale(1)",
+    },
+  },
   {
     name: "Nilfisk",
     logo: { src: "/brands/nilfisk.svg", width: 145, height: 19 },
   },
-  { name: "Viper" },
   {
+    // Nilfisk press & media page (media/x33c5sos/viper-logo.png); no
+    // official vector published, so a transparent PNG cropped to the art.
+    name: "Viper",
+    logo: {
+      src: "/brands/viper.png",
+      width: 900,
+      height: 278,
+      restFilter: "grayscale(1) brightness(2.2)",
+    },
+  },
+  {
+    // solenis.com (Assets/imgs/diversey-logo.svg) — Diversey is a Solenis
+    // brand since 2023; this is the 2024 refreshed mark.
     name: "Diversey",
+    logo: { src: "/brands/diversey.svg", width: 103, height: 20.65 },
     collection: "diversey",
     categoryKeys: ["diversey"],
   },
-  { name: "Taski", categoryKeys: ["taski"] },
   {
+    // The TASKI box, extracted (vector, unchanged) from an official TASKI
+    // product sheet on taski.com (2026); matches the taski.com header.
+    name: "Taski",
+    logo: {
+      src: "/brands/taski.svg",
+      width: 56.14,
+      height: 56.14,
+      scale: 1.15,
+      restFilter: "grayscale(1) brightness(0.8) contrast(2)",
+    },
+    categoryKeys: ["taski"],
+  },
+  {
+    // unilever.com core asset (core-assets/logos/logo-static.svg).
     name: "Unilever",
+    logo: {
+      src: "/brands/unilever.svg",
+      width: 117.92,
+      height: 129.58,
+      scale: 1.4,
+    },
     collection: "unilever",
     categoryKeys: ["unilever"],
   },
@@ -61,11 +135,18 @@ export const BRANDS: Brand[] = [
   },
   { name: "Vileda Swep", categoryKeys: ["vileda swep"], strip: false },
   {
+    // SC Johnson wordmark extracted (vector, unchanged) from an official SC
+    // Johnson Professional brochure; scjohnson.com/scjp.com are bot-walled.
     name: "SC Johnson (Deb)",
+    logo: { src: "/brands/sc-johnson.svg", width: 123.01, height: 41.27 },
     wordmark: "SC Johnson",
     categoryKeys: ["scjohnson (deb)", "sc johnson", "deb"],
   },
-  { name: "Celea" },
+  {
+    // celea.es header logo (media/images/logos/logo_blau_updated_2.svg).
+    name: "Celea",
+    logo: { src: "/brands/celea.svg", width: 281.03, height: 85.9 },
+  },
 ]
 
 /** Lower-case, accent-free, alphanumeric-only key for loose name matching. */

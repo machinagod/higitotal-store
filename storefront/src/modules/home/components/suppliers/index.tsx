@@ -1,14 +1,18 @@
+import { logoRestStyle } from "@lib/brands"
 import { getStripBrands } from "@lib/data/categories"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-// Every mark — SVG logo or typeset wordmark — sits in the same fixed box; wide
+// Every mark — logo or typeset wordmark — sits in the same fixed box; wide
 // marks (Nilfisk) are capped by width, compact ones (Fagor) by height, so they
-// read at a similar weight.
+// read at a similar weight. Round/square/stacked marks (Sammic, Taski,
+// Unilever) carry a `logo.scale` that lifts their height cap a little — a
+// 30px circle reads far lighter than a 112px-wide wordmark. The tile is 64px+
+// tall, so the taller mark still has room.
 const BOX_W = 112
 const BOX_H = 30
 
-function fit(width: number, height: number) {
-  const scale = Math.min(BOX_W / width, BOX_H / height)
+function fit(width: number, height: number, optical = 1) {
+  const scale = Math.min(BOX_W / width, (BOX_H * optical) / height)
   return {
     width: Math.round(width * scale),
     height: Math.round(height * scale),
@@ -54,7 +58,7 @@ const Suppliers = async () => {
         <ul className="grid grid-cols-2 gap-2 xsmall:grid-cols-3 small:grid-cols-5 small:gap-3">
           {brands.map((brand) => {
             const size = brand.logo
-              ? fit(brand.logo.width, brand.logo.height)
+              ? fit(brand.logo.width, brand.logo.height, brand.logo.scale)
               : null
             return (
               <li key={brand.name}>
@@ -65,7 +69,10 @@ const Suppliers = async () => {
                 >
                   <span
                     className="flex items-center justify-center"
-                    style={{ width: BOX_W, height: BOX_H }}
+                    style={{
+                      width: BOX_W,
+                      height: Math.max(BOX_H, size?.height ?? 0),
+                    }}
                   >
                     {brand.logo && size ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
@@ -76,8 +83,12 @@ const Suppliers = async () => {
                         height={size.height}
                         decoding="async"
                         loading="lazy"
-                        className="block opacity-70 [filter:grayscale(1)_brightness(0.35)] transition-[filter,opacity] duration-200 group-hover:opacity-100 group-hover:[filter:none] group-focus-visible:opacity-100 group-focus-visible:[filter:none]"
-                        style={{ width: size.width, height: size.height }}
+                        className="block object-contain opacity-70 [filter:var(--logo-rest,grayscale(1)_brightness(0.35))] transition-[filter,opacity] duration-200 group-hover:opacity-100 group-hover:[filter:none] group-focus-visible:opacity-100 group-focus-visible:[filter:none]"
+                        style={{
+                          width: size.width,
+                          height: size.height,
+                          ...logoRestStyle(brand.logo),
+                        }}
                       />
                     ) : (
                       <span

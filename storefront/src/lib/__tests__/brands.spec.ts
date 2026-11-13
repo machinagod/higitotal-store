@@ -1,3 +1,5 @@
+import fs from "node:fs"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   BRANDS,
@@ -130,7 +132,12 @@ describe("splitNavRoots", () => {
     expect(brands.find((b) => b.label === "SC Johnson (Deb)")?.wordmark).toBe(
       "SC Johnson"
     )
-    expect(brands.find((b) => b.label === "Sammic")?.logo).toBeUndefined()
+    expect(brands.find((b) => b.label === "Sammic")?.logo).toMatchObject({
+      src: "/brands/sammic.svg",
+      scale: 1.3,
+    })
+    // No logo → no `logo` key (the menu falls back to a monogram).
+    expect(brands.find((b) => b.label === "Vileda Swep")?.logo).toBeUndefined()
   })
 
   it("falls back to the category when the collection no longer exists", () => {
@@ -187,6 +194,33 @@ describe("stripBrands / brandHref", () => {
         expect(b.logo.width).toBeGreaterThan(0)
         expect(b.logo.height).toBeGreaterThan(0)
       }
+    }
+  })
+
+  it("every logo file exists, matches its declared aspect and is inert", () => {
+    const publicDir = path.resolve(__dirname, "../../../public")
+    for (const b of BRANDS) {
+      if (!b.logo) continue
+      const file = path.join(publicDir, b.logo.src)
+      expect(fs.existsSync(file), b.logo.src).toBe(true)
+      const declared = b.logo.width / b.logo.height
+      let actual: number
+      if (file.endsWith(".svg")) {
+        const svg = fs.readFileSync(file, "utf8")
+        const vb = svg.match(/viewBox="([^"]+)"/)?.[1].trim().split(/[\s,]+/)
+        expect(vb, b.logo.src).toHaveLength(4)
+        const [, , w, h] = vb!.map(Number)
+        actual = w / h
+        // Sanitised: no scripts, handlers, foreign content or external refs.
+        expect(svg).not.toMatch(/<script|<foreignObject|\son[a-z]+=|<image/i)
+        expect(svg).not.toMatch(/href="(?!#)/)
+      } else {
+        // PNG: IHDR width/height at bytes 16–23.
+        const png = fs.readFileSync(file)
+        actual = png.readUInt32BE(16) / png.readUInt32BE(20)
+      }
+      // Within 1% (the older entries round their viewBox).
+      expect(Math.abs(actual / declared - 1), b.logo.src).toBeLessThan(0.01)
     }
   })
 
