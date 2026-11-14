@@ -74,5 +74,31 @@
       "proxied": false,
       "ttl": 1
     }
+  ],
+  "higitotal.com": [
+    {
+      "id": "806811691f726aa54ec35351e9cbd635",
+      "type": "A",
+      "name": "higitotal.com",
+      "content": "153.92.220.221",
+      "proxied": true,
+      "ttl": 1
+    },
+    {
+      "id": "b3b0df060c2145796ab2287edee1161a",
+      "type": "CNAME",
+      "name": "mcp.higitotal.com",
+      "content": "5d1d501b-7bcd-4e85-a959-0d010eb5dc0f.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1
+    },
+    {
+      "id": "0a372ab1c7f1d638cc861ce107e864a0",
+      "type": "CNAME",
+      "name": "www.higitotal.com",
+      "content": "higitotal.com",
+      "proxied": true,
+      "ttl": 1
+    }
   ]
 }
