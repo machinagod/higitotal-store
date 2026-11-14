@@ -384,14 +384,42 @@ describe("POST /store/contact-request (captcha gate)", () => {
 
   it("staff e-mail failure still 502s after a valid captcha", async () => {
     const createNotifications = jest.fn().mockResolvedValue([{ status: "failure" }])
+    const log = logger()
     const req = {
       body,
       headers: {},
-      scope: { resolve: (key: string) => (key === "logger" ? logger() : { createNotifications }) },
+      scope: { resolve: (key: string) => (key === "logger" ? log : { createNotifications }) },
     }
     const res = { statusCode: 200, status: jest.fn(), json: jest.fn() }
     res.status.mockReturnValue(res)
     await POST(req as never, res as never)
     expect(res.status).toHaveBeenCalledWith(502)
+    // Not a lead: nothing logged as one.
+    expect(log.info).not.toHaveBeenCalledWith(expect.stringMatching(/^lead:/))
+  })
+
+  it("accepted lead: one PII-free structured log line", async () => {
+    const { log } = await call({
+      ...body,
+      kind: "produto",
+      productTitle: "Drip Floor",
+      productUrl: "https://www.higitotal.pt/dk/products/drip-floor?utm_source=x#top",
+      phone: "912345678",
+    })
+    expect(log.info).toHaveBeenCalledWith("lead: kind=produto items=0 path=/dk/products/drip-floor")
+    const line = log.info.mock.calls.map((c: unknown[]) => String(c[0])).join("\n")
+    for (const pii of ["Ana", "ana@example.pt", "912345678", "Olá", "utm_source"]) {
+      expect(line).not.toContain(pii)
+    }
+  })
+
+  it("accepted quote list: logged as orcamento with its line count", async () => {
+    const { log } = await call({
+      ...body,
+      kind: "produto",
+      items: [{ sku: "A1", quantity: 2 }, { title: "Balde", quantity: 1 }],
+      productUrl: "https://www.higitotal.pt/dk/orcamento",
+    })
+    expect(log.info).toHaveBeenCalledWith("lead: kind=orcamento items=2 path=/dk/orcamento")
   })
 })

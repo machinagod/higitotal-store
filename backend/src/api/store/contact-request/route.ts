@@ -1,5 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { leadLogLine, summarizeLead } from "../../../lib/lead-stats"
 import { parseContactRequest, sendContactRequest } from "./handler"
 import {
   CAPTCHA_ERROR_MESSAGE,
@@ -64,6 +65,9 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   if (!outcome.ok) {
     return res.status(502).json({ message: "could not send the request email" })
   }
+
+  // One PII-free line per accepted lead (kind, quote lines, landing path).
+  logger.info(leadLogLine(summarizeLead(parsed.request)))
 
   res.json({ ok: true })
 }
