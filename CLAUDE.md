@@ -133,8 +133,9 @@ to reproduce CI, type-check a copy of `storefront/` without `e2e/`.
   `/api/healthcheck` on the storefront) before `e2e-prod` runs. `e2e-prod`
   (`pnpm test-e2e:prod`, `playwright.prod.config.ts` → `e2e/prod/`) is **strictly
   read-only** — navigation/render assertions only, never creates carts/accounts/
-  orders — and authenticates through the access-token gate with the
-  `STOREFRONT_ACCESS_TOKEN` repo secret. PRs run **no** e2e.
+  orders. The access-token gate is **off** in prod since launch
+  (`STOREFRONT_ACCESS_TOKEN` removed from the Railway storefront); the repo
+  secret is still passed and its auth step is harmless. PRs run **no** e2e.
 - **Storefront images are env-specific**: `NEXT_PUBLIC_*` (incl. the publishable
   key) are inlined at build time from GitHub Actions **Variables**. The backend
   image needs no build secrets.
@@ -145,6 +146,21 @@ to reproduce CI, type-check a copy of `storefront/` without `e2e/`.
   `scintillating-adaptation / production` Environment), the `RAILWAY_BACKEND_SERVICE`
   / `RAILWAY_STOREFRONT_SERVICE` Variables, and the `STOREFRONT_ACCESS_TOKEN` repo
   secret (for the prod e2e gate). Full list in `.github/workflows/README.md`.
+- **Live since 2026-11-14**: `https://www.higitotal.pt` serves this storefront
+  (Cloudflare-proxied CNAME → Railway custom domain; rollback snapshot in
+  `docs/launch/dns-before-switch.json`). `CANONICAL_HOST=www.higitotal.pt` on the
+  Railway storefront 301s `store.higitotal.pt` / `higitotal.pt` to www
+  (`storefront/src/lib/canonical-host.ts`); `NEXT_PUBLIC_BASE_URL` (Actions
+  Variable) is `https://www.higitotal.pt`. Legacy PrestaShop URLs (`/base/...`)
+  301 via middleware. Note: this sandbox's network proxy percent-encodes `(` `)`
+  in Chromium requests, so `/_next/static/.../(main)/...` chunks 404 and pages
+  crash *only here* — verify the live site with curl or the CI e2e, not local
+  Chromium through the proxy.
+- **hCaptcha** guards `POST /store/contact-request` (every form). Backend:
+  `HCAPTCHA_SECRET` enables verification, `HCAPTCHA_REQUIRED=true` rejects
+  token-less requests, outages fail open (`backend/src/api/store/contact-request/captcha.ts`).
+  Storefront widget: `modules/common/components/hcaptcha` (site key default in
+  `lib/util/hcaptcha.ts`). Tests must intercept the POST, never send one.
 - The `storefront/e2e` suite **drops/recreates its DB** — only ever point it at a
   `test_`-prefixed DB, never the production `DATABASE_URL`.
 
