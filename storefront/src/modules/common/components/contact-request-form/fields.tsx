@@ -1,7 +1,7 @@
 "use client"
 
 import { clx } from "@medusajs/ui"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, ChevronDown } from "lucide-react"
 import React, { useCallback, useRef, useState } from "react"
 
 import { sdk } from "@lib/config"
@@ -69,6 +69,34 @@ export function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 /**
+ * Opens the collapsed "Mais detalhes" section(s) (`<details>`) a form control
+ * sits in, so an error there is never hidden.
+ */
+function reveal(el: Element | null | undefined) {
+  let d = el?.closest("details") ?? null
+  while (d) {
+    if (!d.open) d.open = true
+    d = d.parentElement?.closest("details") ?? null
+  }
+}
+
+/**
+ * Focuses an invalid control and centres it, so the error line rendered under
+ * it is not left behind the product sheet's sticky "Enviar pedido" bar.
+ */
+function focusField(el: Element | null | undefined) {
+  if (!(el instanceof HTMLElement)) return
+  el.focus({ preventScroll: true })
+  el.scrollIntoView?.({ block: "center" })
+}
+
+/** Focuses a form control, first opening the collapsed section it sits in. */
+export function revealAndFocus(el: Element | null | undefined) {
+  reveal(el)
+  focusField(el)
+}
+
+/**
  * Field-level validation state for the uncontrolled forms: errors appear on
  * submit, then update live as the user fixes them.
  */
@@ -95,15 +123,21 @@ export function useFieldErrors(
     } as const
   }
 
-  /** Validates on submit; focuses the first invalid field. True when valid. */
+  /**
+   * Validates on submit. Opens the collapsed optional section when any
+   * invalid field is in there, then focuses the first invalid field. True
+   * when valid.
+   */
   const check = (form: HTMLFormElement) => {
     attempted.current = true
     const found = validate(form)
     setProblems(found)
-    if (found.length) {
-      const el = form.elements.namedItem(found[0].field)
-      if (el instanceof HTMLElement) el.focus()
-    }
+    const controls = found.map((p) => {
+      const el = form.elements.namedItem(p.field)
+      return el instanceof Element ? el : null
+    })
+    controls.forEach(reveal)
+    focusField(controls[0])
     return found.length === 0
   }
 
@@ -152,7 +186,7 @@ export function ErrorSummary({
               className="inline-block min-h-[24px] py-[3px] underline underline-offset-2"
               onClick={(e) => {
                 e.preventDefault()
-                document.getElementById(fieldId(p.field))?.focus()
+                revealAndFocus(document.getElementById(fieldId(p.field)))
               }}
             >
               {p.message}
@@ -164,7 +198,14 @@ export function ErrorSummary({
   )
 }
 
-/** "Forma de contacto preferida" — Telefone / E-mail as pill radios. */
+/** Preselected "Forma de contacto preferida". */
+export const DEFAULT_CONTACT_PREF = "email"
+
+/**
+ * "Forma de contacto preferida" — Telefone / E-mail as pill radios. E-mail is
+ * preselected (the only contact the minimum form asks for); choosing
+ * Telefone makes the phone required.
+ */
 export function ContactPrefField({
   idPrefix,
   accent = "cyan",
@@ -191,7 +232,7 @@ export function ContactPrefField({
               type="radio"
               name="contactPref"
               value={o.value}
-              defaultChecked={i === 0}
+              defaultChecked={o.value === DEFAULT_CONTACT_PREF}
               className="peer sr-only"
             />
             <span
@@ -208,6 +249,79 @@ export function ContactPrefField({
         ))}
       </div>
     </fieldset>
+  )
+}
+
+/** "Mais detalhes (opcional)" summary title. */
+export const OPTIONAL_DETAILS_TITLE = "Mais detalhes (opcional)"
+
+/**
+ * The optional part of a form: a native `<details>` disclosure, collapsed by
+ * default, titled "Mais detalhes (opcional)" with a hint listing what is
+ * inside. Uncontrolled on purpose: once opened it stays open across
+ * re-renders (and while the product sheet is closed and reopened, as the
+ * sheet keeps the form mounted). `revealAndFocus` opens it when one of its
+ * fields has an error. Fields inside are still part of the form (FormData).
+ */
+export function OptionalDetails({
+  hint,
+  children,
+  accent = "cyan",
+  className,
+  "data-testid": testId = "optional-details",
+}: {
+  /** What is inside, e.g. "Telefone, empresa, localidade…". */
+  hint: string
+  children: React.ReactNode
+  accent?: "cyan" | "orange"
+  className?: string
+  "data-testid"?: string
+}) {
+  return (
+    <details
+      className={clx(
+        "group rounded-btn border-[1.5px] border-hairline bg-white transition-colors open:border-[#cdd5dd]",
+        className
+      )}
+      data-testid={testId}
+    >
+      <summary
+        className={clx(
+          "flex min-h-[44px] cursor-pointer list-none items-center gap-3 rounded-[10px] px-3 py-2 outline-none transition-colors hover:bg-[#f7f9fa] focus-visible:ring-4 xsmall:px-4 [&::-webkit-details-marker]:hidden",
+          accent === "cyan"
+            ? "focus-visible:ring-brand-cyan/25"
+            : "focus-visible:ring-svc-signal/25"
+        )}
+        data-testid={`${testId}-summary`}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-brand-ink">
+            {OPTIONAL_DETAILS_TITLE}
+          </span>
+          <span className="mt-0.5 block text-xs leading-snug text-grey-60">
+            {hint}
+          </span>
+        </span>
+        <ChevronDown
+          className="h-5 w-5 flex-none text-grey-60 transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
+      <div className="border-t border-hairline px-3 pb-4 pt-3.5 xsmall:px-4">
+        {children}
+      </div>
+    </details>
+  )
+}
+
+/** "Os campos assinalados com * são obrigatórios." — for forms without a page intro. */
+export function RequiredLegend({ className }: { className?: string }) {
+  return (
+    <p className={clx("text-xs text-grey-60", className)}>
+      Os campos assinalados com{" "}
+      <span className="font-semibold text-brand-cyan">*</span> são
+      obrigatórios.
+    </p>
   )
 }
 

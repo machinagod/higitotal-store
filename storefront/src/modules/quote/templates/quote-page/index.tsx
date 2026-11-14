@@ -133,8 +133,8 @@ export default function QuotePageTemplate() {
               </h2>
               <p className="mb-6 mt-1 text-sm text-grey-60">
                 {hasItems
-                  ? `O pedido inclui ${productCountLabel(items.length)}. Os campos assinalados com * são obrigatórios.`
-                  : "Os campos assinalados com * são obrigatórios. Indique um telefone ou, se preferir ser contactado por e-mail, escreva uma mensagem."}
+                  ? `O pedido inclui ${productCountLabel(items.length)}. Só precisamos do seu nome e e-mail (campos assinalados com *).`
+                  : "Os campos assinalados com * são obrigatórios."}
               </p>
               <ContactRequestForm
                 kind={hasItems ? "produto" : "geral"}

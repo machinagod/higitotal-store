@@ -223,10 +223,6 @@ export function parseContactRequest(body: unknown): ParseResult {
     return { status: 'invalid', message: parsedItems.message }
   }
   const items = parsedItems.items
-  // A quote list is content in itself; otherwise a phone or a message is needed.
-  if (!fields.phone && !fields.message && !items?.length) {
-    return { status: 'invalid', message: 'provide a phone, a message or items' }
-  }
 
   // A quote list is a product request even when the kind is missing / unknown.
   const kind = inferContactKind({
@@ -234,6 +230,15 @@ export function parseContactRequest(body: unknown): ParseResult {
     productTitle: fields.productTitle,
     sku: fields.sku ?? (items?.length ? items[0].sku ?? items[0].title : undefined),
   })
+
+  // A product enquiry (single product or quote list) is content in itself: the
+  // product says what the customer wants, so name + e-mail are enough. Other
+  // requests (general contact, assistência — whose legacy "Assistência
+  // Técnica" title is not a product) still need a phone or a message.
+  const hasProduct = kind === 'produto' && !!(fields.productTitle || fields.sku)
+  if (!fields.phone && !fields.message && !items?.length && !hasProduct) {
+    return { status: 'invalid', message: 'provide a phone, a message, a product or items' }
+  }
 
   return {
     status: 'ok',

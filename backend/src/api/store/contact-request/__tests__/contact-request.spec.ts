@@ -152,9 +152,50 @@ describe("parseContactRequest", () => {
   it("requires a phone or a message", () => {
     expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt" })).toEqual({
       status: "invalid",
-      message: "provide a phone, a message or items",
+      message: "provide a phone, a message, a product or items",
     })
     expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt", message: "Olá" }).status).toBe("ok")
+  })
+
+  it("accepts a single-product enquiry with only name and e-mail", () => {
+    const bySku = parseContactRequest({ name: "Ana", email: "ana@empresa.pt", kind: "produto", sku: "DX1002" })
+    expect(bySku.status).toBe("ok")
+    expect(bySku.status === "ok" && bySku.request).toMatchObject({ kind: "produto", sku: "DX1002" })
+    // Legacy payload without a kind: the product title alone makes it a product request.
+    const byTitle = parseContactRequest({ name: "Ana", email: "ana@empresa.pt", productTitle: "Drip Floor (2L)" })
+    expect(byTitle.status === "ok" && byTitle.request).toMatchObject({
+      kind: "produto",
+      productTitle: "Drip Floor (2L)",
+    })
+  })
+
+  it("still needs a name and a valid e-mail for a product enquiry", () => {
+    expect(parseContactRequest({ email: "ana@empresa.pt", kind: "produto", sku: "DX1002" }).status).toBe("invalid")
+    expect(parseContactRequest({ name: "Ana", email: "ana@", kind: "produto", sku: "DX1002" }).status).toBe("invalid")
+  })
+
+  it("does not treat a product on a non-product request as content", () => {
+    // assistência: the legacy "Assistência Técnica" title is not a product
+    expect(
+      parseContactRequest({ name: "Rui", email: "rui@x.pt", kind: "assistencia", productTitle: "Assistência Técnica" })
+    ).toEqual({ status: "invalid", message: "provide a phone, a message, a product or items" })
+    expect(
+      parseContactRequest({ name: "Rui", email: "rui@x.pt", productTitle: "Assistência Técnica" }).status
+    ).toBe("invalid")
+    // an explicit general request still needs a phone or a message
+    expect(parseContactRequest({ name: "Ana", email: "ana@empresa.pt", kind: "geral", sku: "DX1002" }).status).toBe(
+      "invalid"
+    )
+    // a description makes the assistência request valid
+    expect(
+      parseContactRequest({
+        name: "Rui",
+        email: "rui@x.pt",
+        kind: "assistencia",
+        productTitle: "Assistência Técnica",
+        message: "Não aquece.",
+      }).status
+    ).toBe("ok")
   })
 
   it("accepts a quote list without phone or message", () => {

@@ -5,6 +5,7 @@ import {
   buildContactRequestPayload,
   CONTACT_ERROR_MESSAGE,
   isTruthyFlag,
+  MESSAGE_REQUIRED_ERROR,
   PRODUCT_ENQUIRY_MESSAGE,
   productEnquiryHref,
   QUOTE_LIST_MESSAGE,
@@ -32,24 +33,10 @@ describe("enquiry deep link", () => {
 })
 
 describe("validateContactRequest", () => {
-  const ok = { name: "Ana", email: "ana@empresa.pt", phone: "912345678" }
+  const ok = { name: "Ana", email: "ana@empresa.pt", message: "Preciso de 20 caixas" }
 
-  it("accepts name + email + phone", () => {
+  it("accepts name + email + message (general contact)", () => {
     expect(validateContactRequest(ok)).toBeNull()
-  })
-
-  it("accepts a message instead of a phone", () => {
-    expect(validateContactRequest({ ...ok, phone: " ", message: "Olá" })).toBeNull()
-  })
-
-  it("accepts a quote list with only the prefilled message when e-mail is preferred", () => {
-    const f = { ...ok, phone: "", message: "Pedido", contactPref: "email" }
-    expect(validateContactRequest(f, { prefilledMessage: "Pedido" })).not.toBeNull()
-    expect(validateContactRequest(f, { prefilledMessage: "Pedido", hasItems: true })).toBeNull()
-    // phone preferred still needs a phone, list or not
-    expect(
-      validateContactRequest({ ...f, contactPref: "telefone" }, { hasItems: true })?.field
-    ).toBe("phone")
   })
 
   it("requires a name", () => {
@@ -63,10 +50,6 @@ describe("validateContactRequest", () => {
     expect(validateContactRequest({ ...ok, email: "ana@" })?.field).toBe("email")
   })
 
-  it("requires a phone or a message", () => {
-    expect(validateContactRequest({ ...ok, phone: "" })?.message).toMatch(/telefone/)
-  })
-
   it("asks for an e-mail when it is missing and for a valid one when malformed", () => {
     expect(validateContactRequest({ ...ok, email: "" })?.message).toBe(
       "Indique o seu e-mail."
@@ -76,42 +59,44 @@ describe("validateContactRequest", () => {
     )
   })
 
-  it("requires a phone when Telefone is the preferred contact", () => {
+  it("requires a message for a general request, even with a phone", () => {
+    expect(validateContactRequest({ ...ok, message: " " })).toEqual({
+      field: "message",
+      message: MESSAGE_REQUIRED_ERROR,
+    })
     expect(
-      validateContactRequest({
-        ...ok,
-        phone: "",
-        message: "Preciso de 20 caixas",
-        contactPref: "telefone",
-      })
-    ).toEqual({
+      validateContactRequest({ ...ok, message: "", phone: "912345678" })?.field
+    ).toBe("message")
+  })
+
+  it("does not require a phone (it is optional)", () => {
+    expect(validateContactRequest({ ...ok, phone: "", contactPref: "email" })).toBeNull()
+    expect(validateContactRequest({ ...ok, contactPref: undefined })).toBeNull()
+  })
+
+  it("requires a phone when Telefone is the preferred contact", () => {
+    expect(validateContactRequest({ ...ok, phone: "", contactPref: "telefone" })).toEqual({
       field: "phone",
       message:
         "Indique um telefone ou escolha E-mail como forma de contacto preferida.",
     })
-    // E-mail preferred: the message is enough.
     expect(
-      validateContactRequest({
-        ...ok,
-        phone: "",
-        message: "Preciso de 20 caixas",
-        contactPref: "email",
-      })
+      validateContactRequest({ ...ok, phone: "912 345 678", contactPref: "telefone" })
     ).toBeNull()
   })
 
   it("rejects a phone with fewer than 9 digits", () => {
     expect(validateContactRequest({ ...ok, phone: "12 34" })?.field).toBe("phone")
+    expect(
+      validateContactRequest({ ...ok, phone: "12 34", contactPref: "email" })?.message
+    ).toBe("Indique um telefone válido, com pelo menos 9 dígitos.")
     expect(validateContactRequest({ ...ok, phone: "+351 912 345 678" })).toBeNull()
   })
 
-  it("treats an unchanged prefilled message as empty", () => {
-    const prefilled = PRODUCT_ENQUIRY_MESSAGE
-    const f = { ...ok, phone: "", contactPref: "email", message: prefilled }
-    expect(validateContactRequest(f, { prefilledMessage: prefilled })).toEqual({
-      field: "message",
-      message: "Indique um telefone ou escreva uma mensagem.",
-    })
+  it("treats an unchanged prefilled message as empty when a message is required", () => {
+    const prefilled = QUOTE_LIST_MESSAGE
+    const f = { ...ok, message: prefilled }
+    expect(validateContactRequest(f, { prefilledMessage: prefilled })?.field).toBe("message")
     // Re-wrapped whitespace still counts as unchanged.
     expect(
       validateContactRequest(
@@ -119,40 +104,82 @@ describe("validateContactRequest", () => {
         { prefilledMessage: prefilled }
       )?.field
     ).toBe("message")
-    // Edited → valid; a phone also satisfies the rule.
+    // Edited → valid.
     expect(
       validateContactRequest(
         { ...f, message: `${prefilled} São 40 unidades.` },
         { prefilledMessage: prefilled }
       )
     ).toBeNull()
-    expect(
-      validateContactRequest({ ...f, phone: "912345678" }, { prefilledMessage: prefilled })
-    ).toBeNull()
   })
 
-  it("uses the assistência wording for the description", () => {
+  it("uses the given wording for a missing description (assistência)", () => {
     expect(
       validateContactRequest(
-        { ...ok, phone: "", contactPref: "email", message: "" },
-        { messageHint: "descreva o pedido" }
-      )?.message
-    ).toBe("Indique um telefone ou descreva o pedido.")
+        { ...ok, message: "" },
+        { messageError: "Descreva o problema ou o pedido." }
+      )
+    ).toEqual({ field: "message", message: "Descreva o problema ou o pedido." })
+  })
+})
+
+describe("product enquiry (single product)", () => {
+  const base = { name: "Ana", email: "ana@empresa.pt" }
+  const opts = { prefilledMessage: PRODUCT_ENQUIRY_MESSAGE, hasProduct: true }
+
+  it("needs only a name and an e-mail", () => {
+    expect(validateContactRequestAll({ ...base, contactPref: "email" }, opts)).toEqual([])
+    // The unchanged prefilled message is fine, and no phone is needed.
+    expect(
+      validateContactRequestAll(
+        { ...base, contactPref: "email", message: PRODUCT_ENQUIRY_MESSAGE },
+        opts
+      )
+    ).toEqual([])
+    expect(validateContactRequestAll({ ...base, message: "" }, opts)).toEqual([])
+  })
+
+  it("still needs the name and a valid e-mail", () => {
+    expect(
+      validateContactRequestAll({ name: "", email: "x", contactPref: "email" }, opts).map(
+        (p) => p.field
+      )
+    ).toEqual(["name", "email"])
+  })
+
+  it("keeps the phone rules", () => {
+    expect(
+      validateContactRequestAll({ ...base, contactPref: "telefone" }, opts).map((p) => p.field)
+    ).toEqual(["phone"])
+    expect(
+      validateContactRequestAll({ ...base, phone: "123", contactPref: "email" }, opts).map(
+        (p) => p.field
+      )
+    ).toEqual(["phone"])
+  })
+
+  it("requires a message without the product context", () => {
+    expect(
+      validateContactRequestAll(
+        { ...base, contactPref: "email", message: PRODUCT_ENQUIRY_MESSAGE },
+        { prefilledMessage: PRODUCT_ENQUIRY_MESSAGE }
+      ).map((p) => p.field)
+    ).toEqual(["message"])
   })
 })
 
 describe("validateContactRequestAll", () => {
-  it("lists every problem in form order", () => {
+  it("lists every problem in form order (required fields, then the optional section)", () => {
     expect(
       validateContactRequestAll({ name: "", email: "x", phone: "", contactPref: "telefone" }).map(
         (p) => p.field
       )
-    ).toEqual(["name", "email", "phone"])
+    ).toEqual(["name", "email", "message", "phone"])
   })
 
   it("is empty for a valid request", () => {
     expect(
-      validateContactRequestAll({ name: "Ana", email: "ana@empresa.pt", phone: "912345678" })
+      validateContactRequestAll({ name: "Ana", email: "ana@empresa.pt", message: "Olá" })
     ).toEqual([])
   })
 })
@@ -172,12 +199,11 @@ describe("assistência helpers", () => {
     expect(buildAssistanceMessage({})).toBeUndefined()
   })
 
-  it("validates the user's description, not the assembled message", () => {
-    // The assembled message always has the service type; the description is empty.
-    const fields = { name: "Rui", email: "rui@x.pt", phone: "", contactPref: "email", message: "" }
-    expect(validateContactRequest(fields, { messageHint: "descreva o pedido" })?.field).toBe(
-      "message"
-    )
+  it("requires the user's description, not the assembled message", () => {
+    // The assembled message may hold the service type; the description is empty.
+    const fields = { name: "Rui", email: "rui@x.pt", phone: "912345678", contactPref: "email", message: "" }
+    expect(validateContactRequestAll(fields).map((p) => p.field)).toEqual(["message"])
+    expect(validateContactRequestAll({ ...fields, phone: "", message: "Não aquece." })).toEqual([])
   })
 
   it("sends modelo and urgente only when set", () => {
@@ -251,13 +277,27 @@ describe("quote list request", () => {
     expect(payload).not.toHaveProperty("items")
   })
 
-  it("does not count the unchanged quote message as a message", () => {
+  it("needs only a name and an e-mail when the list has items", () => {
+    const f = { name: "Ana", email: "ana@empresa.pt", contactPref: "email", message: QUOTE_LIST_MESSAGE }
+    expect(
+      validateContactRequestAll(f, { prefilledMessage: QUOTE_LIST_MESSAGE, hasItems: true })
+    ).toEqual([])
+    expect(validateContactRequestAll({ ...f, message: "" }, { hasItems: true })).toEqual([])
+    // Telefone preferred still needs a phone, list or not.
+    expect(
+      validateContactRequestAll({ ...f, contactPref: "telefone" }, { hasItems: true }).map(
+        (p) => p.field
+      )
+    ).toEqual(["phone"])
+  })
+
+  it("does not count the unchanged quote message as a message without items", () => {
     expect(
       validateContactRequestAll(
         { name: "Ana", email: "ana@empresa.pt", contactPref: "email", message: QUOTE_LIST_MESSAGE },
         { prefilledMessage: QUOTE_LIST_MESSAGE }
       )
-    ).toEqual([{ field: "message", message: "Indique um telefone ou escreva uma mensagem." }])
+    ).toEqual([{ field: "message", message: MESSAGE_REQUIRED_ERROR }])
   })
 })
 

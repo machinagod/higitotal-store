@@ -169,8 +169,7 @@ export default function ContactPage() {
             Envie-nos uma mensagem
           </h2>
           <p className="mb-6 mt-1 text-sm text-grey-60">
-            Os campos assinalados com * são obrigatórios. Indique um telefone
-            ou, se preferir ser contactado por e-mail, escreva uma mensagem.
+            Os campos assinalados com * são obrigatórios.
           </p>
           <ContactRequestForm kind="geral" idPrefix="contact" />
         </section>
