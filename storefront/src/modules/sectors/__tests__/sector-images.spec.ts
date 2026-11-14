@@ -53,7 +53,7 @@ describe("sector images", () => {
         expect(files.has(rel), rel).toBe(true)
       }
     }
-    for (const rel of files) {
+    for (const rel of Array.from(files)) {
       expect(statSync(join(ASSETS, rel)).size, rel).toBeLessThan(MAX_BYTES)
     }
   })
