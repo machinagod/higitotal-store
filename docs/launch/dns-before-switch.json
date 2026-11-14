@@ -1,0 +1,78 @@
+{
+  "captured_utc": "2026-11-14",
+  "zone": "higitotal.pt",
+  "records": [
+    {
+      "id": "6516d54077bdf89b415c3f444093dfec",
+      "type": "A",
+      "name": "higitotal.pt",
+      "content": "153.92.220.221",
+      "proxied": true,
+      "ttl": 1
+    },
+    {
+      "id": "f899fde1a8f0b5592420743b961d078b",
+      "type": "A",
+      "name": "www.higitotal.pt",
+      "content": "153.92.220.221",
+      "proxied": true,
+      "ttl": 1
+    },
+    {
+      "id": "4acaacbb79f6063626616929c004f782",
+      "type": "CNAME",
+      "name": "autoconfig.higitotal.pt",
+      "content": "www.higitotal.pt",
+      "proxied": true,
+      "ttl": 1
+    },
+    {
+      "id": "b3ca5e2df7374282a133fee7ffa80f3e",
+      "type": "CNAME",
+      "name": "store.higitotal.pt",
+      "content": "u9r8rr1c.up.railway.app",
+      "proxied": true,
+      "ttl": 1
+    },
+    {
+      "id": "9ca1e127a492361332a28054423142c1",
+      "type": "MX",
+      "name": "higitotal.pt",
+      "content": "mx2.zoho.eu",
+      "proxied": false,
+      "ttl": 1
+    },
+    {
+      "id": "763776de80d7cd5fc93b69869ddde965",
+      "type": "MX",
+      "name": "higitotal.pt",
+      "content": "mx3.zoho.eu",
+      "proxied": false,
+      "ttl": 1
+    },
+    {
+      "id": "4854986e067abf2decb24581f180f8eb",
+      "type": "MX",
+      "name": "higitotal.pt",
+      "content": "mx.zoho.eu",
+      "proxied": false,
+      "ttl": 1
+    },
+    {
+      "id": "d3a245ad555af76fbffac2b88cc284d4",
+      "type": "TXT",
+      "name": "higitotal.pt",
+      "content": "apple-domain-verification=UQ2gTy996HZK6dzN",
+      "proxied": false,
+      "ttl": 1
+    },
+    {
+      "id": "05744516849f4c17c2b9da9d91dd336d",
+      "type": "TXT",
+      "name": "higitotal.pt",
+      "content": "v=spf1 include:zoho.eu ~all",
+      "proxied": false,
+      "ttl": 1
+    }
+  ]
+}

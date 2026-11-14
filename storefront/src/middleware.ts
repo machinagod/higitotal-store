@@ -1,3 +1,4 @@
+import { canonicalHostRedirect } from "@lib/canonical-host"
 import { HttpTypes } from "@medusajs/types"
 import { notFound } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
@@ -166,6 +167,16 @@ function catalogModeRedirect(request: NextRequest): NextResponse | null {
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
+  // Domain switch: alias hosts (store., bare domain) → the canonical host,
+  // same path + query. No-op unless CANONICAL_HOST is set (see canonical-host).
+  const canonical = canonicalHostRedirect(
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
+    request.nextUrl.pathname + request.nextUrl.search
+  )
+  if (canonical) {
+    return NextResponse.redirect(canonical, 301)
+  }
+
   // Legacy PrestaShop URLs (/base/…) → permanent redirect to the new pages.
   const legacy = legacyRedirect(request.nextUrl.pathname, request.nextUrl.searchParams)
   if (legacy) {
