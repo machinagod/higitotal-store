@@ -144,28 +144,30 @@ export default async function Home({
   }
 
   // Hero product shot: the first photographed product of the hero collection.
-  const heroProduct = (
-    await collectionProducts(HERO_COLLECTION, countryCode, 4)
-  ).find((p) => p.thumbnail)
+  // Hero collection and the extra hero shots are independent: fetch together.
+  const [heroCandidates, rotation] = await Promise.all([
+    collectionProducts(HERO_COLLECTION, countryCode, 4),
+    Promise.all(
+      HERO_ROTATION_HANDLES.map((h) =>
+        getProductByHandle(h, region.id).catch(() => undefined)
+      )
+    ),
+  ])
+  const heroProduct = heroCandidates.find((p) => p.thumbnail)
 
-  const rotation = await Promise.all(
-    HERO_ROTATION_HANDLES.map((h) =>
-      getProductByHandle(h, region.id).catch(() => undefined)
-    )
-  )
   const heroImages = [
     heroProduct?.thumbnail,
     ...rotation.map((p) => p?.thumbnail),
   ].filter((src, i, all): src is string => !!src && all.indexOf(src) === i)
 
-  const featured = await featuredMix(countryCode, heroProduct?.id)
-
-  // A representative product image per hero carousel range, so the carousel
-  // shows product imagery — including on mobile, where the big hero shot is
-  // hidden. Avoids reusing the hero's own photo; empty/draft collections
+  // Featured rail + a representative product image per hero carousel range
+  // (so the carousel shows product imagery — including on mobile, where the
+  // big hero shot is hidden). Both only need the hero product: fetch together.
+  // The carousel avoids reusing the hero's own photo; empty/draft collections
   // resolve to undefined, leaving that slide text-only.
-  const carouselImages = Object.fromEntries(
-    await Promise.all(
+  const [featured, carouselEntries] = await Promise.all([
+    featuredMix(countryCode, heroProduct?.id),
+    Promise.all(
       SLIDES.map(async (slide) => {
         const products = await collectionProducts(slide.handle, countryCode, 4)
         const pick =
@@ -173,8 +175,9 @@ export default async function Home({
           products.find((p) => p.thumbnail)
         return [slide.handle, pick?.thumbnail ?? undefined] as const
       })
-    )
-  )
+    ),
+  ])
+  const carouselImages = Object.fromEntries(carouselEntries)
 
   return (
     <div className="content-container flex flex-col gap-8 py-3 small:gap-16 small:py-10">
