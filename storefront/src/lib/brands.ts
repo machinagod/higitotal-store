@@ -31,6 +31,14 @@ export type BrandLogo = {
    * omitted when under 1.5%.
    */
   opticalY?: number
+  /**
+   * Raster logos only: `srcset` (width descriptors) adding a larger file for
+   * the places that render the mark big (brand page header). `src` itself is
+   * sized for the small uses — the home strip, Marcas menu, chips (2× their
+   * ~100px width) — so those don't download the large file. Every file keeps
+   * the declared aspect (checked by brands.spec).
+   */
+  srcSet?: string
 }
 
 /** Shift that puts a logo's ink centre on the box centre (see `opticalY`). */
@@ -106,10 +114,13 @@ export const BRANDS: Brand[] = [
   },
   {
     // Nilfisk press & media page (media/x33c5sos/viper-logo.png); no
-    // official vector published, so a transparent PNG cropped to the art.
+    // official vector published, so a transparent PNG cropped to the art:
+    // viper-hd.png (324×100) for the brand page header, and viper.png
+    // (194×60, 2× the 97×30 home strip) for everything else.
     name: "Viper",
     logo: {
       src: "/brands/viper.png",
+      srcSet: "/brands/viper.png 194w, /brands/viper-hd.png 324w",
       width: 900,
       height: 278,
       restFilter: "grayscale(1) brightness(2.2)",

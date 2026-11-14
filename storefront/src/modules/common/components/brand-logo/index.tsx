@@ -49,6 +49,10 @@ export default function BrandLogoImg({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={logo.src}
+      // Raster logos with a larger variant: the browser picks by rendered
+      // width × DPR (small file in chips, the large one in the brand header).
+      srcSet={logo.srcSet}
+      sizes={logo.srcSet ? `${width}px` : undefined}
       alt={alt}
       width={width}
       height={height}

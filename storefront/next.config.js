@@ -19,6 +19,11 @@ const nextConfig = {
     // server component importing from its barrel otherwise ships the WHOLE
     // kit (radix, cmdk, calendar, date picker, prism…) to every page.
     optimizePackageImports: ["@medusajs/ui", "@medusajs/icons", "lucide-react", "radix-ui"],
+    // NOT `inlineCss`: measured on next 15.5 it inlines the global stylesheet
+    // (~22 KB gzip) TWICE per document — as a <style> tag and again inside
+    // the RSC flight payload — so every HTML response grew by ~45 KB gzip
+    // (home 83 → 128 KB, PDP 50 → 95 KB), uncached and re-sent on every page,
+    // to save one immutable, CDN-cached CSS request.
   },
   // `public/` files are not content-hashed, so Next serves them with
   // `max-age=0` (and Cloudflare then applies its 4 h default). Brand logos,
@@ -50,6 +55,12 @@ const nextConfig = {
     // Allowed `quality` values (Next 15.5 gates these): 50 = product thumbnails,
     // 75 = the default used everywhere else (e.g. the PDP gallery).
     qualities: [50, 75],
+    // Next's defaults plus 320 and 480, so responsive images get a candidate
+    // close to their real size instead of jumping 256 → 384 → 640 (e.g. the
+    // home hero: 262px on desktop → 320w, not 384w; 230px on a 1.75x phone →
+    // 480w, not 640w). Widths are only generated when requested; `sizes`
+    // images list every width in their srcset (~150 B of HTML each).
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 320, 384, 480],
     // Product imagery is stable and content-addressed in storage, so cache
     // optimized variants aggressively to maximize reuse within a container's life.
     minimumCacheTTL: 2678400, // 31 days

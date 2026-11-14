@@ -6,22 +6,40 @@ import { useEffect, useState } from "react"
 const INTERVAL_MS = 5000
 
 /**
+ * Rendered width of the hero shot at each breakpoint — the cut-outs are
+ * square and `object-contain`, so it is min(box width, box height). Measured
+ * (Playwright, `/pt`):
+ *  - < 1024px: the mobile background layer, a fixed 230px box.
+ *  - 1024–1279px: the desktop panel, capped by its 320px height.
+ *  - ≥ 1280px: the panel shares a row with the side column, so it is narrower
+ *    than its height: 229px @1280, 244px @1350, 262px from 1440 (the content
+ *    container's max width). `calc(20.6vw - 33px)` tracks that within ~2px,
+ *    rounded up.
+ * One string for both layers — the media conditions describe whichever layer
+ * is visible — so they resolve to the same candidate (see above). Keep it in
+ * step with the hero layout (`hero/index.tsx`).
+ */
+const HERO_SIZES =
+  "(min-width: 1440px) 262px, (min-width: 1280px) calc(20.6vw - 33px), (min-width: 1024px) 320px, 230px"
+
+/**
  * The big hero's product shot, cross-fading through a few cut-out product
  * photos (decorative: aria-hidden). Holds still with prefers-reduced-motion
  * and while the tab is hidden.
  *
  * LCP: only the FIRST image is in the initial HTML, eager and
  * fetchpriority=high. With `priority` (the desktop panel) next/image also
- * preloads it; the mobile layer passes `priority={false}` and the same
- * `sizes`, so it picks the same srcset candidate and shares that one
- * preload/download (one request per viewport). The other images are mounted
+ * preloads it; the mobile layer passes `priority={false}`. Both layers use the
+ * same `HERO_SIZES`, so at any viewport they pick the same srcset candidate
+ * and share that one preload/download (one request per viewport, even though
+ * the hidden layer's <img> is in the DOM too). The other images are mounted
  * only after `window` `load`, and the first cross-fade happens a full
  * interval after that — so they never compete with the critical path, and no
  * later image becomes the LCP element during page load.
  */
 export default function HeroRotator({
   images,
-  sizes = "360px",
+  sizes = HERO_SIZES,
   className = "relative h-[320px] w-full max-w-[360px]",
   imgClassName = "object-contain drop-shadow-2xl",
   priority = true,

@@ -198,6 +198,30 @@ describe("stripBrands / logos", () => {
     }
   })
 
+  it("raster srcsets list the src and real PNGs of the stated width and aspect", () => {
+    const publicDir = path.resolve(__dirname, "../../../public")
+    const withSrcSet = BRANDS.filter((b) => b.logo?.srcSet)
+    expect(withSrcSet.length).toBeGreaterThan(0)
+    for (const b of withSrcSet) {
+      const logo = b.logo!
+      const entries = logo.srcSet!.split(",").map((e) => {
+        const [url, descriptor] = e.trim().split(/\s+/)
+        return { url, w: Number(descriptor.replace(/w$/, "")) }
+      })
+      expect(entries.map((e) => e.url), logo.srcSet).toContain(logo.src)
+      for (const { url, w } of entries) {
+        const file = path.join(publicDir, url)
+        expect(file.endsWith(".png"), url).toBe(true)
+        const png = fs.readFileSync(file)
+        expect(png.readUInt32BE(16), url).toBe(w)
+        const actual = png.readUInt32BE(16) / png.readUInt32BE(20)
+        expect(
+          Math.abs(actual / (logo.width / logo.height) - 1),
+          url
+        ).toBeLessThan(0.01)
+      }
+    }
+  })
 })
 
 describe("brandSlug / brandBySlug / brandHref", () => {

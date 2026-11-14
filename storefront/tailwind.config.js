@@ -1,14 +1,34 @@
-const path = require("path")
+/**
+ * The @medusajs/ui components the storefront actually renders (directory
+ * names under dist/esm/components), plus the ones they import internally
+ * (Input → Hint, Table → Button). Only these are scanned for class names:
+ * scanning the whole kit (calendar, date picker, command bar, drawer…, in both
+ * the cjs and esm builds) added ~20 KB raw / ~3 KB gzip of never-used
+ * utilities to the one global stylesheet. `src/lib/__tests__/tailwind-content.spec.ts`
+ * fails when a newly imported component is missing here.
+ */
+const MEDUSA_UI_COMPONENTS = [
+  "badge",
+  "button",
+  "checkbox",
+  "container",
+  "heading",
+  "hint",
+  "input",
+  "label",
+  "radio-group",
+  "table",
+  "text",
+  "tooltip",
+]
 
 module.exports = {
   darkMode: "class",
   presets: [require("@medusajs/ui-preset")],
   content: [
     "./src/app/**/*.{js,ts,jsx,tsx}",
-    "./src/pages/**/*.{js,ts,jsx,tsx}",
-    "./src/components/**/*.{js,ts,jsx,tsx}",
     "./src/modules/**/*.{js,ts,jsx,tsx}",
-    "./node_modules/@medusajs/ui/dist/**/*.{js,jsx,ts,tsx}",
+    `./node_modules/@medusajs/ui/dist/esm/components/{${MEDUSA_UI_COMPONENTS.join(",")}}/*.js`,
   ],
   theme: {
     extend: {
