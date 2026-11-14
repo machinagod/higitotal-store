@@ -136,8 +136,10 @@ describe("splitNavRoots", () => {
       src: "/brands/sammic.svg",
       scale: 1.3,
     })
-    // No logo → no `logo` key (the menu falls back to a monogram).
-    expect(brands.find((b) => b.label === "Vileda Swep")?.logo).toBeUndefined()
+    // Vileda Swep is a Vileda range and reuses the Vileda mark.
+    expect(brands.find((b) => b.label === "Vileda Swep")?.logo?.src).toBe(
+      "/brands/vileda.svg"
+    )
   })
 
   it("falls back to the category when the collection no longer exists", () => {

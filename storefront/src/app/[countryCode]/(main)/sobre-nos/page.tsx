@@ -23,6 +23,7 @@ import { COMPANY, yearsInBusiness } from "@lib/company"
 import { getStripBrands } from "@lib/data/categories"
 import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
 import { aboutPageSchema } from "@lib/util/structured-data"
+import BrandLogoImg from "@modules/common/components/brand-logo"
 import CompanyCta from "@modules/company/components/company-cta"
 import sedePhoto from "@modules/company/assets/sede-mirandela.webp"
 import JsonLd from "@modules/common/components/json-ld"
@@ -110,10 +111,6 @@ const iconTile =
 /* Brand marks sit in a fixed box, like the homepage strip. */
 const LOGO_W = 112
 const LOGO_H = 30
-const fit = (w: number, h: number) => {
-  const s = Math.min(LOGO_W / w, LOGO_H / h)
-  return { width: Math.round(w * s), height: Math.round(h * s) }
-}
 
 function ItemList({ items }: { items: Item[] }) {
   return (
@@ -294,28 +291,22 @@ export default async function SobreNosPage() {
             data-testid="about-brands"
           >
             {brands.map((brand) => {
-              const size = brand.logo
-                ? fit(brand.logo.width, brand.logo.height)
-                : null
               return (
                 <li key={brand.name}>
                   <LocalizedClientLink
                     href={brand.href}
                     className="group flex h-full min-h-[96px] flex-col items-center justify-center gap-2 rounded-large border border-hairline bg-white px-3 py-4 text-center transition-colors hover:border-brand-cyan hover:bg-brand-cyan-50"
                   >
-                    {brand.logo && size ? (
+                    {brand.logo ? (
                       <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={brand.logo.src}
-                          alt=""
-                          width={size.width}
-                          height={size.height}
-                          loading="lazy"
-                          decoding="async"
-                          className="block opacity-80 [filter:grayscale(1)_brightness(0.35)] transition-[filter,opacity] group-hover:opacity-100 group-hover:[filter:none]"
-                          style={{ width: size.width, height: size.height }}
-                        />
+                        {/* Fixed-height row so every tile's label lines up. */}
+                        <span className="flex h-[42px] items-center justify-center">
+                          <BrandLogoImg
+                            logo={brand.logo}
+                            boxW={LOGO_W}
+                            boxH={LOGO_H}
+                          />
+                        </span>
                         <span className="text-xs font-semibold text-grey-60">
                           {brand.name}
                         </span>

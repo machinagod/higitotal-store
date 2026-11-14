@@ -154,7 +154,13 @@ export const BRANDS: Brand[] = [
     collection: "vileda",
     categoryKeys: ["vileda"],
   },
-  { name: "Vileda Swep", categoryKeys: ["vileda swep"], strip: false },
+  {
+    // A Vileda range: same mark as Vileda (Marcas menu only).
+    name: "Vileda Swep",
+    logo: { src: "/brands/vileda.svg", width: 1687, height: 484, opticalY: 0.176 },
+    categoryKeys: ["vileda swep"],
+    strip: false,
+  },
   {
     // SC Johnson wordmark extracted (vector, unchanged) from an official SC
     // Johnson Professional brochure; scjohnson.com/scjp.com are bot-walled.
