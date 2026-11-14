@@ -69,8 +69,18 @@ const readFields = (form: HTMLFormElement) => {
  * Asks for the minimum: Nome, E-mail and a short description. Everything else
  * (phone, company, location, service type, equipment, model, the urgent flag,
  * preferred contact) sits in the collapsed "Mais detalhes (opcional)" section.
+ *
+ * The per-brand pages (assistencia-tecnica/[marca]) prefill the equipment /
+ * brand field with `equipamento` (sent with the request unless the visitor
+ * edits it) and tailor the description example with `messagePlaceholder`.
  */
-const RequestForm = () => {
+const RequestForm = ({
+  equipamento,
+  messagePlaceholder = "Ex.: a máquina de lavar louça não aquece a água.",
+}: {
+  equipamento?: string
+  messagePlaceholder?: string
+} = {}) => {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
   )
@@ -278,7 +288,7 @@ const RequestForm = () => {
                 name="message"
                 required
                 rows={3}
-                placeholder="Ex.: a máquina de lavar louça não aquece a água."
+                placeholder={messagePlaceholder}
                 className={`${fieldClass} min-h-[96px] resize-y`}
                 {...errors.a11y("message")}
               />
@@ -352,6 +362,7 @@ const RequestForm = () => {
                   <input
                     id={id("equipamento")}
                     name="equipamento"
+                    defaultValue={equipamento}
                     placeholder="Ex.: Fagor, Sammic, Nilfisk"
                     className={fieldClass}
                   />

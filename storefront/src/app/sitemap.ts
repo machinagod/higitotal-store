@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next"
 
+import { serviceSitemapEntries } from "@lib/brand-service-pages"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import { getProductsList } from "@lib/data/products"
@@ -54,6 +55,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: prefix("content/cookie-policy"), changeFrequency: "yearly", priority: 0.2 },
     ] satisfies MetadataRoute.Sitemap
   ).map((e) => ({ lastModified: now, ...e }))
+
+  // Per-brand technical-assistance pages (assistencia-tecnica/[marca]).
+  staticEntries.push(...serviceSitemapEntries(absoluteUrl(`/${countryCode}`), now))
 
   // Catalog routes — fail soft so a backend hiccup never empties the sitemap.
   let products: MetadataRoute.Sitemap = []

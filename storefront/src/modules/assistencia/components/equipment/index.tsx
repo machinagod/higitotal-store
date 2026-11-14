@@ -1,5 +1,10 @@
 import { BRANDS as ALL_BRANDS } from "@lib/brands"
+import {
+  brandServicePath,
+  getBrandServicePageByName,
+} from "@lib/brand-service-pages"
 import BrandLogoImg from "@modules/common/components/brand-logo"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 // Equipment brands we service (machines/appliances) — distinct from the
 // homepage "brands we represent" list. Follows our repair records (Moloni
@@ -10,7 +15,12 @@ const SERVICED = ["Fagor", "Sammic", "Nilfisk", "Viper"]
 const BRANDS = SERVICED.map((name) => ({
   name,
   logo: ALL_BRANDS.find((b) => b.name === name)?.logo,
+  // Each chip opens that brand's own assistance page.
+  slug: getBrandServicePageByName(name)?.slug,
 }))
+
+const CHIP =
+  "flex h-[58px] min-w-[150px] items-center justify-center rounded-pill bg-white px-7"
 
 /**
  * Equipment covered — brand chips plus the general hygiene/catering equipment
@@ -36,26 +46,37 @@ const Equipment = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3.5">
-        {BRANDS.map((b) => (
-          <span
-            key={b.name}
-            className="flex h-[58px] min-w-[150px] items-center justify-center rounded-pill bg-white px-7"
-          >
-            {b.logo ? (
-              <BrandLogoImg
-                logo={b.logo}
-                boxW={104}
-                boxH={26}
-                variant="color"
-                alt={b.name}
-              />
-            ) : (
-              <span className="text-base font-extrabold text-brand-ink">
-                {b.name}
-              </span>
-            )}
-          </span>
-        ))}
+        {BRANDS.map((b) => {
+          const mark = b.logo ? (
+            <BrandLogoImg
+              logo={b.logo}
+              boxW={104}
+              boxH={26}
+              variant="color"
+              alt={b.name}
+            />
+          ) : (
+            <span className="text-base font-extrabold text-brand-ink">
+              {b.name}
+            </span>
+          )
+          return b.slug ? (
+            <LocalizedClientLink
+              key={b.name}
+              href={brandServicePath(b.slug)}
+              title={`Assistência técnica ${b.name}`}
+              data-testid={`assist-brand-${b.slug}`}
+              className={`${CHIP} outline-none transition hover:-translate-y-0.5 hover:shadow-[0_0_0_3px_rgba(255,122,26,0.6)] focus-visible:shadow-[0_0_0_3px_rgba(255,122,26,0.9)]`}
+            >
+              {mark}
+              <span className="sr-only"> — assistência técnica</span>
+            </LocalizedClientLink>
+          ) : (
+            <span key={b.name} className={CHIP}>
+              {mark}
+            </span>
+          )
+        })}
         <span className="rounded-pill border border-dashed border-svc-line bg-svc-ground-2 px-[26px] py-[13px] text-base font-semibold tracking-[-0.01em] text-svc-fg-muted">
           + refrigeração, confeção a gás e lavandaria de outras marcas
         </span>
