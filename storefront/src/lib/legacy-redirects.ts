@@ -1,5 +1,5 @@
 import { BRANDS_PATH, brandBySlug, brandHref } from "./brands"
-import { LEGACY_CATEGORIES, LEGACY_PRODUCTS } from "./legacy-redirects-data"
+import { LEGACY_ATTACHMENTS, LEGACY_CATEGORIES, LEGACY_PRODUCTS } from "./legacy-redirects-data"
 
 /**
  * 301 targets for URLs of the legacy PrestaShop site, which lived under /base/
@@ -7,6 +7,9 @@ import { LEGACY_CATEGORIES, LEGACY_PRODUCTS } from "./legacy-redirects-data"
  * /base/3-detergentes, /base/content/4-about-us, /base/index.php?id_product=2).
  * Once the domain points at this storefront, Google results and bookmarks keep
  * working instead of 404ing. Every /base URL resolves to something useful.
+ *
+ * Product URLs go to the same product (or its successor / same model family) on
+ * the new site, in a single hop; see the per-entry notes in legacy-redirects-data.
  *
  * Pure function (no Next imports) so the edge middleware and unit tests share it.
  */
@@ -61,6 +64,7 @@ const PAGES: Record<string, string> = {
   "password-recovery": "/account",
   "guest-tracking": "/account",
   search: "/store",
+  attachment: "/store",
 }
 
 export function legacyRedirect(pathname: string, search: URLSearchParams): string | null {
@@ -76,6 +80,9 @@ export function legacyRedirect(pathname: string, search: URLSearchParams): strin
   if (qCategory) return category(qCategory)
   const qCms = Number(search.get("id_cms"))
   if (qCms) return cms(qCms)
+  // Technical/product sheet PDFs (controller=attachment&id_attachment=N) → that product's page.
+  const qAttachment = Number(search.get("id_attachment"))
+  if (qAttachment) return LEGACY_ATTACHMENTS[qAttachment] ? product(LEGACY_ATTACHMENTS[qAttachment]) : at("/store")
   const query = (search.get("search_query") || search.get("s") || "").trim()
   if (query) return at(`/results/${encodeURIComponent(query)}`)
   if (Number(search.get("id_manufacturer")) || Number(search.get("id_supplier"))) {
