@@ -6,7 +6,7 @@ import {
   brandSlug,
   type Brand,
 } from "@lib/brands"
-import { SITE_LOCALE, SITE_NAME } from "@lib/util/seo"
+import { DEFAULT_OG_IMAGE, SITE_LOCALE, SITE_NAME } from "@lib/util/seo"
 import { breadcrumbSchema } from "@lib/util/structured-data"
 
 /**
@@ -190,7 +190,7 @@ export function brandServicePath(brand: Pick<Brand, "name">): string | undefined
 
 /**
  * Open Graph for the brand pages. A page-level `openGraph` replaces the root
- * layout's (and its file-based `app/opengraph-image.jpg`), so the site name,
+ * layout's, so the site name,
  * locale and the site's default share image are restated here — the brand
  * logos are SVG, which most link previews do not render.
  */
@@ -210,9 +210,7 @@ export function brandOpenGraph({
     title,
     description,
     url,
-    images: [
-      { url: "/opengraph-image.jpg", width: 1600, height: 900, alt: SITE_NAME },
-    ],
+    images: [DEFAULT_OG_IMAGE],
   }
 }
 

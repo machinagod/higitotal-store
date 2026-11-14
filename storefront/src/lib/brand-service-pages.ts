@@ -1,6 +1,6 @@
 import { COMPANY } from "@lib/company"
 import { organizationSchema } from "@lib/util/structured-data"
-import { SITE_NAME } from "@lib/util/seo"
+import { DEFAULT_OG_IMAGE, SITE_NAME } from "@lib/util/seo"
 
 /**
  * Per-brand technical-assistance landing pages
@@ -280,6 +280,7 @@ export function brandServiceMetadata(page: BrandServicePage, canonical: string) 
       title,
       description,
       url: canonical,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }

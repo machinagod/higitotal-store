@@ -104,8 +104,8 @@ describe("brandOpenGraph", () => {
       url: "https://x/pt/marcas/fagor",
     })
     expect(og.images).toHaveLength(1)
-    expect(og.images[0].url).toBe("/opengraph-image.jpg")
-    const file = path.resolve(__dirname, "../../app/opengraph-image.jpg")
+    expect(og.images[0].url).toBe("/higitotal/og-default.png")
+    const file = path.resolve(__dirname, "../../../public/higitotal/og-default.png")
     expect(fs.existsSync(file)).toBe(true)
   })
 })
