@@ -16,8 +16,8 @@ importers:
         specifier: ^0.0.2
         version: 0.0.2(@medusajs/admin-sdk@2.21.2)(@medusajs/cli@2.21.2(@types/node@20.19.25))(@medusajs/framework@2.21.2(@medusajs/cli@2.21.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@7.3.7(@types/node@20.19.25)(jiti@1.21.7)(yaml@2.9.1))(zod@4.2.0))(@medusajs/icons@2.21.2(react@18.3.1))(@medusajs/medusa@2.21.2(3rhbbmpmbl5mivk6ikqqqmwp24))(@medusajs/ui@4.2.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))
       '@machinagod/medusa-plugin-competitor-prices':
-        specifier: ^1.3.0
-        version: 1.3.0(@medusajs/admin-sdk@2.21.2)(@medusajs/admin-shared@2.21.2)(@medusajs/cli@2.21.2(@types/node@20.19.25))(@medusajs/framework@2.21.2(@medusajs/cli@2.21.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@7.3.7(@types/node@20.19.25)(jiti@1.21.7)(yaml@2.9.1))(zod@4.2.0))(@medusajs/icons@2.21.2(react@18.3.1))(@medusajs/ui@4.2.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@7.18.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+        specifier: ^1.4.0
+        version: 1.4.0(@medusajs/admin-sdk@2.21.2)(@medusajs/admin-shared@2.21.2)(@medusajs/cli@2.21.2(@types/node@20.19.25))(@medusajs/framework@2.21.2(@medusajs/cli@2.21.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@7.3.7(@types/node@20.19.25)(jiti@1.21.7)(yaml@2.9.1))(zod@4.2.0))(@medusajs/icons@2.21.2(react@18.3.1))(@medusajs/ui@4.2.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@7.18.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@machinagod/moloni-client-ts':
         specifier: npm:@jsr/machinagod__moloni-client-ts@0.1.1
         version: '@jsr/machinagod__moloni-client-ts@0.1.1'
@@ -1661,8 +1661,8 @@ packages:
       '@medusajs/medusa': ^2.13
       '@medusajs/ui': ^4
 
-  '@machinagod/medusa-plugin-competitor-prices@1.3.0':
-    resolution: {integrity: sha512-dxu0/8bz32HWdGq25gMST67SGO7pTaYL9XZJbys3UR1db+oD54VtP1XQfvygnhVSuioHXxTBMUUJXUcIhiiXOw==, tarball: https://npm.pkg.github.com/download/@machinagod/medusa-plugin-competitor-prices/1.3.0/07c02e254046f3980c41d5712599167eb15fd9c9}
+  '@machinagod/medusa-plugin-competitor-prices@1.4.0':
+    resolution: {integrity: sha512-CGPKnutEITBQHEaDl4nouxtc553keqOxSYyREKK4pA1XO1jMLdiH+SeowNU+S/y/OX3chNXilKTcAvzBqAhDFQ==, tarball: https://npm.pkg.github.com/download/@machinagod/medusa-plugin-competitor-prices/1.4.0/15427a27779e91278d39c1feacdc54e3535d3f19}
     engines: {node: '>=22.12'}
     peerDependencies:
       '@medusajs/admin-sdk': ^2.21.2
@@ -10739,7 +10739,7 @@ snapshots:
       '@medusajs/medusa': 2.21.2(3rhbbmpmbl5mivk6ikqqqmwp24)
       '@medusajs/ui': 4.2.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
 
-  '@machinagod/medusa-plugin-competitor-prices@1.3.0(@medusajs/admin-sdk@2.21.2)(@medusajs/admin-shared@2.21.2)(@medusajs/cli@2.21.2(@types/node@20.19.25))(@medusajs/framework@2.21.2(@medusajs/cli@2.21.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@7.3.7(@types/node@20.19.25)(jiti@1.21.7)(yaml@2.9.1))(zod@4.2.0))(@medusajs/icons@2.21.2(react@18.3.1))(@medusajs/ui@4.2.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@7.18.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
+  '@machinagod/medusa-plugin-competitor-prices@1.4.0(@medusajs/admin-sdk@2.21.2)(@medusajs/admin-shared@2.21.2)(@medusajs/cli@2.21.2(@types/node@20.19.25))(@medusajs/framework@2.21.2(@medusajs/cli@2.21.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@7.3.7(@types/node@20.19.25)(jiti@1.21.7)(yaml@2.9.1))(zod@4.2.0))(@medusajs/icons@2.21.2(react@18.3.1))(@medusajs/ui@4.2.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@types/node@20.19.25)(react-dom@18.3.1(react@18.3.1))(react-router-dom@7.18.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@medusajs/admin-sdk': 2.21.2
       '@medusajs/admin-shared': 2.21.2
