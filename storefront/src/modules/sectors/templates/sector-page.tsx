@@ -1,5 +1,5 @@
 import { HttpTypes } from "@medusajs/types"
-import { ArrowRight, CircleCheck, Phone, Wrench } from "lucide-react"
+import { ArrowRight, CircleCheck, ClipboardList, Phone, Wrench } from "lucide-react"
 import Image from "next/image"
 
 import { COMPANY } from "@lib/company"
@@ -25,6 +25,21 @@ const h2 =
   "mt-3 text-2xl font-extrabold tracking-[-0.02em] text-brand-ink small:text-[32px] small:leading-[1.15]"
 
 type BrandLink = { name: string; href: string }
+
+/** Sectors whose kitchens / canteens / production run under HACCP. */
+const HACCP_SECTORS = new Set([
+  "restauracao",
+  "industria-alimentar",
+  "lares-e-saude",
+  "escolas-e-autarquias",
+])
+
+const HYGIENE_PLAN_ITEMS = [
+  "Zonas, superfícies e equipamentos a limpar e desinfetar",
+  "Produto, diluição e método para cada um",
+  "Frequência e responsável de cada tarefa",
+  "Fichas técnicas e de dados de segurança dos produtos indicados",
+]
 
 function resolveBrands(
   names: string[] | undefined,
@@ -411,6 +426,64 @@ export default function SectorTemplate({
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Hygiene plan service */}
+      <section
+        aria-labelledby="sector-hygiene-plan"
+        className="rounded-card border border-brand-cyan-100 bg-brand-cyan-50 p-6 small:p-10"
+        data-testid="sector-hygiene-plan"
+      >
+        <div className="grid grid-cols-1 gap-6 small:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] small:gap-12">
+          <div>
+            <span className={eyebrow}>
+              <ClipboardList className="h-4 w-4" aria-hidden />
+              Plano de higienização
+            </span>
+            <h2 id="sector-hygiene-plan" className={h2}>
+              Um plano de higiene feito para a sua instalação
+            </h2>
+            <p className="mt-3 leading-relaxed text-grey-70">
+              A nossa equipa elabora planos de higiene e limpeza adaptados ao
+              seu espaço e à sua operação, com os produtos certos para cada
+              tarefa
+              {HACCP_SECTORS.has(sector.slug)
+                ? " e enquadrados nos pré-requisitos do seu sistema HACCP."
+                : "."}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <LocalizedClientLink
+                href="/contact"
+                className="inline-flex items-center gap-2 rounded-pill bg-brand-cyan-ink px-6 py-3 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-brand-ink"
+                data-testid="sector-hygiene-plan-cta"
+              >
+                Pedir um plano de higiene
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </LocalizedClientLink>
+              <a
+                href={phone.href}
+                className="inline-flex items-center gap-2 text-sm font-bold text-brand-ink hover:text-brand-cyan-ink"
+              >
+                <Phone className="h-4 w-4" aria-hidden />
+                {phone.display}
+              </a>
+            </div>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {HYGIENE_PLAN_ITEMS.map((item) => (
+              <li
+                key={item}
+                className="flex items-start gap-3 rounded-large bg-white p-4"
+              >
+                <CircleCheck
+                  className="mt-0.5 h-5 w-5 flex-none text-brand-cyan"
+                  aria-hidden
+                />
+                <span className="leading-relaxed text-grey-70">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {/* Other sectors */}
