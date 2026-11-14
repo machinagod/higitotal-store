@@ -31,6 +31,15 @@ export const DATABASE_URL = assertValue(
 export const REDIS_URL = process.env.REDIS_URL;
 
 /**
+ * Parallel event-bus jobs per worker (BullMQ `concurrency`). Default 10;
+ * override with EVENT_BUS_CONCURRENCY (1–50).
+ */
+export const EVENT_BUS_CONCURRENCY = (() => {
+  const n = Number.parseInt(process.env.EVENT_BUS_CONCURRENCY ?? '', 10)
+  return Number.isFinite(n) && n >= 1 && n <= 50 ? n : 10
+})();
+
+/**
  * Admin CORS origins
  */
 export const ADMIN_CORS = process.env.ADMIN_CORS;

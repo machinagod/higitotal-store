@@ -7,6 +7,7 @@ import {
   DATABASE_URL,
   JWT_SECRET,
   REDIS_URL,
+  EVENT_BUS_CONCURRENCY,
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
   SENDGRID_API_KEY,
@@ -97,7 +98,14 @@ const medusaConfig = {
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
       options: {
-        redisUrl: REDIS_URL
+        redisUrl: REDIS_URL,
+        // BullMQ processes one event at a time by default. Most traffic is
+        // product.updated -> Search Module re-index (idempotent, reads current
+        // state), so several in parallel are safe and keep a burst (e.g. a
+        // full Moloni re-sync) from delaying e-mails like password resets.
+        workerOptions: {
+          concurrency: EVENT_BUS_CONCURRENCY
+        }
       }
     },
     {
