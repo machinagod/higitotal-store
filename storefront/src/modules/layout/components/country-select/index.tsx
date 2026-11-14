@@ -16,15 +16,24 @@ type CountryOption = {
 }
 
 // Country names in Portuguese (the region data carries English display names).
-const ptRegionNames =
-  typeof Intl !== "undefined" && "DisplayNames" in Intl
-    ? new Intl.DisplayNames(["pt-PT"], { type: "region" })
-    : null
+// Created on first use, not at module load: building an Intl.DisplayNames
+// loads locale data and is surprisingly slow (tens of ms on a throttled CPU).
+let ptRegionNamesCache: Intl.DisplayNames | null | undefined
+function ptRegionNames() {
+  if (ptRegionNamesCache === undefined) {
+    ptRegionNamesCache =
+      typeof Intl !== "undefined" && "DisplayNames" in Intl
+        ? new Intl.DisplayNames(["pt-PT"], { type: "region" })
+        : null
+  }
+  return ptRegionNamesCache
+}
 
 function countryLabel(iso2?: string, fallback?: string) {
-  if (iso2 && ptRegionNames) {
+  const names = ptRegionNames()
+  if (iso2 && names) {
     try {
-      return ptRegionNames.of(iso2.toUpperCase()) ?? fallback
+      return names.of(iso2.toUpperCase()) ?? fallback
     } catch {
       /* fall through */
     }

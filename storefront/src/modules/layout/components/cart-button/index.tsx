@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
-import CartDropdown from "../cart-dropdown"
+// Code-split (see ./lazy): only rendered when selling, never in catalog mode.
+import CartDropdown from "../cart-dropdown/lazy"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 
 const fetchCart = async () => {

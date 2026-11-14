@@ -1,6 +1,5 @@
 "use client"
 
-import { clx } from "@medusajs/ui"
 import { ClipboardList } from "lucide-react"
 
 import { useQuoteList } from "@lib/quote-list/context"
@@ -27,11 +26,11 @@ export function QuoteNavPill({ className }: { className?: string }) {
       aria-label={quoteControlLabel(count)}
       data-testid="nav-quote-link"
       data-count={count}
-      className={clx(
-        "inline-flex items-center gap-2 whitespace-nowrap rounded-pill bg-brand-cyan px-5 py-3 text-xs font-bold uppercase tracking-[0.04em] text-white shadow-[0_8px_20px_rgba(0,173,239,0.25)] transition-colors hover:bg-brand-cyan-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2",
-        count > 0 && "py-2.5 pr-2.5",
-        className
-      )}
+      // Plain strings, no class merging (`clx` would pull tailwind-merge
+      // into every page): the two states spell out their padding.
+      className={`inline-flex items-center gap-2 whitespace-nowrap rounded-pill bg-brand-cyan text-xs font-bold uppercase tracking-[0.04em] text-white shadow-[0_8px_20px_rgba(0,173,239,0.25)] transition-colors hover:bg-brand-cyan-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 ${
+        count > 0 ? "py-2.5 pl-5 pr-2.5" : "px-5 py-3"
+      }${className ? ` ${className}` : ""}`}
     >
       {count > 0 ? (
         <>

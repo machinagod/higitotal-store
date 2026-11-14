@@ -90,15 +90,29 @@ export default function CookieConsent() {
       root.style.removeProperty(STACK_VAR)
       return
     }
+    // Only phones stack the toast on it (from `small` up the toast sits
+    // bottom-right). Writing a custom property on <html> restyles the whole
+    // document, so skip it where nothing reads it, and when it is unchanged.
+    const phone = window.matchMedia("(max-width: 1023.98px)")
     // From layout values (bottom offset + height), not getBoundingClientRect:
     // the rise-in animation's transform would skew the first measurement.
     const update = () => {
+      if (!phone.matches) {
+        if (root.style.getPropertyValue(STACK_VAR)) root.style.removeProperty(STACK_VAR)
+        return
+      }
       const bottom = parseFloat(getComputedStyle(el).bottom) || 0
-      root.style.setProperty(STACK_VAR, `${Math.round(bottom + el.offsetHeight)}px`)
+      const value = `${Math.round(bottom + el.offsetHeight)}px`
+      if (root.style.getPropertyValue(STACK_VAR) !== value) {
+        root.style.setProperty(STACK_VAR, value)
+      }
     }
-    update()
+    // No synchronous first read: right after the banner is inserted it would
+    // force a layout during hydration. ResizeObserver's first callback comes
+    // after the browser's own layout, when the read is free.
     const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update)
-    ro?.observe(el)
+    if (ro) ro.observe(el)
+    else update()
     window.addEventListener("resize", update)
     return () => {
       ro?.disconnect()

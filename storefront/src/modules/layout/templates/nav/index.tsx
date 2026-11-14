@@ -7,6 +7,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import CategoryNav from "@modules/layout/components/category-nav"
+import CategoryIcon from "@modules/common/icons/category-icon"
 import SearchBox, {
   type SearchBrand,
   type SearchCategory,
@@ -66,6 +67,15 @@ export default async function Nav() {
     name: b.label,
     href: b.href,
   }))
+  // Category icons, rendered here (server) and handed to the client menus as
+  // ready SVG, so no icon code ships to the browser.
+  const iconMap = (className: string) =>
+    Object.fromEntries(
+      categories.map((c) => [
+        c.href,
+        <CategoryIcon key={c.href} name={c.icon} className={className} />,
+      ])
+    )
   // Catalog mode (no prices / no cart) hides the cart and the account link.
   const catalogMode = isCatalogMode()
 
@@ -179,6 +189,7 @@ export default async function Nav() {
               <SideMenu
                 regions={regions}
                 categories={categories}
+                categoryIcons={iconMap("h-[18px] w-[18px]")}
                 brands={brands}
                 catalogMode={catalogMode}
               />
@@ -256,7 +267,11 @@ export default async function Nav() {
         </MobileSearchRow>
 
         {/* Category strip — real product categories + "Marcas" (desktop) */}
-        <CategoryNav categories={categories} brands={brands} />
+        <CategoryNav
+          categories={categories}
+          brands={brands}
+          icons={iconMap("h-4 w-4")}
+        />
       </div>
     </MobileHeaderProvider>
   )

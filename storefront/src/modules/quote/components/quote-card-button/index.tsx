@@ -1,6 +1,5 @@
 "use client"
 
-import { clx } from "@medusajs/ui"
 import { ClipboardCheck, ClipboardPlus } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -66,12 +65,13 @@ export default function QuoteCardButton({
       aria-label={ariaLabel}
       data-testid="card-add-to-quote"
       data-state={justAdded ? "added" : inList ? "in-list" : "idle"}
-      className={clx(
-        "relative z-10 flex h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-pill border-[1.5px] border-brand-cyan px-0.5 text-xs font-semibold tracking-[-0.02em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 xsmall:px-2 xsmall:text-[13px] xsmall:font-bold xsmall:tracking-normal small:px-3 small:text-sm",
+      // Plain string (no `clx`): the two parts never conflict, and class
+      // merging would ship tailwind-merge with every product card.
+      className={`relative z-10 flex h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-pill border-[1.5px] border-brand-cyan px-0.5 text-xs font-semibold tracking-[-0.02em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 xsmall:px-2 xsmall:text-[13px] xsmall:font-bold xsmall:tracking-normal small:px-3 small:text-sm ${
         justAdded || inList
           ? "bg-brand-cyan-50 text-brand-cyan-ink hover:bg-brand-cyan-100"
           : "bg-white text-brand-cyan-ink hover:bg-brand-cyan-50"
-      )}
+      }`}
     >
       {/* Icon from 360px; the narrowest cards keep the label only. */}
       <Icon
