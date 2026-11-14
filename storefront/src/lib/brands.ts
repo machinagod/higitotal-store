@@ -103,9 +103,17 @@ export const BRANDS: Brand[] = [
     name: "Nilfisk",
     logo: { src: "/brands/nilfisk.svg", width: 145, height: 19 },
   },
-  // Viper: typeset wordmark on purpose — Higitotal doesn't use the red-oval
-  // Viper logo (owner's call). Swap in a `logo` if an approved file arrives.
-  { name: "Viper" },
+  {
+    // Nilfisk press & media page (media/x33c5sos/viper-logo.png); no
+    // official vector published, so a transparent PNG cropped to the art.
+    name: "Viper",
+    logo: {
+      src: "/brands/viper.png",
+      width: 900,
+      height: 278,
+      restFilter: "grayscale(1) brightness(2.2)",
+    },
+  },
   {
     // solenis.com (Assets/imgs/diversey-logo.svg) — Diversey is a Solenis
     // brand since 2023; this is the 2024 refreshed mark.
