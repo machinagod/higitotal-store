@@ -18,6 +18,7 @@ import CookiePreferencesButton from "@modules/common/components/cookie-consent/p
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import BlackCat from "@modules/layout/components/black-cat"
+import ExpandableLinkList from "./expandable-link-list"
 
 type FooterLink = { label: string; href: string }
 
@@ -199,8 +200,10 @@ export default async function Footer() {
           {categories.length > 0 && (
             <div>
               <h2 className={`mb-4 ${headingClass}`}>Categorias</h2>
-              <LinkList
+              <ExpandableLinkList
                 links={categories}
+                linkClass={linkClass}
+                noun="categorias"
                 testId="footer-categories"
                 itemTestId="category-link"
               />
@@ -210,7 +213,12 @@ export default async function Footer() {
           {brands.length > 0 && (
             <div>
               <h2 className={`mb-4 ${headingClass}`}>Marcas</h2>
-              <LinkList links={brands} testId="footer-brands" />
+              <ExpandableLinkList
+                links={brands}
+                linkClass={linkClass}
+                noun="marcas"
+                testId="footer-brands"
+              />
             </div>
           )}
 
