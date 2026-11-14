@@ -13,6 +13,33 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    // Rewrite barrel imports (`import { Text } from "@medusajs/ui"`) to the
+    // modules actually used. @medusajs/ui's components are "use client", so a
+    // server component importing from its barrel otherwise ships the WHOLE
+    // kit (radix, cmdk, calendar, date picker, prism…) to every page.
+    optimizePackageImports: ["@medusajs/ui", "@medusajs/icons", "lucide-react", "radix-ui"],
+  },
+  // `public/` files are not content-hashed, so Next serves them with
+  // `max-age=0` (and Cloudflare then applies its 4 h default). Brand logos,
+  // Higitotal logos/icons and favicons change very rarely: cache them for 30
+  // days, revalidating in the background for a day after that. Never
+  // `immutable` — a replaced file keeps its URL. (`/_next/static` is hashed
+  // and already immutable; fonts are bundled there via next/font.)
+  async headers() {
+    const longCache = [
+      {
+        key: "Cache-Control",
+        value: "public, max-age=2592000, stale-while-revalidate=86400",
+      },
+    ]
+    return [
+      "/brands/:path*",
+      "/higitotal/:path*",
+      "/favicon.ico",
+      "/apple-touch-icon.png",
+    ].map((source) => ({ source, headers: longCache }))
+  },
   images: {
     // Next/image optimization is ON: the runner (`next start`) resizes source
     // images and serves modern formats via /_next/image, backed by `sharp`
