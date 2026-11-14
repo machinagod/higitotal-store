@@ -30,17 +30,17 @@ type FooterLink = { label: string; href: string }
 const SERVICE_FORM = "/assistencia-tecnica#pedir"
 const SERVICE_LINKS = ["Instalação", "Reparação", "Contratos de manutenção"]
 
+// Assistência técnica and Contactos have their own columns (and Contactos is
+// in the bottom bar), so the company list only carries what isn't elsewhere.
 const COMPANY_LINKS: FooterLink[] = [
   { label: "Sobre nós", href: "/sobre-nos" },
   { label: "A nossa loja", href: "/a-nossa-loja" },
-  { label: "Assistência técnica", href: "/assistencia-tecnica" },
-  { label: "Contactos", href: "/contact" },
 ]
 
-const SECTOR_LINKS: FooterLink[] = [
-  ...SECTORS.map((s) => ({ label: s.name, href: sectorHref(s) })),
-  { label: "Todos os setores", href: SECTORS_PATH },
-]
+const SECTOR_LINKS: FooterLink[] = SECTORS.map((s) => ({
+  label: s.name,
+  href: sectorHref(s),
+}))
 
 const LEGAL_LINKS: FooterLink[] = [
   { label: "Política de Privacidade", href: "/content/privacy-policy" },
@@ -237,20 +237,35 @@ export default async function Footer() {
             </div>
           )}
 
-          <div>
-            <h2 className={`mb-4 ${headingClass}`}>Assistência Técnica</h2>
-            <ServiceColumn />
-          </div>
-
+          {/* Short service list + the two company links: balances the
+              Categorias / Marcas / Setores columns. */}
           <div className="flex flex-col gap-9">
             <div>
-              <h2 className={`mb-4 ${headingClass}`}>Setores</h2>
-              <LinkList links={SECTOR_LINKS} testId="footer-sectors" />
+              <h2 className={`mb-4 ${headingClass}`}>Assistência Técnica</h2>
+              <ServiceColumn />
             </div>
             <div>
               <h2 className={`mb-4 ${headingClass}`}>Empresa</h2>
               <LinkList links={COMPANY_LINKS} testId="footer-company" />
             </div>
+          </div>
+
+          <div>
+            <h2 className={`mb-4 ${headingClass}`}>
+              <LocalizedClientLink
+                href={SECTORS_PATH}
+                className="transition-colors hover:text-brand-cyan-bright"
+                data-testid="footer-sectors-index"
+              >
+                Setores
+              </LocalizedClientLink>
+            </h2>
+            <ExpandableLinkList
+              links={SECTOR_LINKS}
+              linkClass={linkClass}
+              noun="setores"
+              testId="footer-sectors"
+            />
           </div>
 
           <div>
@@ -276,7 +291,13 @@ export default async function Footer() {
               </MobileSection>
             )}
             <MobileSection title="Setores">
-              <LinkList links={SECTOR_LINKS} testId="footer-sectors-mobile" />
+              <LinkList
+                links={[
+                  ...SECTOR_LINKS,
+                  { label: "Todos os setores", href: SECTORS_PATH },
+                ]}
+                testId="footer-sectors-mobile"
+              />
             </MobileSection>
             <MobileSection title="Assistência Técnica">
               <ServiceColumn />

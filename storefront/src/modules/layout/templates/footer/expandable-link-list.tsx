@@ -73,7 +73,7 @@ export default function ExpandableLinkList({
               open ? `Mostrar menos ${noun}` : `Ver todas as ${links.length} ${noun}`
             }
             onClick={() => setOpen((v) => !v)}
-            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-white/90 transition-colors hover:text-white"
+            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap text-[12px] font-bold uppercase tracking-[0.08em] text-white/90 transition-colors hover:text-white"
             data-testid={testId ? `${testId}-toggle` : undefined}
           >
             {open ? "Ver menos" : `Ver todas (${links.length})`}
