@@ -109,9 +109,13 @@ export default function PrivacyPolicyPage() {
             6.º, n.º 1, als. b) e c), do RGPD).
           </li>
           <li>
-            <B>Estatísticas de utilização do site</B> (Google Analytics) —
-            apenas com o seu consentimento (art. 6.º, n.º 1, al. a), do RGPD),
-            através do Google Tag Manager. O site não utiliza cookies de
+            <B>Estatísticas de utilização do site</B> — com cookies (Google
+            Analytics, através do Google Tag Manager), apenas com o seu
+            consentimento (art. 6.º, n.º 1, al. a), do RGPD); e sem cookies
+            (Cloudflare Web Analytics, apenas dados agregados), bem como a
+            contagem agregada dos pedidos recebidos pelos formulários, sem
+            dados pessoais, com base no interesse legítimo da Higitotal (art.
+            6.º, n.º 1, al. f), do RGPD). O site não utiliza cookies de
             publicidade nem de marketing. Ver a{" "}
             <LegalLink href="/content/cookie-policy">
               Política de Cookies
@@ -155,6 +159,11 @@ export default function PrivacyPolicyPage() {
               consentimento aos cookies de estatística.
             </li>
             <li>
+              <B>Cloudflare, Inc.</B> — entrega e proteção do site (rede de
+              distribuição de conteúdos e proteção contra ataques) e
+              estatística agregada sem cookies (Cloudflare Web Analytics).
+            </li>
+            <li>
               <B>Intuition Machines, Inc.</B> (hCaptcha) — proteção dos
               formulários contra envios automáticos (spam), com fundamento no
               interesse legítimo; estritamente necessário para os formulários e
@@ -173,10 +182,10 @@ export default function PrivacyPolicyPage() {
             A Railway e a Resend podem tratar dados fora do Espaço Económico
             Europeu, nomeadamente nos Estados Unidos. Essas transferências
             assentam em Cláusulas Contratuais-Tipo aprovadas pela Comissão
-            Europeia (art. 46.º do RGPD). A Intuition Machines, Inc.
-            (hCaptcha) está sediada nos Estados Unidos e pode tratar dados fora
-            do Espaço Económico Europeu, nos termos da sua política de
-            privacidade.
+            Europeia (art. 46.º do RGPD). A Cloudflare, Inc. e a Intuition
+            Machines, Inc. (hCaptcha) estão sediadas nos Estados Unidos e
+            podem tratar dados fora do Espaço Económico Europeu, nos termos das
+            respetivas políticas de privacidade.
           </p>
           <p>
             Os dados podem ainda ser comunicados a autoridades públicas quando

@@ -29,6 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const GA4_STREAM_COOKIE = "_ga_SWG8Q2W0PQ"
 
 const GOOGLE_PRIVACY_URL = "https://policies.google.com/privacy?hl=pt-PT"
+const CLOUDFLARE_PRIVACY_URL = "https://www.cloudflare.com/privacypolicy/"
 const GOOGLE_PARTNER_SITES_URL =
   "https://policies.google.com/technologies/partner-sites?hl=pt-PT"
 
@@ -312,6 +313,36 @@ export default function CookiePolicyPage() {
             tratá-los fora do Espaço Económico Europeu, nos termos da{" "}
             <LegalLink href={HCAPTCHA_PRIVACY_URL}>
               política de privacidade do hCaptcha
+            </LegalLink>
+            .
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "estatistica-sem-cookies",
+      title: "Estatística sem cookies (Cloudflare Web Analytics)",
+      body: (
+        <>
+          <p>
+            O site é servido através da Cloudflare, Inc., que o protege e
+            acelera o acesso. Para conhecer o tráfego do site de forma
+            agregada, utilizamos o Cloudflare Web Analytics, que{" "}
+            <strong>não utiliza cookies</strong> nem guarda ou lê informação
+            no seu dispositivo (incluindo o armazenamento local do navegador)
+            e não cria um identificador do visitante.
+          </p>
+          <p>
+            São recolhidos apenas dados técnicos da visita — página vista,
+            página de origem, país, tipo de dispositivo e de navegador e
+            tempos de carregamento — e os resultados são consultados apenas de
+            forma agregada. Como não acede ao seu dispositivo, não depende de
+            consentimento; assenta no interesse legítimo da Higitotal em
+            conhecer a utilização do site e melhorar o seu funcionamento (art.
+            6.º, n.º 1, al. f), do RGPD). A Cloudflare pode tratar dados fora
+            do Espaço Económico Europeu, nos termos da sua{" "}
+            <LegalLink href={CLOUDFLARE_PRIVACY_URL}>
+              política de privacidade
             </LegalLink>
             .
           </p>
