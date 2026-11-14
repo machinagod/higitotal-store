@@ -1,3 +1,5 @@
+import { Wrench } from "lucide-react"
+
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import FeaturedCarousel from "@modules/home/components/hero/featured-carousel"
 import HeroRotator from "@modules/home/components/hero/hero-rotator"
@@ -32,6 +34,24 @@ const Hero = ({
           aria-hidden
           className="pointer-events-none absolute -bottom-7 -right-7 z-[1] h-36 w-36 rotate-[18deg] opacity-[0.12] [filter:brightness(0)_invert(1)] small:h-48 small:w-48"
         />
+
+        {/* Mobile: the product shots drift behind the text — top-right,
+            partly off-card, faded towards the copy so it stays readable.
+            (Desktop shows them in the media panel instead.) */}
+        {images.length > 0 && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-4 z-[1] h-[230px] w-[230px] opacity-[0.28] [mask-image:radial-gradient(circle_at_70%_40%,#000_35%,transparent_72%)] small:hidden"
+          >
+            <HeroRotator
+              images={images}
+              sizes="230px"
+              priorityFirst={false}
+              className="relative h-full w-full"
+              imgClassName="object-contain"
+            />
+          </div>
+        )}
 
         <div className="relative z-[2] small:flex-[1_1_64%]">
           <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#bdeaff]">
@@ -93,6 +113,13 @@ const Hero = ({
           <span
             aria-hidden
             className="pointer-events-none absolute -bottom-8 -right-8 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,122,26,0.22),transparent_70%)]"
+          />
+          {/* The service mark: a large outlined wrench on the orange glow,
+              behind the copy (decorative). */}
+          <Wrench
+            aria-hidden
+            strokeWidth={1.4}
+            className="pointer-events-none absolute bottom-5 right-5 z-[1] h-[72px] w-[72px] -rotate-12 text-svc-signal-bright opacity-80 max-[359px]:hidden small:bottom-7 small:right-7 small:h-24 small:w-24"
           />
           <div className="relative z-[2]">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-svc-signal">

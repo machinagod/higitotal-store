@@ -11,7 +11,21 @@ const INTERVAL_MS = 5000
  * the rest load lazily. Holds still with prefers-reduced-motion and while the
  * tab is hidden.
  */
-export default function HeroRotator({ images }: { images: string[] }) {
+export default function HeroRotator({
+  images,
+  sizes = "360px",
+  className = "relative h-[320px] w-full max-w-[360px]",
+  imgClassName = "object-contain drop-shadow-2xl",
+  priorityFirst = true,
+}: {
+  images: string[]
+  sizes?: string
+  /** The positioned box the images fill. */
+  className?: string
+  imgClassName?: string
+  /** Priority-load the first image (the desktop panel is the LCP candidate). */
+  priorityFirst?: boolean
+}) {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
@@ -27,17 +41,17 @@ export default function HeroRotator({ images }: { images: string[] }) {
   }, [images.length])
 
   return (
-    <div className="relative h-[320px] w-full max-w-[360px]" aria-hidden>
+    <div className={className} aria-hidden>
       {images.map((src, i) => (
         <Image
           key={src}
           src={src}
           alt=""
           fill
-          priority={i === 0}
-          loading={i === 0 ? undefined : "lazy"}
-          sizes="360px"
-          className={`object-contain drop-shadow-2xl transition-opacity duration-700 ease-in-out motion-reduce:transition-none ${
+          priority={priorityFirst && i === 0}
+          loading={priorityFirst && i === 0 ? undefined : "lazy"}
+          sizes={sizes}
+          className={`${imgClassName} transition-opacity duration-700 ease-in-out motion-reduce:transition-none ${
             i === index ? "opacity-100" : "opacity-0"
           }`}
         />
