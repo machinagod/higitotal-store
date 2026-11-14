@@ -4,12 +4,14 @@ import { InviteUserEmail, INVITE_USER, isInviteUserData } from './invite-user'
 import { OrderPlacedTemplate, ORDER_PLACED, isOrderPlacedTemplateData } from './order-placed'
 import { ContactRequestEmail, CONTACT_REQUEST, isContactRequestData } from './contact-request'
 import { ContactRequestAckEmail, CONTACT_REQUEST_ACK, isContactRequestAckData } from './contact-request-ack'
+import { ResetPasswordEmail, RESET_PASSWORD, isResetPasswordData } from './reset-password'
 
 export const EmailTemplates = {
   INVITE_USER,
   ORDER_PLACED,
   CONTACT_REQUEST,
-  CONTACT_REQUEST_ACK
+  CONTACT_REQUEST_ACK,
+  RESET_PASSWORD
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -51,6 +53,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
         )
       }
       return <ContactRequestAckEmail {...data} />
+
+    case EmailTemplates.RESET_PASSWORD:
+      if (!isResetPasswordData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.RESET_PASSWORD}"`
+        )
+      }
+      return <ResetPasswordEmail {...data} />
 
     default:
       throw new MedusaError(
