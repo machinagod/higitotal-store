@@ -98,6 +98,8 @@ export type ContactRequestContext = {
    * `fields.message`.
    */
   message?: string
+  /** hCaptcha response token (verified by the backend). */
+  hcaptchaToken?: string | null
 }
 
 export type ContactRequestPayload = {
@@ -119,6 +121,8 @@ export type ContactRequestPayload = {
   quantity?: number
   productUrl?: string
   items?: ContactRequestItem[]
+  /** hCaptcha response token; omitted when the widget gave none. */
+  hcaptchaToken?: string
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -271,6 +275,7 @@ export function buildContactRequestPayload(
         : undefined,
     productUrl: clean(ctx.productUrl),
     items: ctx.items?.length ? ctx.items : undefined,
+    hcaptchaToken: clean(ctx.hcaptchaToken),
   }
   // Drop undefined keys so the JSON body stays minimal.
   return Object.fromEntries(

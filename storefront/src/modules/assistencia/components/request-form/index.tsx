@@ -5,6 +5,11 @@ import { Phone, Mail, MapPin, Check, ArrowRight } from "lucide-react"
 
 import { COMPANY } from "@lib/company"
 import {
+  CAPTCHA_EXPIRED_MESSAGE,
+  isCaptchaRejection,
+} from "@lib/util/hcaptcha"
+import HCaptcha, { HCaptchaHandle } from "@modules/common/components/hcaptcha"
+import {
   buildAssistanceMessage,
   buildContactRequestPayload,
   CONTACT_ERROR_MESSAGE,
@@ -72,6 +77,7 @@ const RequestForm = () => {
   const [pref, setPref] = useState(DEFAULT_CONTACT_PREF)
   const [urgent, setUrgent] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
+  const captchaRef = useRef<HCaptchaHandle>(null)
   const id = (name: string) => `${ID}-${name}`
 
   const errors = useFieldErrors(ID, (form) =>
@@ -111,7 +117,10 @@ const RequestForm = () => {
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
-    if (!errors.check(form)) return
+    const fieldsOk = errors.check(form)
+    // Field errors take focus first; the captcha error shows alongside.
+    const captchaOk = captchaRef.current?.check({ focus: fieldsOk }) ?? true
+    if (!fieldsOk || !captchaOk) return
     const { fields, tipo, equipamento } = readFields(form)
 
     setStatus("sending")
@@ -129,10 +138,19 @@ const RequestForm = () => {
           }),
           productUrl:
             typeof window !== "undefined" ? window.location.href : undefined,
+          hcaptchaToken: captchaRef.current?.getToken(),
         })
       )
+      captchaRef.current?.reset()
       setStatus("done")
-    } catch {
+    } catch (error) {
+      if (isCaptchaRejection(error)) {
+        // Token refused / expired: a fresh check, the rest of the form kept.
+        captchaRef.current?.reset(CAPTCHA_EXPIRED_MESSAGE)
+        setStatus("idle")
+        return
+      }
+      captchaRef.current?.reset()
       setStatus("error")
     }
   }
@@ -382,6 +400,8 @@ const RequestForm = () => {
             </OptionalDetails>
 
             <Honeypot />
+
+            <HCaptcha ref={captchaRef} idPrefix={ID} className="sm:col-span-2" />
 
             {status === "error" && (
               <p role="alert" className="text-sm font-medium text-rose-700 sm:col-span-2">

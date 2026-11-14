@@ -4,6 +4,7 @@ import { COMPANY } from "@lib/company"
 import { CONSENT_MAX_AGE } from "@lib/consent/cookie"
 import { QUOTE_STORAGE_KEY } from "@lib/quote-list/state"
 import { DEFAULT_GTM_ID, analyticsEnabled } from "@lib/util/gtm"
+import { HCAPTCHA_PRIVACY_URL } from "@lib/util/hcaptcha"
 import CookiePreferencesButton from "@modules/common/components/cookie-consent/preferences-button"
 import {
   CompanyContacts,
@@ -90,6 +91,22 @@ const NECESSARY: StoredItem[] = [
     purpose:
       "Uso técnico interno, apenas quando a loja é aberta a partir do painel de administração para configuração. Não é definido durante a navegação.",
     duration: "24 horas",
+  },
+]
+
+/**
+ * hCaptcha (form spam protection), set on hcaptcha.com — not the site's
+ * domain — when a form is shown. As observed in a browser with the widget
+ * loaded (no localStorage / sessionStorage in any frame). Keep in sync.
+ */
+const FORM_PROTECTION: StoredItem[] = [
+  {
+    name: "__cf_bm",
+    kind: "Cookie (domínio hcaptcha.com)",
+    provider: "Intuition Machines, Inc. (hCaptcha)",
+    purpose:
+      "Cookie de gestão de bots da Cloudflare, utilizado pelo hCaptcha e definido quando um formulário é apresentado. Serve para a proteção dos formulários contra envios automáticos (spam), distinguindo pedidos de pessoas de pedidos automáticos.",
+    duration: "30 minutos",
   },
 ]
 
@@ -231,7 +248,8 @@ export default function CookiePolicyPage() {
             <li>
               <span className="font-semibold text-brand-ink">Necessários</span>{" "}
               — indispensáveis para prestar o serviço que pede (por exemplo,
-              guardar a sua escolha de cookies ou a lista de orçamento). Não
+              guardar a sua escolha de cookies ou a lista de orçamento, ou
+              proteger os formulários contra envios automáticos). Não
               dependem de consentimento e não são usados para análise nem
               publicidade.
             </li>
@@ -259,6 +277,40 @@ export default function CookiePolicyPage() {
             situações específicas, como indicado.
           </p>
           <StorageTable items={NECESSARY} testId="cookies-necessary" />
+        </>
+      ),
+    },
+    {
+      id: "formularios",
+      title: "Proteção dos formulários (hCaptcha)",
+      body: (
+        <>
+          <p>
+            Os formulários de pedido de orçamento, de contacto e de
+            assistência técnica utilizam o hCaptcha, da Intuition Machines,
+            Inc., para a proteção dos formulários contra envios automáticos
+            (spam). O hCaptcha é estritamente necessário para enviar os
+            formulários e assenta no interesse legítimo da Higitotal (art. 6.º,
+            n.º 1, al. f), do RGPD), pelo que não depende de consentimento.
+          </p>
+          <p>
+            Só é carregado nas páginas com um formulário, quando o formulário é
+            apresentado (na página de um produto, apenas ao abrir o pedido de
+            orçamento); as restantes páginas do site não o carregam. Ao ser
+            carregado, o hCaptcha define o cookie abaixo no domínio
+            hcaptcha.com, e não no domínio do site. Não guarda dados no
+            armazenamento local do navegador.
+          </p>
+          <StorageTable items={FORM_PROTECTION} testId="cookies-forms" />
+          <p>
+            O hCaptcha trata dados técnicos do dispositivo, do navegador e da
+            interação com o formulário, incluindo o endereço IP, e pode
+            tratá-los fora do Espaço Económico Europeu, nos termos da{" "}
+            <LegalLink href={HCAPTCHA_PRIVACY_URL}>
+              política de privacidade do hCaptcha
+            </LegalLink>
+            .
+          </p>
         </>
       ),
     },
@@ -362,7 +414,7 @@ export default function CookiePolicyPage() {
     <LegalPage
       title="Política de Cookies"
       current="/content/cookie-policy"
-      lastUpdated="13 de novembro de 2026"
+      lastUpdated="14 de novembro de 2026"
       intro={
         <p>
           Esta política explica que cookies e tecnologias semelhantes o site

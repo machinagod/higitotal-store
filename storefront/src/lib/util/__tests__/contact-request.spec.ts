@@ -344,6 +344,28 @@ describe("buildContactRequestPayload", () => {
     expect(buildContactRequestPayload({}, { kind: "produto", quantity: 3 }).quantity).toBe(3)
     expect(buildContactRequestPayload({}, { kind: "produto", quantity: NaN }).quantity).toBeUndefined()
   })
+
+  it("sends the hCaptcha token when there is one, and nothing otherwise", () => {
+    const fields = { name: "Ana", email: "ana@empresa.pt", message: "Olá" }
+    expect(
+      buildContactRequestPayload(fields, {
+        kind: "geral",
+        hcaptchaToken: "10000000-aaaa-bbbb-cccc-000000000001",
+      })
+    ).toEqual({
+      kind: "geral",
+      name: "Ana",
+      email: "ana@empresa.pt",
+      message: "Olá",
+      hcaptchaToken: "10000000-aaaa-bbbb-cccc-000000000001",
+    })
+    expect(buildContactRequestPayload(fields, { kind: "geral", hcaptchaToken: null })).not.toHaveProperty(
+      "hcaptchaToken"
+    )
+    expect(buildContactRequestPayload(fields, { kind: "geral", hcaptchaToken: " " })).not.toHaveProperty(
+      "hcaptchaToken"
+    )
+  })
 })
 
 it("error message names the phone and its cost note", () => {

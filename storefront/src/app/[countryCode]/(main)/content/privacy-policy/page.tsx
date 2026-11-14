@@ -2,6 +2,7 @@ import { Metadata } from "next"
 
 import { COMPANY } from "@lib/company"
 import { isCatalogMode } from "@lib/util/catalog-mode"
+import { HCAPTCHA_PRIVACY_URL } from "@lib/util/hcaptcha"
 import {
   CompanyContacts,
   CompanyIdentification,
@@ -51,6 +52,12 @@ export default function PrivacyPolicyPage() {
             nome, e-mail, telefone, empresa, localidade e a mensagem que nos
             envia; nos pedidos de assistência, também o tipo de serviço, o
             equipamento ou marca e a forma de contacto preferida.
+          </li>
+          <li>
+            <B>Verificação anti-spam dos formulários (hCaptcha):</B> dados
+            técnicos do dispositivo, do navegador e da interação com o
+            formulário, incluindo o endereço IP, tratados pelo hCaptcha quando
+            um formulário é apresentado.
           </li>
           <li>
             <B>Área de cliente:</B> nome, e-mail, telefone, palavra-passe e as
@@ -108,6 +115,12 @@ export default function PrivacyPolicyPage() {
             .
           </li>
           <li>
+            <B>Proteção dos formulários contra envios automáticos (spam)</B>{" "}
+            (hCaptcha) — interesse legítimo da Higitotal (art. 6.º, n.º 1, al.
+            f), do RGPD). É estritamente necessário para enviar os formulários
+            e só é carregado nas páginas com um formulário.
+          </li>
+          <li>
             <B>Segurança e funcionamento do site</B> — interesse legítimo da
             Higitotal (art. 6.º, n.º 1, al. f), do RGPD).
           </li>
@@ -137,12 +150,29 @@ export default function PrivacyPolicyPage() {
               Analytics) — estatísticas de utilização, apenas se der o seu
               consentimento aos cookies de estatística.
             </li>
+            <li>
+              <B>Intuition Machines, Inc.</B> (hCaptcha) — proteção dos
+              formulários contra envios automáticos (spam), com fundamento no
+              interesse legítimo; estritamente necessário para os formulários e
+              carregado apenas nas páginas com um formulário. Ver a{" "}
+              <LegalLink href={HCAPTCHA_PRIVACY_URL}>
+                política de privacidade do hCaptcha
+              </LegalLink>{" "}
+              e a{" "}
+              <LegalLink href="/content/cookie-policy">
+                Política de Cookies
+              </LegalLink>
+              .
+            </li>
           </LegalList>
           <p>
             A Railway e a Resend podem tratar dados fora do Espaço Económico
             Europeu, nomeadamente nos Estados Unidos. Essas transferências
             assentam em Cláusulas Contratuais-Tipo aprovadas pela Comissão
-            Europeia (art. 46.º do RGPD).
+            Europeia (art. 46.º do RGPD). A Intuition Machines, Inc.
+            (hCaptcha) está sediada nos Estados Unidos e pode tratar dados fora
+            do Espaço Económico Europeu, nos termos da sua política de
+            privacidade.
           </p>
           <p>
             Os dados podem ainda ser comunicados a autoridades públicas quando
@@ -234,7 +264,7 @@ export default function PrivacyPolicyPage() {
     <LegalPage
       title="Política de Privacidade"
       current="/content/privacy-policy"
-      lastUpdated="13 de novembro de 2026"
+      lastUpdated="14 de novembro de 2026"
       intro={
         <p>
           Esta política explica que dados pessoais recolhemos através do site,

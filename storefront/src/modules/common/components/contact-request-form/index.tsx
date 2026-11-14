@@ -7,6 +7,11 @@ import Image from "next/image"
 import React, { useEffect, useRef, useState } from "react"
 
 import {
+  CAPTCHA_EXPIRED_MESSAGE,
+  isCaptchaRejection,
+} from "@lib/util/hcaptcha"
+import HCaptcha, { HCaptchaHandle } from "@modules/common/components/hcaptcha"
+import {
   buildContactRequestPayload,
   CONTACT_ERROR_MESSAGE,
   CONTACT_SUCCESS_MESSAGE,
@@ -127,6 +132,7 @@ export default function ContactRequestForm({
   )
   const [pref, setPref] = useState(DEFAULT_CONTACT_PREF)
   const firstRef = useRef<HTMLInputElement>(null)
+  const captchaRef = useRef<HCaptchaHandle>(null)
   const id = (name: string) => `${idPrefix}-${name}`
   const prefilledMessage =
     prefilledProp ?? (product ? PRODUCT_ENQUIRY_MESSAGE : undefined)
@@ -155,7 +161,10 @@ export default function ContactRequestForm({
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
-    if (!errors.check(form)) return
+    const fieldsOk = errors.check(form)
+    // Field errors take focus first; the captcha error shows alongside.
+    const captchaOk = captchaRef.current?.check({ focus: fieldsOk }) ?? true
+    if (!fieldsOk || !captchaOk) return
 
     setStatus("sending")
     try {
@@ -167,13 +176,22 @@ export default function ContactRequestForm({
         productUrl:
           typeof window !== "undefined" ? window.location.href : undefined,
         items: getItems?.(),
+        hcaptchaToken: captchaRef.current?.getToken(),
       })
       await submitContactRequest(payload)
+      captchaRef.current?.reset()
       setStatus("done")
       // Quote lists report their own lead (with the line count) on /orcamento.
       if (!payload.items?.length) pushDataLayer(formLeadEvent(payload.kind))
       onSuccess?.(payload)
-    } catch {
+    } catch (error) {
+      if (isCaptchaRejection(error)) {
+        // Token refused / expired: a fresh check, the rest of the form kept.
+        captchaRef.current?.reset(CAPTCHA_EXPIRED_MESSAGE)
+        setStatus("idle")
+        return
+      }
+      captchaRef.current?.reset()
       setStatus("error")
     }
   }
@@ -373,6 +391,8 @@ export default function ContactRequestForm({
       <Honeypot />
 
       {sheet && <PrivacyNote />}
+
+      <HCaptcha ref={captchaRef} idPrefix={idPrefix} />
 
       <div
         className={clx(

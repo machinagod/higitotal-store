@@ -106,6 +106,7 @@ into the storefront image at build time):
 | `NEXT_PUBLIC_BASE_URL` | `https://<storefront>.up.railway.app` |
 | `NEXT_PUBLIC_DEFAULT_REGION` | `dk` |
 | `NEXT_PUBLIC_MINIO_ENDPOINT` | `bucket-...up.railway.app` (optional) |
+| `NEXT_PUBLIC_HCAPTCHA_SITEKEY` | hCaptcha site key (optional — unset uses the production key in `src/lib/util/hcaptcha.ts`) |
 | `NEXT_PUBLIC_SEARCH_ENDPOINT` | MeiliSearch URL (optional) |
 | `NEXT_PUBLIC_SEARCH_API_KEY` | MeiliSearch search key (optional) |
 | `NEXT_PUBLIC_INDEX_NAME` | `products` (optional) |
