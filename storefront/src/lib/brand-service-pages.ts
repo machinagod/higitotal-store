@@ -43,10 +43,47 @@ export type BrandServicePage = {
   messagePlaceholder: string
 }
 
-/** Service-area line (the main page: "a partir de Mirandela", "resposta
- * prioritária no Norte"). No town list or radius — not stated on the page. */
-export const SERVICE_AREA =
-  "A partir de Mirandela, para Trás-os-Montes e o Norte"
+/** Priority-response radius around Mirandela (confirmed by Higitotal; the
+ * main page's hero shows the same "≈200 km"). */
+export const SERVICE_RADIUS_KM = 200
+
+/**
+ * Towns within the radius (straight-line distance from Mirandela, all
+ * ≤ 190 km), grouped by region, nearest first. Confirmed by Higitotal as
+ * served; edit here to change the pages, FAQ and Service JSON-LD.
+ */
+export const SERVICE_TOWNS: { region: string; towns: string[] }[] = [
+  {
+    region: "Trás-os-Montes",
+    towns: [
+      "Mirandela",
+      "Valpaços",
+      "Macedo de Cavaleiros",
+      "Torre de Moncorvo",
+      "Chaves",
+      "Vinhais",
+      "Mogadouro",
+      "Bragança",
+      "Vila Real",
+      "Miranda do Douro",
+    ],
+  },
+  { region: "Douro", towns: ["Peso da Régua", "Lamego"] },
+  {
+    region: "Minho e Porto",
+    towns: ["Guimarães", "Braga", "Porto", "Viana do Castelo"],
+  },
+  {
+    region: "Beiras",
+    towns: ["Guarda", "Viseu", "Covilhã", "Aveiro", "Coimbra", "Castelo Branco"],
+  },
+]
+
+/** Every served town, flat. */
+export const SERVICE_TOWN_NAMES = SERVICE_TOWNS.flatMap((r) => r.towns)
+
+/** Service-area line shown under the intro. */
+export const SERVICE_AREA = `A partir de Mirandela, num raio de cerca de ${SERVICE_RADIUS_KM} km: Trás-os-Montes, Douro, Minho, Porto e Beiras`
 
 const PAGES: BrandServicePage[] = [
   {
@@ -272,7 +309,7 @@ export function brandServiceFaqs(page: BrandServicePage): Faq[] {
     },
     {
       question: "Onde estão e que zona servem?",
-      answer: `A nossa equipa técnica está sediada em ${COMPANY.address.city} (${COMPANY.address.street}), em Trás-os-Montes, e dá resposta prioritária no Norte. Indique a localidade no pedido ou ligue para ${COMPANY.phone.display}.`,
+      answer: `A nossa equipa técnica está sediada em ${COMPANY.address.city} (${COMPANY.address.street}), em Trás-os-Montes, com resposta prioritária num raio de cerca de ${SERVICE_RADIUS_KM} km: ${SERVICE_TOWNS.map((r) => `${r.region} (${r.towns.filter((t) => t !== COMPANY.address.city).join(", ")})`).join("; ")}. Indique a localidade no pedido ou ligue para ${COMPANY.phone.display}.`,
     },
   ]
 }
@@ -340,10 +377,19 @@ export function brandServiceSchema(page: BrandServicePage, url: string): Json {
     provider,
     areaServed: [
       {
-        "@type": "AdministrativeArea",
-        name: "Norte",
-        containedInPlace: { "@type": "Country", name: "Portugal" },
+        "@type": "GeoCircle",
+        geoMidpoint: {
+          "@type": "GeoCoordinates",
+          latitude: COMPANY.geo.latitude,
+          longitude: COMPANY.geo.longitude,
+        },
+        geoRadius: SERVICE_RADIUS_KM * 1000,
       },
+      ...SERVICE_TOWN_NAMES.map((name) => ({
+        "@type": "City",
+        name,
+        containedInPlace: { "@type": "Country", name: "Portugal" },
+      })),
     ],
   }
 }

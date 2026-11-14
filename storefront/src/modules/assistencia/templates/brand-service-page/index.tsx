@@ -20,6 +20,8 @@ import {
   brandServicePath,
   HOW_IT_WORKS,
   SERVICE_AREA,
+  SERVICE_RADIUS_KM,
+  SERVICE_TOWNS,
   type BrandServicePage,
 } from "@lib/brand-service-pages"
 import { COMPANY } from "@lib/company"
@@ -288,6 +290,34 @@ export default function BrandServicePageTemplate({
             ))}
           </ol>
         </div>
+      </section>
+
+      {/* Service area */}
+      <section
+        aria-labelledby="bs-area"
+        className="content-container pb-16 sm:pb-[74px]"
+        data-testid="brand-service-area"
+      >
+        <span className={eyebrow}>
+          <span className="ind amber" />
+          Zona de intervenção
+        </span>
+        <h2 id="bs-area" className={h2}>
+          Assistência {page.brand} num raio de {SERVICE_RADIUS_KM} km de
+          Mirandela
+        </h2>
+        <dl className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          {SERVICE_TOWNS.map((r) => (
+            <div key={r.region}>
+              <dt className="text-[13px] font-extrabold uppercase tracking-[0.1em] text-svc-signal-bright">
+                {r.region}
+              </dt>
+              <dd className="mt-2 text-sm leading-relaxed text-svc-fg-muted">
+                {r.towns.join(" · ")}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       {/* FAQ */}

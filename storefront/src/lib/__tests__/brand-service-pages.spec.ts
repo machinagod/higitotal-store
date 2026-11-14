@@ -19,6 +19,7 @@ import {
   getBrandServicePageByName,
   HOW_IT_WORKS,
   serviceSitemapEntries,
+  SERVICE_TOWN_NAMES,
 } from "../brand-service-pages"
 import { BRANDS } from "../brands"
 import { COMPANY } from "../company"
@@ -94,7 +95,6 @@ describe("brand service pages — copy", () => {
       "24h",
       "24 h",
       "horas",
-      "km",
       "€",
       "parceiro",
     ]) {
@@ -176,13 +176,27 @@ describe("brand service pages — JSON-LD & sitemap", () => {
     expect(s.provider["@context"]).toBeUndefined()
     expect(s.provider.address.addressLocality).toBe("Mirandela")
     expect(s.provider.telephone).toBe("+351278262913")
-    expect(s.areaServed).toEqual([
-      {
-        "@type": "AdministrativeArea",
-        name: "Norte",
-        containedInPlace: { "@type": "Country", name: "Portugal" },
+    expect(s.areaServed[0]).toEqual({
+      "@type": "GeoCircle",
+      geoMidpoint: {
+        "@type": "GeoCoordinates",
+        latitude: 41.5008095,
+        longitude: -7.164659,
       },
-    ])
+      geoRadius: 200000,
+    })
+    const cities = s.areaServed.slice(1).map((c: { name: string }) => c.name)
+    expect(cities).toEqual(SERVICE_TOWN_NAMES)
+    expect(cities).toEqual(expect.arrayContaining(["Bragança", "Vila Real", "Chaves", "Porto", "Viseu"]))
+  })
+
+  it("lists every served town (outside Mirandela) in the area FAQ", () => {
+    const area = brandServiceFaqs(fagor).find((f) => f.question.startsWith("Onde"))!
+    for (const t of SERVICE_TOWN_NAMES.filter((t) => t !== "Mirandela")) {
+      expect(area.answer).toContain(t)
+    }
+    expect(area.answer).toContain("200 km")
+    expect(new Set(SERVICE_TOWN_NAMES).size).toBe(SERVICE_TOWN_NAMES.length)
   })
 
   it("builds an FAQPage from the brand's FAQ", () => {

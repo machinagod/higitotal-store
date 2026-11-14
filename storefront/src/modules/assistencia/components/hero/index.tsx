@@ -4,7 +4,7 @@ import { COMPANY, yearsInBusiness } from "@lib/company"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { IberiaMap } from "@modules/assistencia/components/iberia-map"
 
-/** Hero stats. The ≈200 km priority radius is a business figure — confirm. */
+/** Hero stats. The ≈200 km priority radius is confirmed by Higitotal (see SERVICE_RADIUS_KM). */
 const getStats = () => [
   {
     value: `${yearsInBusiness()} anos`,
