@@ -82,14 +82,17 @@ export async function pageMetadata({
   title,
   description,
   images,
+  fullTitle: givenFullTitle,
 }: {
   path: string
   title: string
   description: string
   images?: OgImage[]
+  /** The complete `<title>` when the caller built it (e.g. `productSeoTitle`). */
+  fullTitle?: string
 }): Promise<Metadata> {
   const canonical = await canonicalUrl(path)
-  const fullTitle = titleWithSiteName(title)
+  const fullTitle = givenFullTitle ?? titleWithSiteName(title)
   return {
     title: { absolute: fullTitle },
     description,

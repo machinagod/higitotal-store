@@ -6,7 +6,7 @@ import JsonLd from "@modules/common/components/json-ld"
 import { getRegion, listRegions } from "@lib/data/regions"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { canonicalUrl, pageMetadata, SITE_NAME } from "@lib/util/seo"
-import { productMetaDescription } from "@lib/util/seo-meta"
+import { productMetaDescription, productSeoTitle } from "@lib/util/seo-meta"
 import { breadcrumbSchema, productSchema } from "@lib/util/structured-data"
 import {
   displayCategoryName,
@@ -70,12 +70,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
-  // Title: "<product> · Higitotal" only when that fits in 60 characters.
+  // Title: "<product> – <manufacturer ref> · Higitotal", the ref only when the
+  // SKU is one and the site name only when it fits (see productSeoTitle).
   // Products without a photo get the site's default social image; Twitter
   // inherits the Open Graph title/description/image.
   return pageMetadata({
     path: `products/${product.handle}`,
     title: product.title,
+    fullTitle: productSeoTitle(product.title, product.variants?.[0]?.sku),
     description: productMetaDescription(product),
     images: product.thumbnail ? [product.thumbnail] : undefined,
   })

@@ -8,10 +8,13 @@ import {
   collectionsWithoutCategoryTwin,
   listingCanonicalPath,
   listingPageTitle,
+  manufacturerRef,
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
+  MAX_TITLE_WITH_REF_LENGTH,
   plainText,
   productMetaDescription,
+  productSeoTitle,
   titleWithSiteName,
   truncateAtWord,
 } from "../seo-meta"
@@ -38,6 +41,71 @@ describe("titleWithSiteName", () => {
   it("trims and falls back to the site name for an empty title", () => {
     expect(titleWithSiteName("  Papel  ")).toBe("Papel · Higitotal")
     expect(titleWithSiteName("   ")).toBe("Higitotal")
+  })
+})
+
+describe("manufacturerRef", () => {
+  it("ignores internal Higitotal codes (2 letters + 4 digits)", () => {
+    for (const sku of ["PA3008", "PB3023", "DX1004", "RL1062", "SR4509", "hf2605"]) {
+      expect(manufacturerRef(sku), sku).toBeNull()
+    }
+  })
+
+  it("strips our M- prefix from supplier codes", () => {
+    expect(manufacturerRef("M-19071868")).toBe("19071868")
+    expect(manufacturerRef("m-1303180")).toBe("1303180")
+  })
+
+  it("keeps 6–9 digit manufacturer codes and Vileda V-codes", () => {
+    expect(manufacturerRef("7010074")).toBe("7010074")
+    expect(manufacturerRef("100842643")).toBe("100842643")
+    expect(manufacturerRef("406150")).toBe("406150")
+    expect(manufacturerRef(" V140695 ")).toBe("V140695")
+  })
+
+  it("does not guess on any other shape", () => {
+    for (const sku of ["N50000111", "D7524829", "9066", "00110", "PCT224046", "M-5700.006", "T033", "", null, undefined]) {
+      expect(manufacturerRef(sku), String(sku)).toBeNull()
+    }
+  })
+})
+
+describe("productSeoTitle", () => {
+  it("adds the manufacturer reference and the site name when both fit", () => {
+    expect(productSeoTitle("Clax 100 22A1 (20L)", "7518139")).toBe(
+      "Clax 100 22A1 (20L) – 7518139 · Higitotal"
+    )
+    expect(productSeoTitle("SWEP Mopa HygienePlus", "V140695")).toBe(
+      "SWEP Mopa HygienePlus – V140695 · Higitotal"
+    )
+    // Exactly 60 characters with the suffix.
+    const sr16 = productSeoTitle("Máquina de Secar Roupa SR-16 ME Fagor", "M-19071868")
+    expect(sr16).toBe("Máquina de Secar Roupa SR-16 ME Fagor – 19071868 · Higitotal")
+    expect(sr16.length).toBe(MAX_TITLE_LENGTH)
+  })
+
+  it("drops the site name, keeping the reference, up to 70 characters", () => {
+    expect(productSeoTitle("Máquina de Lavar a Roupa LA-14 TP 2 E Fagor", "M-19058420")).toBe(
+      "Máquina de Lavar a Roupa LA-14 TP 2 E Fagor – 19058420"
+    )
+    const name = "x".repeat(MAX_TITLE_WITH_REF_LENGTH - " – 1234567".length)
+    expect(productSeoTitle(name, "1234567")).toBe(`${name} – 1234567`)
+  })
+
+  it("keeps the whole name, without the reference, when name + reference is too long", () => {
+    const long = "Suma Auto Oven 2em1 DA9.10 Detergente Desengordurante para Fornos (2x5L)"
+    expect(productSeoTitle(long, "7517911")).toBe(long)
+    const name = "x".repeat(MAX_TITLE_WITH_REF_LENGTH - " – 1234567".length + 1)
+    expect(productSeoTitle(name, "1234567")).toBe(name)
+  })
+
+  it("falls back to the plain title rule for internal codes, no SKU or a ref already named", () => {
+    expect(productSeoTitle("Toalha de Mãos Zig-Zag Amoos", "PA3023")).toBe(
+      "Toalha de Mãos Zig-Zag Amoos · Higitotal"
+    )
+    expect(productSeoTitle("Doseador Crema", null)).toBe("Doseador Crema · Higitotal")
+    expect(productSeoTitle("Clax 7518139 (20L)", "7518139")).toBe("Clax 7518139 (20L) · Higitotal")
+    expect(productSeoTitle("", "7518139")).toBe("Higitotal")
   })
 })
 

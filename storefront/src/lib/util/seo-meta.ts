@@ -48,6 +48,52 @@ export function titleWithSiteName(title: string): string {
   return full.length <= MAX_TITLE_LENGTH ? full : t
 }
 
+/**
+ * Longest product `<title>` we accept to fit the manufacturer reference in
+ * when the site name has to go (search results cut around here).
+ */
+export const MAX_TITLE_WITH_REF_LENGTH = 70
+
+/**
+ * The manufacturer's reference hidden in a variant SKU, as people search for
+ * it — or null when the SKU is one of our own codes or we are not sure:
+ *  - "M-19071868" (supplier code with our "M-" prefix) → "19071868";
+ *  - plain 6–9 digit codes (Diversey "7010074", "100842643") as they are;
+ *  - Vileda codes "V" + 6 digits ("V140695") as they are.
+ * Internal Higitotal codes (2 letters + 4 digits: PA3008, DX1004, SR4509…) and
+ * every other shape (N…, D…, short numbers) give null.
+ */
+export function manufacturerRef(sku: string | null | undefined): string | null {
+  const s = (sku ?? "").trim().toUpperCase()
+  const m = s.match(/^M-(\d{6,9})$/)
+  if (m) return m[1]
+  if (/^\d{6,9}$/.test(s)) return s
+  if (/^V\d{6}$/.test(s)) return s
+  return null
+}
+
+/**
+ * Complete `<title>` of a product page. Competitors rank for code searches by
+ * naming the manufacturer reference, so we add it when the SKU is one
+ * (see {@link manufacturerRef}) and the name does not already contain it:
+ *  1. "<name> – <ref> · Higitotal" when it fits in {@link MAX_TITLE_LENGTH};
+ *  2. else "<name> – <ref>" when it fits in {@link MAX_TITLE_WITH_REF_LENGTH};
+ *  3. else the plain rule ({@link titleWithSiteName}). The name is never cut.
+ */
+export function productSeoTitle(
+  title: string | null | undefined,
+  sku: string | null | undefined
+): string {
+  const name = (title ?? "").trim()
+  const ref = manufacturerRef(sku)
+  if (!name || !ref || containsWords(name, ref)) return titleWithSiteName(name)
+  const withRef = `${name} – ${ref}`
+  const full = `${withRef} · ${SITE_NAME}`
+  if (full.length <= MAX_TITLE_LENGTH) return full
+  if (withRef.length <= MAX_TITLE_WITH_REF_LENGTH) return withRef
+  return titleWithSiteName(name)
+}
+
 const ENTITIES: Record<string, string> = {
   amp: "&",
   lt: "<",
