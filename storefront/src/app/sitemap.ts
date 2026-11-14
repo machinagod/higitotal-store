@@ -8,6 +8,7 @@ import { getProductsList } from "@lib/data/products"
 import { isInternalCategory } from "@lib/util/category-display"
 import { absoluteUrl, getCanonicalCountryCode } from "@lib/util/seo"
 import { collectionsWithoutCategoryTwin } from "@lib/util/seo-meta"
+import { sectorSitemapEntries } from "@lib/sectors"
 
 // Regenerate hourly so newly published products/categories appear without a
 // redeploy, while still serving a cached sitemap to crawlers.
@@ -67,7 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ).map((e) => ({ lastModified: STATIC_PAGES_LAST_MODIFIED, ...e }))
 
   // Per-brand technical-assistance pages (assistencia-tecnica/[marca]).
-  staticEntries.push(...serviceSitemapEntries(absoluteUrl(`/${countryCode}`), now))
+  staticEntries.push(...serviceSitemapEntries(absoluteUrl(`/${countryCode}`), STATIC_PAGES_LAST_MODIFIED))
 
   // Catalog routes — fail soft so a backend hiccup never empties the sitemap.
   let products: MetadataRoute.Sitemap = []
@@ -118,6 +119,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch {
     // ignore
   }
+
+  staticEntries.push(...sectorSitemapEntries(absoluteUrl(`/${countryCode}`), STATIC_PAGES_LAST_MODIFIED))
 
   return [...staticEntries, ...categories, ...collections, ...products]
 }

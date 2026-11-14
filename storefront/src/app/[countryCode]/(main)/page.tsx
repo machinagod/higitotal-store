@@ -7,6 +7,7 @@ import TrustBar from "@modules/home/components/trust-bar"
 import CategoryCards from "@modules/home/components/category-cards"
 import AtFeature from "@modules/home/components/at-feature"
 import Suppliers from "@modules/home/components/suppliers"
+import HomeSectors from "@modules/sectors/components/home-sectors"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { getCollectionByHandle } from "@lib/data/collections"
@@ -219,6 +220,8 @@ export default async function Home({
       )}
 
       <AtFeature />
+
+      <HomeSectors />
 
       <Suppliers />
     </div>

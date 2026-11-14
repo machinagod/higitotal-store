@@ -13,6 +13,7 @@ import {
 import { BRANDS_PATH } from "@lib/brands"
 import { getNavGroups } from "@lib/data/categories"
 import { COMPANY } from "@lib/company"
+import { SECTORS, SECTORS_PATH, sectorHref } from "@lib/sectors"
 import { isCatalogMode } from "@lib/util/catalog-mode"
 import { analyticsEnabled } from "@lib/util/gtm"
 import CookiePreferencesButton from "@modules/common/components/cookie-consent/preferences-button"
@@ -34,6 +35,11 @@ const COMPANY_LINKS: FooterLink[] = [
   { label: "A nossa loja", href: "/a-nossa-loja" },
   { label: "Assistência técnica", href: "/assistencia-tecnica" },
   { label: "Contactos", href: "/contact" },
+]
+
+const SECTOR_LINKS: FooterLink[] = [
+  ...SECTORS.map((s) => ({ label: s.name, href: sectorHref(s) })),
+  { label: "Todos os setores", href: SECTORS_PATH },
 ]
 
 const LEGAL_LINKS: FooterLink[] = [
@@ -236,9 +242,15 @@ export default async function Footer() {
             <ServiceColumn />
           </div>
 
-          <div>
-            <h2 className={`mb-4 ${headingClass}`}>Empresa</h2>
-            <LinkList links={COMPANY_LINKS} testId="footer-company" />
+          <div className="flex flex-col gap-9">
+            <div>
+              <h2 className={`mb-4 ${headingClass}`}>Setores</h2>
+              <LinkList links={SECTOR_LINKS} testId="footer-sectors" />
+            </div>
+            <div>
+              <h2 className={`mb-4 ${headingClass}`}>Empresa</h2>
+              <LinkList links={COMPANY_LINKS} testId="footer-company" />
+            </div>
           </div>
 
           <div>
@@ -263,6 +275,9 @@ export default async function Footer() {
                 />
               </MobileSection>
             )}
+            <MobileSection title="Setores">
+              <LinkList links={SECTOR_LINKS} testId="footer-sectors-mobile" />
+            </MobileSection>
             <MobileSection title="Assistência Técnica">
               <ServiceColumn />
             </MobileSection>
