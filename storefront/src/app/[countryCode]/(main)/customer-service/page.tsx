@@ -14,11 +14,15 @@ import {
 
 import { COMPANY } from "@lib/company"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { pageMetadata } from "@lib/util/seo"
 
-export const metadata: Metadata = {
-  title: "Apoio ao Cliente",
-  description:
-    "Pedidos de informação, orçamentos, acompanhamento de encomendas e assistência pós-venda Higitotal.",
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    path: "customer-service",
+    title: "Apoio ao Cliente",
+    description:
+      "Pedidos de informação, orçamentos, acompanhamento de encomendas e assistência pós-venda Higitotal.",
+  })
 }
 
 type HelpCard = {

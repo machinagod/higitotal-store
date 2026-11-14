@@ -18,7 +18,12 @@ import {
 } from "@lib/data/categories"
 import { getRegion } from "@lib/data/regions"
 import { SLIDES } from "@modules/home/components/hero/featured-slides"
-import { canonicalUrl, SITE_DESCRIPTION, SITE_NAME } from "@lib/util/seo"
+import {
+  canonicalUrl,
+  DEFAULT_OG_IMAGE,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+} from "@lib/util/seo"
 
 /** Collection whose first product photo anchors the hero. */
 const HERO_COLLECTION = "fornos-profissionais"
@@ -50,6 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: SITE_DESCRIPTION,
       url: canonical,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }

@@ -17,9 +17,10 @@ import {
   weeklyHours,
 } from "@lib/company"
 import { isCatalogMode } from "@lib/util/catalog-mode"
-import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
+import { canonicalUrl, pageMetadata } from "@lib/util/seo"
 import { localBusinessSchema } from "@lib/util/structured-data"
 import CompanyCta from "@modules/company/components/company-cta"
+import sedePhoto from "@modules/company/assets/sede-mirandela.webp"
 import JsonLd from "@modules/common/components/json-ld"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -27,19 +28,20 @@ const TITLE = "A nossa loja"
 const DESCRIPTION = `Morada, horário e direções para a Higitotal na Zona Industrial de ${COMPANY.address.city}. ${COMPANY.hours}.`
 
 export async function generateMetadata(): Promise<Metadata> {
-  const canonical = await canonicalUrl("a-nossa-loja")
-  return {
-    // The root layout's title template appends " · Higitotal".
+  return pageMetadata({
+    path: "a-nossa-loja",
     title: TITLE,
     description: DESCRIPTION,
-    alternates: { canonical },
-    openGraph: {
-      type: "website",
-      title: `${TITLE} · ${SITE_NAME}`,
-      description: DESCRIPTION,
-      url: canonical,
-    },
-  }
+    // The façade photo, as on Sobre nós.
+    images: [
+      {
+        url: sedePhoto.src,
+        width: sedePhoto.width,
+        height: sedePhoto.height,
+        alt: "Fachada das instalações da Higitotal na Zona Industrial de Mirandela",
+      },
+    ],
+  })
 }
 
 const iconTile =

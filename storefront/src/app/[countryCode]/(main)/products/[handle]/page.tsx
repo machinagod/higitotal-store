@@ -5,7 +5,8 @@ import ProductTemplate from "@modules/products/templates"
 import JsonLd from "@modules/common/components/json-ld"
 import { getRegion, listRegions } from "@lib/data/regions"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
-import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
+import { canonicalUrl, pageMetadata, SITE_NAME } from "@lib/util/seo"
+import { productMetaDescription } from "@lib/util/seo-meta"
 import { breadcrumbSchema, productSchema } from "@lib/util/structured-data"
 import {
   displayCategoryName,
@@ -55,13 +56,6 @@ export async function generateStaticParams() {
   }
 }
 
-/** Trim a description to a meta-friendly length on a word boundary. */
-function metaDescription(product: { description?: string | null; subtitle?: string | null; title: string }) {
-  const source = (product.description || product.subtitle || product.title).trim()
-  if (source.length <= 160) return source
-  return source.slice(0, 157).replace(/\s+\S*$/, "") + "…"
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = params
   const region = await getRegion(params.countryCode)
@@ -76,28 +70,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
-  const canonical = await canonicalUrl(`products/${product.handle}`)
-  const description = metaDescription(product)
-  const images = product.thumbnail ? [product.thumbnail] : []
-
-  return {
+  // Title: "<product> · Higitotal" only when that fits in 60 characters.
+  // Products without a photo get the site's default social image; Twitter
+  // inherits the Open Graph title/description/image.
+  return pageMetadata({
+    path: `products/${product.handle}`,
     title: product.title,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      type: "website",
-      title: `${product.title} · ${SITE_NAME}`,
-      description,
-      url: canonical,
-      images,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${product.title} · ${SITE_NAME}`,
-      description,
-      images,
-    },
-  }
+    description: productMetaDescription(product),
+    images: product.thumbnail ? [product.thumbnail] : undefined,
+  })
 }
 
 export default async function ProductPage({ params }: Props) {

@@ -1,8 +1,11 @@
+import type { Metadata } from "next"
+
 import { listRegions } from "@lib/data/regions"
 import { getBaseURL } from "./env"
+import { DEFAULT_OG_IMAGE, SITE_NAME, titleWithSiteName } from "./seo-meta"
 
 /** Brand/site constants reused across metadata, JSON-LD and the sitemap. */
-export const SITE_NAME = "Higitotal"
+export { DEFAULT_OG_IMAGE, SITE_NAME }
 
 export const SITE_DESCRIPTION =
   "Higiene profissional e equipamento para hotelaria, restauração e indústria, com assistência técnica própria sediada em Mirandela. Especialistas desde 1999."
@@ -57,4 +60,46 @@ export const canonicalUrl = async (pathWithoutCountry = ""): Promise<string> => 
   const cc = await getCanonicalCountryCode()
   const clean = pathWithoutCountry.replace(/^\/+/, "")
   return absoluteUrl(clean ? `/${cc}/${clean}` : `/${cc}`)
+}
+
+/** An Open Graph image: a URL (absolute or site-relative) or a full entry. */
+export type OgImage =
+  | string
+  | { url: string; width?: number; height?: number; alt?: string }
+
+/**
+ * Standard metadata for an indexable page: title (with " · Higitotal" when it
+ * fits, see `titleWithSiteName`), description, self-canonical URL on the
+ * canonical region, and Open Graph (Twitter inherits it) with the page's own
+ * images or the site default.
+ *
+ * `path` is WITHOUT the country prefix and may carry a query (`store?page=2`).
+ * Next merges `openGraph` shallowly — a page that sets it drops the root
+ * layout's images — so every page states its images through here.
+ */
+export async function pageMetadata({
+  path,
+  title,
+  description,
+  images,
+}: {
+  path: string
+  title: string
+  description: string
+  images?: OgImage[]
+}): Promise<Metadata> {
+  const canonical = await canonicalUrl(path)
+  const fullTitle = titleWithSiteName(title)
+  return {
+    title: { absolute: fullTitle },
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: fullTitle,
+      description,
+      url: canonical,
+      images: images?.length ? images : [DEFAULT_OG_IMAGE],
+    },
+  }
 }

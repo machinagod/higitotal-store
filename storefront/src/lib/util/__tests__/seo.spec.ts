@@ -9,7 +9,9 @@ import { listRegions } from "@lib/data/regions"
 import {
   absoluteUrl,
   canonicalUrl,
+  DEFAULT_OG_IMAGE,
   getCanonicalCountryCode,
+  pageMetadata,
 } from "../seo"
 
 const mockedListRegions = vi.mocked(listRegions)
@@ -121,5 +123,61 @@ describe("canonicalUrl", () => {
 
   it("returns the country home for an empty path", async () => {
     expect(await canonicalUrl("")).toBe("https://higitotal.test/dk")
+  })
+})
+
+describe("pageMetadata", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_BASE_URL = "https://higitotal.test"
+    process.env.NEXT_PUBLIC_DEFAULT_REGION = "dk"
+    mockedListRegions.mockResolvedValue(regions)
+  })
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_BASE_URL
+    delete process.env.NEXT_PUBLIC_DEFAULT_REGION
+    vi.clearAllMocks()
+  })
+
+  it("builds a self-canonical page with the default social image", async () => {
+    const meta = await pageMetadata({
+      path: "contact",
+      title: "Contactos",
+      description: "Fale connosco.",
+    })
+    expect(meta).toEqual({
+      title: { absolute: "Contactos · Higitotal" },
+      description: "Fale connosco.",
+      alternates: { canonical: "https://higitotal.test/dk/contact" },
+      openGraph: {
+        type: "website",
+        title: "Contactos · Higitotal",
+        description: "Fale connosco.",
+        url: "https://higitotal.test/dk/contact",
+        images: [DEFAULT_OG_IMAGE],
+      },
+    })
+  })
+
+  it("keeps a query in the canonical and the page's own images", async () => {
+    const meta = await pageMetadata({
+      path: "store?page=2",
+      title: "Catálogo — página 2",
+      description: "d",
+      images: ["https://cdn.test/a.jpg"],
+    })
+    expect(meta.alternates?.canonical).toBe("https://higitotal.test/dk/store?page=2")
+    expect((meta.openGraph as any).images).toEqual(["https://cdn.test/a.jpg"])
+  })
+
+  it("drops the site name from a title that would exceed 60 characters", async () => {
+    const long = "Máquina de Lavar Loiça de Capota Profissional com Doseador X"
+    const meta = await pageMetadata({ path: "products/x", title: long, description: "d" })
+    expect(meta.title).toEqual({ absolute: long })
+    expect(meta.openGraph?.title).toBe(long)
+  })
+
+  it("falls back to the default image for an empty list", async () => {
+    const meta = await pageMetadata({ path: "", title: "T", description: "d", images: [] })
+    expect((meta.openGraph as any).images).toEqual([DEFAULT_OG_IMAGE])
   })
 })

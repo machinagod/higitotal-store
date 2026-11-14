@@ -12,12 +12,15 @@ import {
 import { COMPANY, MAPS_URL as MAP_URL } from "@lib/company"
 import ContactRequestForm from "@modules/common/components/contact-request-form"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { pageMetadata } from "@lib/util/seo"
 
-export const metadata: Metadata = {
-  // The root layout's title template appends " · Higitotal".
-  title: "Contactos",
-  description:
-    "Contacte a Higitotal — produtos de higiene profissional, equipamento hoteleiro e assistência técnica. Mirandela, Portugal.",
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    path: "contact",
+    title: "Contactos",
+    description:
+      "Contacte a Higitotal — produtos de higiene profissional, equipamento hoteleiro e assistência técnica. Mirandela, Portugal.",
+  })
 }
 
 const iconTile =

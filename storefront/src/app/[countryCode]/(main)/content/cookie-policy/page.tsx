@@ -14,11 +14,15 @@ import {
   LegalPage,
   type LegalSection,
 } from "../_components/legal-page"
+import { pageMetadata } from "@lib/util/seo"
 
-export const metadata: Metadata = {
-  title: "Política de Cookies",
-  description:
-    "Que cookies o site Higitotal utiliza, para que servem e como gerir o seu consentimento.",
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    path: "content/cookie-policy",
+    title: "Política de Cookies",
+    description:
+      "Que cookies o site Higitotal utiliza, para que servem e como gerir o seu consentimento.",
+  })
 }
 
 /** The GA4 property the GTM container sends to (its `_ga_<id>` cookie). */

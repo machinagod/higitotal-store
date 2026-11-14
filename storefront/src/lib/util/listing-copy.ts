@@ -4,11 +4,6 @@ export function productCountLabel(count: number): string {
   return `${n.toLocaleString("pt-PT")} ${n === 1 ? "produto" : "produtos"}`
 }
 
-/** Meta description for a category listing (pass the display name). */
-export function categoryMetaDescription(name: string): string {
-  return `${name} para uso profissional — catálogo Higitotal. Peça preço e disponibilidade.`
-}
-
 /**
  * Meta description for a collection listing. Collections are mostly brands
  * ("Vileda") but some are product lines ("Fornos Profissionais"), so the

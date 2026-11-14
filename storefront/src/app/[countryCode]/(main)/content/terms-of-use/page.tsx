@@ -9,10 +9,14 @@ import {
   LegalPage,
   type LegalSection,
 } from "../_components/legal-page"
+import { pageMetadata } from "@lib/util/seo"
 
-export const metadata: Metadata = {
-  title: "Termos de Utilização",
-  description: "Termos de utilização do site Higitotal.",
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    path: "content/terms-of-use",
+    title: "Termos de Utilização",
+    description: "Termos de utilização do site Higitotal.",
+  })
 }
 
 export default function TermsOfUsePage() {

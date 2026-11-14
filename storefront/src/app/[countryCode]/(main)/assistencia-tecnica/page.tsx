@@ -5,11 +5,15 @@ import Services from "@modules/assistencia/components/services"
 import Equipment from "@modules/assistencia/components/equipment"
 import Maintenance from "@modules/assistencia/components/maintenance"
 import RequestForm from "@modules/assistencia/components/request-form"
+import { pageMetadata } from "@lib/util/seo"
 
-export const metadata: Metadata = {
-  title: "Assistência Técnica",
-  description:
-    "Instalação, reparação e contratos de manutenção de equipamento profissional de cozinha, lavandaria e limpeza. Técnicos especializados, sediados em Mirandela, com resposta prioritária no Norte.",
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    path: "assistencia-tecnica",
+    title: "Assistência Técnica",
+    description:
+      "Instalação, reparação e contratos de manutenção de equipamento profissional de cozinha, lavandaria e limpeza. Técnicos especializados, sediados em Mirandela, com resposta prioritária no Norte.",
+  })
 }
 
 type Params = {

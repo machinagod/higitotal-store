@@ -11,11 +11,15 @@ import {
   LegalPage,
   type LegalSection,
 } from "../_components/legal-page"
+import { pageMetadata } from "@lib/util/seo"
 
-export const metadata: Metadata = {
-  title: "Política de Privacidade",
-  description:
-    "Como a Higitotal recolhe, utiliza e protege os seus dados pessoais.",
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    path: "content/privacy-policy",
+    title: "Política de Privacidade",
+    description:
+      "Como a Higitotal recolhe, utiliza e protege os seus dados pessoais.",
+  })
 }
 
 const B = ({ children }: { children: React.ReactNode }) => (

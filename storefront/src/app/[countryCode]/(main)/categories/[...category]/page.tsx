@@ -1,13 +1,24 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { cache } from "react"
 
 import {
+  collectCategoryIds,
   getCategoryByHandle,
   getCategoryById,
   listCategories,
+  preferCurated,
 } from "@lib/data/categories"
+import { getProductsList } from "@lib/data/products"
 import { isInternalCategory } from "@lib/util/category-display"
-import { categoryMetaDescription } from "@lib/util/listing-copy"
+import {
+  categoryLabel,
+  categoryMetaDescription,
+  categoryParentLabel,
+  categorySeoTitle,
+  listingCanonicalPath,
+  listingPageTitle,
+} from "@lib/util/seo-meta"
 import { listRegions } from "@lib/data/regions"
 import { StoreProductCategory, StoreRegion } from "@medusajs/types"
 import CategoryTemplate, {
@@ -15,7 +26,7 @@ import CategoryTemplate, {
 } from "@modules/categories/templates"
 import JsonLd from "@modules/common/components/json-ld"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
+import { canonicalUrl, pageMetadata, SITE_NAME } from "@lib/util/seo"
 import { breadcrumbSchema } from "@lib/util/structured-data"
 
 type Props = {
@@ -92,32 +103,80 @@ async function getAncestors(category: StoreProductCategory | undefined): Promise
   return { chain, siblings }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+/**
+ * Product count of a category (with its sub-categories) and the first product
+ * photo, for the meta description and the social image. Fail-soft: the page
+ * still gets its metadata (default image, no count) if the listing fails.
+ *
+ * Request-cached on primitive keys (the comma-joined category ids) so the page
+ * can await the very same promise: the HTML shell then waits for it, and the
+ * metadata — resolved by then — lands in <head> instead of being streamed
+ * into the body after it.
+ */
+const categoryListingSummary = cache(async function (
+  categoryIds: string,
+  countryCode: string
+): Promise<{ count: number | null; image: string | null }> {
+  try {
+    const {
+      response: { products, count },
+    } = await getProductsList({
+      queryParams: {
+        category_id: categoryIds.split(","),
+        limit: 24,
+        fields: "id,thumbnail,collection_id",
+      },
+      countryCode,
+    })
+    const image = preferCurated(products).find((p) => p.thumbnail)?.thumbnail
+    return { count, image: image ?? null }
+  } catch {
+    return { count: null, image: null }
+  }
+})
+
+const summaryFor = (category: StoreProductCategory, countryCode: string) =>
+  categoryListingSummary(collectCategoryIds(category).join(","), countryCode)
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
+  let category: StoreProductCategory | undefined
   try {
     const { product_categories } = await getCategoryByHandle(params.category)
-    const category = product_categories[product_categories.length - 1]
-    const title = categoryPageTitle(category)
-    const description =
-      category.description?.trim() || categoryMetaDescription(title)
-
-    const canonical = await canonicalUrl(
-      `categories/${params.category.join("/")}`
-    )
-
-    return {
-      title,
-      description,
-      alternates: { canonical },
-      openGraph: {
-        type: "website",
-        title: `${title} · ${SITE_NAME}`,
-        description,
-        url: canonical,
-      },
-    }
-  } catch (error) {
-    notFound()
+    category = product_categories[product_categories.length - 1]
+  } catch {
+    // handled below
   }
+  if (!category) notFound()
+
+  // The by-handle lookup (with the descendant tree) carries no parent; fetch
+  // it by id so sub-categories get unique titles ("Lavandaria — Diversey").
+  const [byId, { count, image }] = await Promise.all([
+    getCategoryById(category.id).catch(() => null),
+    summaryFor(category, params.countryCode),
+  ])
+  const withParent = {
+    ...category,
+    parent_category: byId?.parent_category ?? null,
+  }
+  const description =
+    category.description?.trim() ||
+    categoryMetaDescription(categoryLabel(withParent), {
+      parent: categoryParentLabel(withParent),
+      count,
+    })
+
+  return pageMetadata({
+    path: listingCanonicalPath(
+      `categories/${params.category.join("/")}`,
+      searchParams?.page
+    ),
+    title: listingPageTitle(categorySeoTitle(withParent), searchParams?.page),
+    description,
+    images: image ? [image] : undefined,
+  })
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -128,6 +187,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!product_categories?.length) {
     notFound()
   }
+
+  // Shared with generateMetadata (request-cached), awaited alongside the
+  // ancestors so the metadata is ready when the shell flushes (see above).
+  const summary = summaryFor(
+    product_categories[product_categories.length - 1],
+    params.countryCode
+  )
 
   const { chain: ancestors, siblings: parentChildren } =
     product_categories.length === 1
@@ -142,6 +208,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             product_categories[product_categories.length - 2]
               ?.category_children ?? [],
         }
+  await summary
 
   const trail = [
     { name: SITE_NAME, url: await canonicalUrl("") },

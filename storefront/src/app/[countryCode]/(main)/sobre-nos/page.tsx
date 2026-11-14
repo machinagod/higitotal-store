@@ -21,7 +21,7 @@ import {
 import { stripBrands } from "@lib/brands"
 import { COMPANY, yearsInBusiness } from "@lib/company"
 import { getStripBrands } from "@lib/data/categories"
-import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
+import { canonicalUrl, pageMetadata, SITE_NAME } from "@lib/util/seo"
 import { aboutPageSchema } from "@lib/util/structured-data"
 import BrandLogoImg from "@modules/common/components/brand-logo"
 import CompanyCta from "@modules/company/components/company-cta"
@@ -33,27 +33,19 @@ const TITLE = "Sobre nós"
 const DESCRIPTION = `A Higitotal fornece produtos de higiene e limpeza profissional, papel, equipamento hoteleiro e de lavandaria e máquinas de limpeza, com assistência técnica própria. Em Mirandela, desde ${COMPANY.since}.`
 
 export async function generateMetadata(): Promise<Metadata> {
-  const canonical = await canonicalUrl("sobre-nos")
-  return {
-    // The root layout's title template appends " · Higitotal".
+  return pageMetadata({
+    path: "sobre-nos",
     title: TITLE,
     description: DESCRIPTION,
-    alternates: { canonical },
-    openGraph: {
-      type: "website",
-      title: `${TITLE} · ${SITE_NAME}`,
-      description: DESCRIPTION,
-      url: canonical,
-      images: [
-        {
-          url: sedePhoto.src,
-          width: sedePhoto.width,
-          height: sedePhoto.height,
-          alt: PHOTO_ALT,
-        },
-      ],
-    },
-  }
+    images: [
+      {
+        url: sedePhoto.src,
+        width: sedePhoto.width,
+        height: sedePhoto.height,
+        alt: PHOTO_ALT,
+      },
+    ],
+  })
 }
 
 type Item = { Icon: LucideIcon; label: string }

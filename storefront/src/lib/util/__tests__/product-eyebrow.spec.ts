@@ -5,8 +5,8 @@ import {
   productEyebrow,
   sameLabel,
 } from "../product-eyebrow"
+import { categoryMetaDescription } from "../seo-meta"
 import {
-  categoryMetaDescription,
   collectionMetaDescription,
   decodeSearchTerm,
   productCountLabel,

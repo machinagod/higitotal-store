@@ -7,6 +7,7 @@ import { getCollectionsList } from "@lib/data/collections"
 import { getProductsList } from "@lib/data/products"
 import { isInternalCategory } from "@lib/util/category-display"
 import { absoluteUrl, getCanonicalCountryCode } from "@lib/util/seo"
+import { collectionsWithoutCategoryTwin } from "@lib/util/seo-meta"
 
 // Regenerate hourly so newly published products/categories appear without a
 // redeploy, while still serving a cached sitemap to crawlers.
@@ -14,6 +15,13 @@ export const revalidate = 3600
 
 const PAGE_SIZE = 100
 const MAX_PAGES = 100 // hard cap (~10k products) to bound build/crawl cost
+
+/**
+ * lastmod of the static pages: a fixed date (bump it when their content
+ * changes), not "now" on every request, which tells crawlers nothing. An entry
+ * can set its own `lastModified` to override it.
+ */
+const STATIC_PAGES_LAST_MODIFIED = new Date("2026-11-14T00:00:00Z")
 
 /** Walk the paginated product list until exhausted (or the page cap). */
 async function getAllProducts(countryCode: string) {
@@ -56,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: prefix("content/cookie-policy"), changeFrequency: "yearly", priority: 0.2 },
       ...brandSitemapEntries(absoluteUrl(`/${countryCode}`)),
     ] satisfies MetadataRoute.Sitemap
-  ).map((e) => ({ lastModified: now, ...e }))
+  ).map((e) => ({ lastModified: STATIC_PAGES_LAST_MODIFIED, ...e }))
 
   // Per-brand technical-assistance pages (assistencia-tecnica/[marca]).
   staticEntries.push(...serviceSitemapEntries(absoluteUrl(`/${countryCode}`), now))
@@ -96,7 +104,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const { collections: cols } = await getCollectionsList(0, 100)
-    collections = (cols ?? [])
+    // A collection with a same-handle category duplicates it (and
+    // canonicalises to it) — list only the category.
+    const cats = await listCategories().catch(() => [])
+    collections = collectionsWithoutCategoryTwin(cols, cats)
       .filter((c) => c?.handle)
       .map((c) => ({
         url: prefix(`collections/${c.handle}`),

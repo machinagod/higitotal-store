@@ -13,6 +13,7 @@ import JsonLd from "@modules/common/components/json-ld"
 import { getBaseURL } from "@lib/util/env"
 import { analyticsEnabled } from "@lib/util/gtm"
 import {
+  DEFAULT_OG_IMAGE,
   SITE_DESCRIPTION,
   SITE_LOCALE,
   SITE_NAME,
@@ -84,11 +85,16 @@ export const metadata: Metadata = {
     locale: SITE_LOCALE,
     title: `${SITE_NAME} · Higiene profissional e assistência técnica`,
     description: SITE_DESCRIPTION,
+    // Default social image. A page that sets its own `openGraph` replaces this
+    // object wholesale (shallow merge), so pages pass their images — or this
+    // default — via `pageMetadata` (@lib/util/seo).
+    images: [DEFAULT_OG_IMAGE],
   },
+  // Card type only: Next fills twitter title/description/image from each
+  // page's resolved openGraph. Setting them here would pin the home page's
+  // values onto every page.
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} · Higiene profissional e assistência técnica`,
-    description: SITE_DESCRIPTION,
   },
   robots: {
     index: true,
