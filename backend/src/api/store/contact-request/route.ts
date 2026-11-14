@@ -1,6 +1,12 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { parseContactRequest, sendContactRequest } from "./handler"
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  captchaConfigFromEnv,
+  clientIp,
+  verifyCaptcha,
+} from "./captcha"
 
 /**
  * Public enquiry / contact / assistência submission from the storefront.
@@ -13,7 +19,12 @@ import { parseContactRequest, sendContactRequest } from "./handler"
  * kind ("produto" | "assistencia" | "geral", inferred when absent),
  * productTitle, sku, quantity (number), productUrl, company (honeypot),
  * items (quote list: up to 100 × { sku, title, quantity 1–9999, note, url },
- * sanitised — see parseQuoteItems).
+ * sanitised — see parseQuoteItems), hcaptchaToken.
+ *
+ * hCaptcha (see ./captcha): with HCAPTCHA_SECRET set, a token is verified
+ * BEFORE any e-mail is sent and an invalid one gets 400 { message: "captcha" };
+ * a missing token is rejected only when HCAPTCHA_REQUIRED=true (rollout
+ * switch); an hCaptcha outage fails open.
  */
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const parsed = parseContactRequest(req.body)
@@ -26,6 +37,17 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     return res.json({ ok: true })
   }
 
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
+
+  const captcha = await verifyCaptcha(
+    parsed.captchaToken,
+    captchaConfigFromEnv(process.env),
+    { logger, remoteip: clientIp(req.headers["x-forwarded-for"]) }
+  )
+  if (!captcha.ok) {
+    return res.status(400).json({ message: CAPTCHA_ERROR_MESSAGE })
+  }
+
   const to =
     process.env.CONTACT_REQUEST_EMAIL ||
     process.env.RESEND_FROM_EMAIL ||
@@ -33,7 +55,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
   const outcome = await sendContactRequest(parsed.request, {
     notification: req.scope.resolve(Modules.NOTIFICATION),
-    logger: req.scope.resolve(ContainerRegistrationKeys.LOGGER),
+    logger,
     to,
   })
 

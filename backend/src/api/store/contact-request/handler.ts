@@ -6,6 +6,7 @@ import {
   buildStaffSubject,
   inferContactKind,
 } from '../../../modules/email-notifications/contact-request-copy'
+import { readCaptchaToken } from './captcha'
 
 /** Template keys (kept as literals so this module stays free of React/JSX). */
 export const CONTACT_REQUEST_TEMPLATE = 'contact-request'
@@ -37,6 +38,8 @@ export type ContactRequestBody = {
   items?: unknown
   /** Honeypot — bots fill hidden fields; humans don't. */
   company?: unknown
+  /** hCaptcha response token (verified in the route; never e-mailed). */
+  hcaptchaToken?: unknown
 }
 
 export type ContactRequest = {
@@ -63,7 +66,12 @@ export type ContactRequest = {
 /** Discriminated by `status` (the backend tsconfig is not strict, so boolean tags don't narrow). */
 export type ParseResult =
   | { status: 'honeypot' }
-  | { status: 'ok'; request: ContactRequest }
+  | {
+      status: 'ok'
+      request: ContactRequest
+      /** hCaptcha token, kept apart from `request` (which is spread into the e-mail data). */
+      captchaToken?: string
+    }
   | { status: 'invalid'; message: string }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -191,8 +199,9 @@ export function parseQuoteItems(raw: unknown): QuoteItemsResult {
  * Validates and normalises a contact-request body. Backward compatible with
  * the original payload (name/email/phone/contactPref/message/productTitle/sku/
  * quantity/productUrl); `kind`, `empresa`, `localidade`,
- * `quantidadeEstimada`, `modelo`, `urgente` and `items` (quote list) are
- * optional additions.
+ * `quantidadeEstimada`, `modelo`, `urgente`, `items` (quote list) and
+ * `hcaptchaToken` (returned as `captchaToken`, outside `request`) are optional
+ * additions.
  */
 export function parseContactRequest(body: unknown): ParseResult {
   const b = (body && typeof body === 'object' ? body : {}) as ContactRequestBody
@@ -217,6 +226,11 @@ export function parseContactRequest(body: unknown): ParseResult {
     typeof b.quantity === 'number' && Number.isFinite(b.quantity) && b.quantity > 0
       ? Math.floor(b.quantity)
       : undefined
+
+  const captcha = readCaptchaToken(b.hcaptchaToken)
+  if (captcha.status === 'invalid') {
+    return { status: 'invalid', message: captcha.message }
+  }
 
   const parsedItems = parseQuoteItems(b.items)
   if (parsedItems.status === 'invalid') {
@@ -260,6 +274,7 @@ export function parseContactRequest(body: unknown): ParseResult {
       urgente: flag(b.urgente) ? true : undefined,
       items,
     },
+    captchaToken: captcha.token,
   }
 }
 
