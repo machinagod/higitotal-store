@@ -107,8 +107,11 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="pt-PT" data-mode="light" className={montserrat.variable}>
       <head>
-        {/* Must run before any Google tag: Consent Mode v2 defaults. */}
+        {/* Must run before any Google tag: Consent Mode v2 defaults (also
+            creates window.dataLayer). */}
         <ConsentModeDefaults />
+        {/* GTM loader: requests gtm.js only after window load + idle. */}
+        <GoogleTagManagerScript />
       </head>
       <body>
         <GoogleTagManagerNoScript />
@@ -121,7 +124,6 @@ export default function RootLayout(props: { children: React.ReactNode }) {
             layout, so the header/footer are never nested inside <main>. */}
         {props.children}
         <GoogleAnalytics />
-        <GoogleTagManagerScript />
       </body>
     </html>
   )

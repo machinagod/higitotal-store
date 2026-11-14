@@ -71,6 +71,41 @@ export const CONSENT_DEFAULTS = {
 export const GRANTED_COOKIE_PATTERN = `(?:^|;\\s*)${CONSENT_COOKIE}=v${CONSENT_VERSION}:analytics=1:ts=\\d{1,12}(?:;|$)`
 
 /**
+ * How long after `window` `load` gtm.js is requested (then on the next idle
+ * period, at most GTM_IDLE_TIMEOUT_MS later). gtm.js + the container is
+ * ~180 KiB with long tasks; loading it after the page is interactive keeps
+ * it off the critical path (TBT/INP). Events pushed before then (consent,
+ * add_to_quote, generate_lead) wait in `dataLayer` and are processed when
+ * GTM boots.
+ */
+export const GTM_LOAD_DELAY_MS = 1500
+export const GTM_IDLE_TIMEOUT_MS = 3000
+
+/**
+ * Inline <head> script, rendered AFTER consentDefaultScript(): the standard
+ * GTM snippet, but deferred until after `window` `load` (+ GTM_LOAD_DELAY_MS,
+ * then requestIdleCallback) instead of loading during hydration. Only the
+ * validated container id is interpolated (see resolveGtmId).
+ */
+export function gtmLoaderScript(id: string): string {
+  if (!GTM_ID_RE.test(id)) throw new Error(`Invalid GTM id: ${id}`)
+  return [
+    "(function(w,d,i){",
+    "var s=false;",
+    "function go(){if(s)return;s=true;",
+    "w.dataLayer=w.dataLayer||[];",
+    "w.dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});",
+    "var j=d.createElement('script');j.async=true;",
+    "j.src='https://www.googletagmanager.com/gtm.js?id='+i;",
+    "d.head.appendChild(j);}",
+    `function idle(){if(w.requestIdleCallback){w.requestIdleCallback(go,{timeout:${GTM_IDLE_TIMEOUT_MS}});}else{go();}}`,
+    `function onLoad(){setTimeout(idle,${GTM_LOAD_DELAY_MS});}`,
+    "if(d.readyState==='complete'){onLoad();}else{w.addEventListener('load',onLoad);}",
+    `})(window,document,'${id}');`,
+  ].join("")
+}
+
+/**
  * Inline script for <head>, run before GTM/gtag load: defines the standard
  * `gtag` shim on `dataLayer`, pushes the consent defaults and then, if the
  * visitor already accepted statistics (`ht_consent` cookie), grants

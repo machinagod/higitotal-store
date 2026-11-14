@@ -3,7 +3,9 @@ import {
   CONSENT_DEFAULTS,
   DEFAULT_GTM_ID,
   analyticsEnabled,
+  GTM_LOAD_DELAY_MS,
   consentDefaultScript,
+  gtmLoaderScript,
   resolveGtmId,
 } from "../gtm"
 import {
@@ -162,5 +164,69 @@ describe("consentDefaultScript — stored choice", () => {
       const headGrants = runWith(`a=1; ht_consent=${v}; b=2`).length === 2
       expect(headGrants, v).toBe(parseConsent(v)?.analytics === true)
     }
+  })
+})
+
+describe("gtmLoaderScript", () => {
+  type Listener = () => void
+  function env(readyState: "loading" | "complete", withIdle = true) {
+    const listeners: Record<string, Listener[]> = {}
+    const timers: { fn: Listener; ms: number }[] = []
+    const idles: Listener[] = []
+    const appended: { src?: string; async?: boolean }[] = []
+    const w: Record<string, unknown> = {
+      dataLayer: [{ consent: "defaults" }],
+      addEventListener: (t: string, fn: Listener) => {
+        ;(listeners[t] ||= []).push(fn)
+      },
+    }
+    if (withIdle) w.requestIdleCallback = (fn: Listener) => idles.push(fn)
+    const d = {
+      readyState,
+      createElement: () => ({}) as { src?: string; async?: boolean },
+      head: { appendChild: (el: { src?: string }) => appended.push(el) },
+    }
+    const setTimeout = (fn: Listener, ms: number) => timers.push({ fn, ms })
+    return { w, d, setTimeout, listeners, timers, idles, appended }
+  }
+  function run(e: ReturnType<typeof env>, id = DEFAULT_GTM_ID) {
+    new Function("window", "document", "setTimeout", gtmLoaderScript(id))(
+      e.w,
+      e.d,
+      e.setTimeout
+    )
+  }
+
+  it("does not request gtm.js until load + delay + idle", () => {
+    const e = env("loading")
+    run(e)
+    expect(e.appended).toHaveLength(0)
+    expect(e.timers).toHaveLength(0)
+    e.listeners.load.forEach((fn) => fn())
+    expect(e.appended).toHaveLength(0)
+    expect(e.timers[0].ms).toBe(GTM_LOAD_DELAY_MS)
+    e.timers[0].fn()
+    expect(e.appended).toHaveLength(0)
+    e.idles[0]()
+    expect(e.appended).toEqual([
+      {
+        async: true,
+        src: `https://www.googletagmanager.com/gtm.js?id=${DEFAULT_GTM_ID}`,
+      },
+    ])
+  })
+
+  it("keeps the existing dataLayer (consent defaults first) and adds gtm.start", () => {
+    const e = env("complete", false)
+    run(e)
+    e.timers[0].fn()
+    const dl = e.w.dataLayer as Record<string, unknown>[]
+    expect(dl[0]).toEqual({ consent: "defaults" })
+    expect(dl[1]).toMatchObject({ event: "gtm.js" })
+    expect(e.appended).toHaveLength(1)
+  })
+
+  it("rejects malformed ids", () => {
+    expect(() => gtmLoaderScript("GTM-1');alert(1)//")).toThrow()
   })
 })

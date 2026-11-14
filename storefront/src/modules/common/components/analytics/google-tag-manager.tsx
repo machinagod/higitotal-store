@@ -1,30 +1,23 @@
-import Script from "next/script"
-import { resolveGtmId } from "@lib/util/gtm"
+import { gtmLoaderScript, resolveGtmId } from "@lib/util/gtm"
 
 /**
- * Google Tag Manager container (standard snippet). The Consent Mode v2
- * defaults (all non-essential storage denied, plus any stored "statistics"
- * consent) are pushed earlier, from <head>, by ConsentModeDefaults; the
- * first-party cookie banner sends later updates — Portuguese law requires
- * consent before analytics/marketing cookies.
+ * Google Tag Manager container, as a plain inline <script> in <head> placed
+ * right AFTER ConsentModeDefaults: that script creates `window.dataLayer` and
+ * pushes the Consent Mode v2 defaults (all non-essential storage denied, plus
+ * any stored "statistics" consent) first; the first-party cookie banner sends
+ * later updates — Portuguese law requires consent before analytics cookies.
+ *
+ * gtm.js itself is NOT requested here: the loader waits for `window` `load`,
+ * a short delay and an idle period (see gtmLoaderScript), so the ~180 KiB
+ * container never competes with hydration. dataLayer events pushed earlier
+ * (add_to_quote, generate_lead) are queued and processed when GTM boots.
+ * A plain inline script (not next/script) so it is independent of hydration.
  */
 export function GoogleTagManagerScript() {
   const id = resolveGtmId()
   if (!id) return null
   return (
-    <Script
-      id="gtm"
-      strategy="afterInteractive"
-      dangerouslySetInnerHTML={{
-        __html: `
-          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-          })(window,document,'script','dataLayer','${id}');
-        `,
-      }}
-    />
+    <script id="gtm" dangerouslySetInnerHTML={{ __html: gtmLoaderScript(id) }} />
   )
 }
 
