@@ -1,5 +1,6 @@
 import { HttpTypes } from "@medusajs/types"
 import { ArrowRight, CircleCheck, Phone, Wrench } from "lucide-react"
+import Image from "next/image"
 
 import { COMPANY } from "@lib/company"
 import {
@@ -16,6 +17,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import FeaturedProducts from "@modules/home/components/featured-products"
 import SectorCards from "@modules/sectors/components/sector-cards"
 import SectorIcon from "@modules/sectors/components/sector-icon"
+import { sectorImage } from "@modules/sectors/sector-images"
 
 const eyebrow =
   "inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-cyan-ink"
@@ -105,6 +107,7 @@ export default function SectorTemplate({
   const quoteHref = isCatalogMode() ? "/orcamento" : "/contact"
   const { phone } = COMPANY
   const others = SECTORS.filter((s) => s.slug !== sector.slug)
+  const image = sectorImage(sector.slug)
 
   const needs = sector.needs
     .map((n) => ({
@@ -156,8 +159,11 @@ export default function SectorTemplate({
           </ol>
         </nav>
 
-        <div className="grid grid-cols-1 gap-8 small:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] small:gap-14">
-          <div className="min-w-0">
+        {/* Desktop: intro on the left (both rows), photo above the "Nesta
+            página" card on the right. Mobile: the photo comes first (a 16:9
+            band under the breadcrumb), then the intro and the card. */}
+        <div className="grid grid-cols-1 gap-8 small:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] small:grid-rows-[auto_1fr] small:gap-x-14 small:gap-y-6">
+          <div className="min-w-0 small:row-span-2">
             <span className={eyebrow}>
               <span className="ind" aria-hidden="true" />
               Soluções por setor
@@ -204,6 +210,29 @@ export default function SectorTemplate({
             </div>
             <p className="mt-2 text-xs text-grey-50">({phone.costNote})</p>
           </div>
+
+          {image && (
+            <figure
+              className="relative order-first aspect-[16/9] overflow-hidden rounded-card border border-hairline bg-grey-10 small:order-none small:aspect-[4/3]"
+              data-testid="sector-hero-image"
+            >
+              <Image
+                src={image.src}
+                alt={image.alt}
+                fill
+                priority
+                // next/image 15 preloads for `priority` but doesn't set the
+                // attribute itself (see the home hero-rotator).
+                fetchPriority="high"
+                placeholder="blur"
+                // content-container: 1440 max, 24px gutters; the right column
+                // is 0.75 / 2 of the row minus the 56px gap.
+                sizes="(min-width: 1440px) 500px, (min-width: 1024px) 36vw, calc(100vw - 48px)"
+                className="object-cover"
+                style={{ objectPosition: image.position }}
+              />
+            </figure>
+          )}
 
           {/* What's on this page */}
           <aside
@@ -392,7 +421,7 @@ export default function SectorTemplate({
         >
           Outros setores
         </h2>
-        <SectorCards sectors={others} compact testId="sector-others" />
+        <SectorCards sectors={others} variant="list" testId="sector-others" />
       </section>
 
       <CompanyCta

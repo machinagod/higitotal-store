@@ -19,6 +19,7 @@ import {
 import { canonicalUrl, SITE_NAME } from "@lib/util/seo"
 import { breadcrumbSchema } from "@lib/util/structured-data"
 import JsonLd from "@modules/common/components/json-ld"
+import { sectorOgImage } from "@modules/sectors/sector-images"
 import SectorTemplate from "@modules/sectors/templates/sector-page"
 
 type Props = {
@@ -49,6 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { title, withSuffix } = sectorPageTitle(sector)
   const canonical = await canonicalUrl(sectorHref(sector).slice(1))
+  const ogImage = sectorOgImage(sector.slug) ?? DEFAULT_OG_IMAGE
 
   return {
     // Within 60 characters: keep the layout's " · Higitotal" suffix when it
@@ -61,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description: sector.description,
       url: canonical,
-      images: [DEFAULT_OG_IMAGE],
+      images: [ogImage],
     },
   }
 }

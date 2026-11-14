@@ -28,7 +28,7 @@ export default function HomeSectors() {
           <span aria-hidden>→</span>
         </LocalizedClientLink>
       </div>
-      <SectorCards compact testId="home-sector-cards" />
+      <SectorCards variant="tile" testId="home-sector-cards" />
     </section>
   )
 }
