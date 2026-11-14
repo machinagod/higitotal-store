@@ -143,7 +143,9 @@ export default async function Nav() {
           >
             <LocalizedClientLink
               href="/"
-              className="flex items-center shrink-0"
+              // 44px tap target and a rounded focus ring with breathing room;
+              // the negative margin keeps the logo exactly where it was.
+              className="-mx-2 flex min-h-[44px] shrink-0 items-center rounded-[10px] px-2 transition-opacity hover:opacity-80"
               data-testid="nav-store-link"
               aria-label="Higitotal — página inicial"
             >

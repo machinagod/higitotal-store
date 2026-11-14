@@ -1,5 +1,8 @@
 import { Metadata } from "next"
 
+import { Suspense } from "react"
+
+import NavigationProgress from "@modules/common/components/navigation-progress"
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
 import QuoteToast from "@modules/quote/components/quote-toast"
@@ -36,6 +39,10 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
       </main>
       <Footer />
       <QuoteToast />
+      {/* useSearchParams needs a Suspense boundary to keep pages static. */}
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
     </QuoteListProvider>
   )
 }
