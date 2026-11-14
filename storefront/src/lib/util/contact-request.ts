@@ -150,31 +150,43 @@ export type ContactRequestProblem = {
 
 export type ValidateOptions = {
   /**
-   * Text the message box is prefilled with (product enquiry). Left unchanged
-   * it says nothing about the request, so it counts as empty for the
-   * "telefone ou mensagem" rule.
+   * Text the message box is prefilled with (product enquiry, quote list).
+   * Left unchanged it says nothing about the request, so it counts as no
+   * message.
    */
   prefilledMessage?: string
-  /** How the message is asked for in errors (assistência: "descreva o pedido"). */
-  messageHint?: string
+  /** Error shown when the required message is missing (assistência: "Descreva o pedido…"). */
+  messageError?: string
   /**
    * The request carries a quote list: the products and quantities are the
-   * content, so an unchanged prefilled message is enough (no phone needed).
+   * content, so no message is needed.
    */
   hasItems?: boolean
+  /**
+   * Single-product enquiry: the product is the content, so no message is
+   * needed (an unchanged prefilled message is fine).
+   */
+  hasProduct?: boolean
 }
 
 /** Minimum digits for a phone number (PT numbers have 9). */
 export const MIN_PHONE_DIGITS = 9
 
+/** Default error for a missing message (general contact). */
+export const MESSAGE_REQUIRED_ERROR = "Escreva a sua mensagem."
+
 /**
- * Client-side checks, in form order. Mirrors the backend (name + valid e-mail,
- * and a phone or a message) and adds lead-quality rules the backend doesn't
- * enforce (older storefronts must keep working):
- *  - a phone is required when "Telefone" is the preferred contact;
- *  - a phone, when given, needs at least 9 digits;
- *  - an unchanged prefilled message counts as no message.
- * Returns every problem (pt-PT); empty when valid.
+ * Client-side checks, in form order (required fields first, then the
+ * optional "Mais detalhes" section). Every form needs a name and a valid
+ * e-mail (the customer gets an acknowledgement e-mail). Beyond that:
+ *  - product enquiry / quote list: nothing else — the product(s) are the
+ *    content;
+ *  - general contact / assistência: a message (description) is required; an
+ *    unchanged prefilled message counts as none;
+ *  - the phone is optional, but when given it needs at least 9 digits, and it
+ *    is required when "Telefone" is the preferred contact.
+ * The backend accepts all of this (name + e-mail plus a phone, a message, a
+ * product or items). Returns every problem (pt-PT); empty when valid.
  */
 export function validateContactRequestAll(
   f: ContactRequestFields,
@@ -195,34 +207,31 @@ export function validateContactRequestAll(
     })
   }
 
-  const phone = clean(f.phone)
   const message = clean(f.message)
   const hasMessage =
-    !!opts.hasItems ||
-    (!!message &&
-      !(
-        opts.prefilledMessage &&
-        normalise(message) === normalise(opts.prefilledMessage)
-      ))
-  const pref = normalise(f.contactPref)
-  const hint = opts.messageHint ?? "escreva uma mensagem"
+    !!message &&
+    !(
+      opts.prefilledMessage &&
+      normalise(message) === normalise(opts.prefilledMessage)
+    )
+  if (!opts.hasItems && !opts.hasProduct && !hasMessage) {
+    problems.push({
+      field: "message",
+      message: opts.messageError ?? MESSAGE_REQUIRED_ERROR,
+    })
+  }
 
+  const phone = clean(f.phone)
   if (phone && phone.replace(/\D/g, "").length < MIN_PHONE_DIGITS) {
     problems.push({
       field: "phone",
       message: "Indique um telefone válido, com pelo menos 9 dígitos.",
     })
-  } else if (!phone && pref === "telefone") {
+  } else if (!phone && normalise(f.contactPref) === "telefone") {
     problems.push({
       field: "phone",
       message:
         "Indique um telefone ou escolha E-mail como forma de contacto preferida.",
-    })
-  } else if (!phone && !hasMessage) {
-    problems.push({
-      // With e-mail preferred the natural fix is the message.
-      field: pref === "email" ? "message" : "phone",
-      message: `Indique um telefone ou ${hint}.`,
     })
   }
   return problems

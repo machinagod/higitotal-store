@@ -20,12 +20,15 @@ import {
 
 import {
   ContactPrefField,
+  DEFAULT_CONTACT_PREF,
   ErrorSummary,
   FieldError,
   FieldLabel,
   fieldClass,
   Honeypot,
+  OptionalDetails,
   PrivacyNote,
+  RequiredLegend,
   submitContactRequest,
   useFieldErrors,
 } from "./fields"
@@ -95,9 +98,15 @@ const readFields = (form: HTMLFormElement): ContactRequestFields => {
 /**
  * Enquiry form ("Pedir orçamento"). Posts to the backend
  * `POST /store/contact-request`, which e-mails the sales team and sends the
- * customer an acknowledgement. Used inline on the contact page and inside the
- * product page's ContactModal. Inline errors per field (aria-invalid +
- * aria-describedby), a summary when there are several. pt-PT.
+ * customer an acknowledgement. Used inline on the contact page and the quote
+ * list (`/orcamento`), and inside the product page's ContactModal. Inline
+ * errors per field (aria-invalid + aria-describedby), a summary when there are
+ * several. pt-PT.
+ *
+ * Asks for the minimum: Nome + E-mail, plus the message when it is the only
+ * content (general contact). For a product enquiry or a quote list the
+ * product(s) are the content, so the (prefilled) message moves into the
+ * collapsed "Mais detalhes (opcional)" section with the other optional fields.
  */
 export default function ContactRequestForm({
   kind,
@@ -116,15 +125,19 @@ export default function ContactRequestForm({
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
   )
-  const [pref, setPref] = useState("telefone")
+  const [pref, setPref] = useState(DEFAULT_CONTACT_PREF)
   const firstRef = useRef<HTMLInputElement>(null)
   const id = (name: string) => `${idPrefix}-${name}`
   const prefilledMessage =
     prefilledProp ?? (product ? PRODUCT_ENQUIRY_MESSAGE : undefined)
+  // The product (enquiry sheet) or the list (`/orcamento`) is the content;
+  // otherwise the message is, and it is required.
+  const messageRequired = !product && !(kind === "produto" && getItems)
 
   const errors = useFieldErrors(idPrefix, (form) =>
     validateContactRequestAll(readFields(form), {
       prefilledMessage,
+      hasProduct: !!product,
       hasItems: (getItems?.().length ?? 0) > 0,
     })
   )
@@ -184,6 +197,24 @@ export default function ContactRequestForm({
   }
 
   const sheet = layout === "sheet"
+  const message = (
+    <div>
+      <FieldLabel htmlFor={id("message")} required={messageRequired}>
+        Mensagem
+      </FieldLabel>
+      <textarea
+        id={id("message")}
+        name="message"
+        required={messageRequired}
+        rows={product ? 2 : prefilledMessage ? 3 : 5}
+        defaultValue={prefilledMessage}
+        placeholder={prefilledMessage ? undefined : messagePlaceholder}
+        className={clx(fieldClass, product ? "min-h-[72px]" : "min-h-[96px]", "resize-y")}
+        {...errors.a11y("message")}
+      />
+      <FieldError id={errors.errorId("message")} message={errors.messageFor("message")} />
+    </div>
+  )
   // Paired fields go two-up from 360px; name / e-mail from 512px.
   const pair = "col-span-2 min-[360px]:col-span-1"
   const wide = "col-span-2 xsmall:col-span-1"
@@ -231,6 +262,8 @@ export default function ContactRequestForm({
         </div>
       )}
 
+      {sheet && <RequiredLegend className="-mb-1" />}
+
       <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
         <div className={wide}>
           <FieldLabel htmlFor={id("name")} required>
@@ -264,72 +297,78 @@ export default function ContactRequestForm({
           />
           <FieldError id={errors.errorId("email")} message={errors.messageFor("email")} />
         </div>
-        <div className={pair}>
-          <FieldLabel htmlFor={id("phone")} required={pref === "telefone"}>
-            Telefone
-          </FieldLabel>
-          <input
-            id={id("phone")}
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            inputMode="tel"
-            className={fieldClass}
-            {...errors.a11y("phone")}
-          />
-          <FieldError id={errors.errorId("phone")} message={errors.messageFor("phone")} />
-        </div>
-        {product && (
-          <div className={pair}>
-            <FieldLabel htmlFor={id("quantidade")}>Quantidade estimada</FieldLabel>
-            <input
-              id={id("quantidade")}
-              name="quantidadeEstimada"
-              placeholder="Ex.: 20 caixas"
-              defaultValue={
-                product.quantity && product.quantity > 1
-                  ? String(product.quantity)
-                  : undefined
-              }
-              className={fieldClass}
-            />
+      </div>
+
+      {messageRequired && message}
+
+      <OptionalDetails
+        hint={
+          product
+            ? "Telefone, quantidade, empresa, localidade, mensagem…"
+            : messageRequired
+              ? "Telefone, empresa, localidade, forma de contacto…"
+              : "Telefone, empresa, localidade, mensagem…"
+        }
+        data-testid="contact-request-details"
+      >
+        <div className="flex flex-col gap-3.5">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
+            <div className={pair}>
+              <FieldLabel htmlFor={id("phone")} required={pref === "telefone"}>
+                Telefone
+              </FieldLabel>
+              <input
+                id={id("phone")}
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                className={fieldClass}
+                {...errors.a11y("phone")}
+              />
+              <FieldError id={errors.errorId("phone")} message={errors.messageFor("phone")} />
+            </div>
+            {product && (
+              <div className={pair}>
+                <FieldLabel htmlFor={id("quantidade")}>Quantidade estimada</FieldLabel>
+                <input
+                  id={id("quantidade")}
+                  name="quantidadeEstimada"
+                  placeholder="Ex.: 20 caixas"
+                  defaultValue={
+                    product.quantity && product.quantity > 1
+                      ? String(product.quantity)
+                      : undefined
+                  }
+                  className={fieldClass}
+                />
+              </div>
+            )}
+            <div className={pair}>
+              <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
+              <input
+                id={id("empresa")}
+                name="empresa"
+                autoComplete="organization"
+                className={fieldClass}
+              />
+            </div>
+            <div className={product ? pair : "col-span-2"}>
+              <FieldLabel htmlFor={id("localidade")}>Localidade</FieldLabel>
+              <input
+                id={id("localidade")}
+                name="localidade"
+                autoComplete="address-level2"
+                className={fieldClass}
+              />
+            </div>
           </div>
-        )}
-        <div className={pair}>
-          <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
-          <input
-            id={id("empresa")}
-            name="empresa"
-            autoComplete="organization"
-            className={fieldClass}
-          />
-        </div>
-        <div className={product ? pair : "col-span-2"}>
-          <FieldLabel htmlFor={id("localidade")}>Localidade</FieldLabel>
-          <input
-            id={id("localidade")}
-            name="localidade"
-            autoComplete="address-level2"
-            className={fieldClass}
-          />
-        </div>
-      </div>
 
-      <ContactPrefField idPrefix={idPrefix} />
+          <ContactPrefField idPrefix={idPrefix} />
 
-      <div>
-        <FieldLabel htmlFor={id("message")}>Mensagem</FieldLabel>
-        <textarea
-          id={id("message")}
-          name="message"
-          rows={product ? 2 : prefilledMessage ? 3 : 5}
-          defaultValue={prefilledMessage}
-          placeholder={prefilledMessage ? undefined : messagePlaceholder}
-          className={clx(fieldClass, product ? "min-h-[72px]" : "min-h-[96px]", "resize-y")}
-          {...errors.a11y("message")}
-        />
-        <FieldError id={errors.errorId("message")} message={errors.messageFor("message")} />
-      </div>
+          {!messageRequired && message}
+        </div>
+      </OptionalDetails>
 
       <Honeypot />
 

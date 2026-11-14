@@ -13,12 +13,15 @@ import {
 } from "@lib/util/contact-request"
 import {
   ContactPrefField,
+  DEFAULT_CONTACT_PREF,
   ErrorSummary,
   FieldError,
   FieldLabel,
   fieldClass,
   Honeypot,
+  OptionalDetails,
   PrivacyNote,
+  RequiredLegend,
   submitContactRequest,
   useFieldErrors,
 } from "@modules/common/components/contact-request-form/fields"
@@ -27,6 +30,9 @@ import {
 export const REQUEST_ANCHOR = "pedir"
 
 const ID = "rf"
+
+/** Error when the (required) description is missing. */
+const DESCRIPTION_ERROR = "Descreva o problema ou o pedido."
 
 /** What the customer typed (the message is their own description). */
 const readFields = (form: HTMLFormElement) => {
@@ -54,19 +60,23 @@ const readFields = (form: HTMLFormElement) => {
  * its fields, validation UI, privacy note and submit logic with the enquiry
  * form (modules/common/components/contact-request-form). Arriving via
  * `#pedir` (hero / PDP / contact links) focuses the first field. pt-PT.
+ *
+ * Asks for the minimum: Nome, E-mail and a short description. Everything else
+ * (phone, company, location, service type, equipment, model, the urgent flag,
+ * preferred contact) sits in the collapsed "Mais detalhes (opcional)" section.
  */
 const RequestForm = () => {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
   )
-  const [pref, setPref] = useState("telefone")
+  const [pref, setPref] = useState(DEFAULT_CONTACT_PREF)
   const [urgent, setUrgent] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
   const id = (name: string) => `${ID}-${name}`
 
   const errors = useFieldErrors(ID, (form) =>
     validateContactRequestAll(readFields(form).fields, {
-      messageHint: "descreva o pedido",
+      messageError: DESCRIPTION_ERROR,
     })
   )
 
@@ -208,6 +218,7 @@ const RequestForm = () => {
               fieldId={(f) => id(f)}
               className="sm:col-span-2"
             />
+            <RequiredLegend className="sm:col-span-2" />
             <div>
               <FieldLabel htmlFor={id("name")} required>
                 Nome
@@ -240,81 +251,14 @@ const RequestForm = () => {
               />
               <FieldError id={errors.errorId("email")} message={errors.messageFor("email")} />
             </div>
-            <div>
-              <FieldLabel htmlFor={id("phone")} required={pref === "telefone"}>
-                Telefone
-              </FieldLabel>
-              <input
-                id={id("phone")}
-                name="phone"
-                type="tel"
-                autoComplete="tel"
-                inputMode="tel"
-                className={fieldClass}
-                {...errors.a11y("phone")}
-              />
-              <FieldError id={errors.errorId("phone")} message={errors.messageFor("phone")} />
-            </div>
-            <div>
-              <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
-              <input
-                id={id("empresa")}
-                name="empresa"
-                autoComplete="organization"
-                className={fieldClass}
-              />
-            </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor={id("localidade")}>
-                Localidade / código postal
+              <FieldLabel htmlFor={id("message")} required>
+                Descrição do pedido
               </FieldLabel>
-              <input
-                id={id("localidade")}
-                name="localidade"
-                placeholder="Ex.: Mirandela, 5370-565"
-                className={fieldClass}
-              />
-            </div>
-            <div>
-              <FieldLabel htmlFor={id("tipo")}>Tipo de serviço</FieldLabel>
-              <select
-                id={id("tipo")}
-                name="tipo"
-                className={fieldClass}
-                defaultValue="Reparação"
-              >
-                <option>Instalação</option>
-                <option>Reparação</option>
-                <option>Contrato de manutenção</option>
-                <option>Outro / não sei</option>
-              </select>
-            </div>
-            <div>
-              <FieldLabel htmlFor={id("equipamento")}>Equipamento / marca</FieldLabel>
-              <input
-                id={id("equipamento")}
-                name="equipamento"
-                placeholder="Ex.: Fagor, Sammic, Nilfisk"
-                className={fieldClass}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <FieldLabel htmlFor={id("modelo")}>
-                Modelo / n.º de série{" "}
-                <span className="font-normal text-grey-50">(opcional)</span>
-              </FieldLabel>
-              <input
-                id={id("modelo")}
-                name="modelo"
-                placeholder="Consta da chapa de características do equipamento"
-                className={fieldClass}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <FieldLabel htmlFor={id("message")}>Descrição do pedido</FieldLabel>
               <textarea
                 id={id("message")}
                 name="message"
+                required
                 rows={3}
                 placeholder="Ex.: a máquina de lavar louça não aquece a água."
                 className={`${fieldClass} min-h-[96px] resize-y`}
@@ -326,38 +270,116 @@ const RequestForm = () => {
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label
-                htmlFor={id("urgente")}
-                className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-btn border-[1.5px] border-hairline px-4 py-3 transition-colors hover:border-[#cdd5dd] has-[:checked]:border-svc-signal has-[:checked]:bg-svc-signal/10"
-              >
-                <input
-                  id={id("urgente")}
-                  name="urgente"
-                  type="checkbox"
-                  value="sim"
-                  aria-describedby={id("urgente-hint")}
-                  className="mt-0.5 h-5 w-5 flex-none cursor-pointer accent-svc-signal-ink"
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-brand-ink">
-                    Equipamento parado (urgente)
-                  </span>
-                  <span
-                    id={id("urgente-hint")}
-                    className="mt-0.5 block text-xs leading-relaxed text-grey-60"
+            <OptionalDetails
+              accent="orange"
+              className="sm:col-span-2"
+              hint="Telefone, empresa, localidade, tipo de serviço, equipamento, urgência…"
+              data-testid="assistance-request-details"
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <FieldLabel htmlFor={id("phone")} required={pref === "telefone"}>
+                    Telefone
+                  </FieldLabel>
+                  <input
+                    id={id("phone")}
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    className={fieldClass}
+                    {...errors.a11y("phone")}
+                  />
+                  <FieldError id={errors.errorId("phone")} message={errors.messageFor("phone")} />
+                </div>
+                <div>
+                  <FieldLabel htmlFor={id("empresa")}>Empresa</FieldLabel>
+                  <input
+                    id={id("empresa")}
+                    name="empresa"
+                    autoComplete="organization"
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <FieldLabel htmlFor={id("localidade")}>
+                    Localidade / código postal
+                  </FieldLabel>
+                  <input
+                    id={id("localidade")}
+                    name="localidade"
+                    placeholder="Ex.: Mirandela, 5370-565"
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <FieldLabel htmlFor={id("tipo")}>Tipo de serviço</FieldLabel>
+                  {/* No default: hidden in the collapsed section, a preselected
+                      type would be sent without the customer choosing it. */}
+                  <select
+                    id={id("tipo")}
+                    name="tipo"
+                    className={fieldClass}
+                    defaultValue=""
                   >
-                    {urgent
-                      ? `O pedido segue assinalado como urgente. Para uma resposta imediata, ligue também para ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()}).`
-                      : "Assinale se o equipamento não está a funcionar e a sua atividade está afetada."}
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            <div className="sm:col-span-2">
-              <ContactPrefField idPrefix={ID} accent="orange" />
-            </div>
+                    <option value="">Selecione…</option>
+                    <option>Instalação</option>
+                    <option>Reparação</option>
+                    <option>Contrato de manutenção</option>
+                    <option>Outro / não sei</option>
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel htmlFor={id("equipamento")}>Equipamento / marca</FieldLabel>
+                  <input
+                    id={id("equipamento")}
+                    name="equipamento"
+                    placeholder="Ex.: Fagor, Sammic, Nilfisk"
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <FieldLabel htmlFor={id("modelo")}>Modelo / n.º de série</FieldLabel>
+                  <input
+                    id={id("modelo")}
+                    name="modelo"
+                    placeholder="Consta da chapa de características do equipamento"
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor={id("urgente")}
+                    className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-btn border-[1.5px] border-hairline px-4 py-3 transition-colors hover:border-[#cdd5dd] has-[:checked]:border-svc-signal has-[:checked]:bg-svc-signal/10"
+                  >
+                    <input
+                      id={id("urgente")}
+                      name="urgente"
+                      type="checkbox"
+                      value="sim"
+                      aria-describedby={id("urgente-hint")}
+                      className="mt-0.5 h-5 w-5 flex-none cursor-pointer accent-svc-signal-ink"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-brand-ink">
+                        Equipamento parado (urgente)
+                      </span>
+                      <span
+                        id={id("urgente-hint")}
+                        className="mt-0.5 block text-xs leading-relaxed text-grey-60"
+                      >
+                        {urgent
+                          ? `O pedido segue assinalado como urgente. Para uma resposta imediata, ligue também para ${COMPANY.phone.display} (${COMPANY.phone.costNote.toLowerCase()}).`
+                          : "Assinale se o equipamento não está a funcionar e a sua atividade está afetada."}
+                      </span>
+                    </span>
+                  </label>
+                </div>
+                <div className="sm:col-span-2">
+                  <ContactPrefField idPrefix={ID} accent="orange" />
+                </div>
+              </div>
+            </OptionalDetails>
 
             <Honeypot />
 
