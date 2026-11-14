@@ -8,7 +8,9 @@ import { model } from "@medusajs/framework/utils"
 export const MoloniSyncCursor = model
   .define("moloni_sync_cursor", {
     id: model.id().primaryKey(),
-    entity: model.text(), // "products" | "customers"
+    // "products" | "customers" cursors, plus JSON state keys such as
+    // "products:retry" (the retry list, stored in `last_modified`).
+    entity: model.text(),
     last_modified: model.text(), // ISO timestamp cursor for getModifiedSince
   })
   .indexes([{ on: ["entity"], unique: true }])

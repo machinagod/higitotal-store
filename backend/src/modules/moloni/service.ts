@@ -101,22 +101,48 @@ export default class MoloniModuleService extends MedusaService({
   /** Upserts the cursor for an entity. No-ops (with a warning) if unavailable. */
   async setSyncCursor(entity: string, lastModified: string): Promise<void> {
     try {
-      const [row] = await this.listMoloniSyncCursors({ entity })
-      if (row) {
-        await this.updateMoloniSyncCursors({
-          id: row.id,
-          last_modified: lastModified,
-        })
-      } else {
-        await this.createMoloniSyncCursors({
-          entity,
-          last_modified: lastModified,
-        })
-      }
+      await this.upsertSyncRow_(entity, lastModified)
     } catch (e: any) {
       this.logger_.warn(
         `[moloni] could not persist sync cursor for ${entity} (${e.message}); next run will be full until the moloni migration is applied.`
       )
+    }
+  }
+
+  /**
+   * Arbitrary sync state (e.g. a JSON retry list) stored under `key` in the
+   * same cursor table — the `last_modified` text column holds the value, so no
+   * extra migration is needed. Returns null when unset or unavailable.
+   */
+  async getSyncState(key: string): Promise<string | null> {
+    try {
+      const [row] = await this.listMoloniSyncCursors({ entity: key })
+      return row?.last_modified ?? null
+    } catch (e: any) {
+      this.logger_.warn(
+        `[moloni] could not read sync state ${key} (${e.message})`
+      )
+      return null
+    }
+  }
+
+  /** Upserts sync state under `key`. No-ops (with a warning) if unavailable. */
+  async setSyncState(key: string, value: string): Promise<void> {
+    try {
+      await this.upsertSyncRow_(key, value)
+    } catch (e: any) {
+      this.logger_.warn(
+        `[moloni] could not persist sync state ${key} (${e.message})`
+      )
+    }
+  }
+
+  protected async upsertSyncRow_(entity: string, value: string): Promise<void> {
+    const [row] = await this.listMoloniSyncCursors({ entity })
+    if (row) {
+      await this.updateMoloniSyncCursors({ id: row.id, last_modified: value })
+    } else {
+      await this.createMoloniSyncCursors({ entity, last_modified: value })
     }
   }
 
@@ -179,6 +205,40 @@ export default class MoloniModuleService extends MedusaService({
     }
     this.logger_.info(`[moloni] fetched ${all.length} products since ${since}`)
     return all
+  }
+
+  /**
+   * Fetch specific products by id (products/getOne), sequentially. Moloni
+   * answers `[]` for an unknown/deleted id → `notFound`; a thrown request
+   * (network, auth, rate limit) → `errors`, so the caller can keep retrying.
+   */
+  async getProductsByIds(ids: number[]): Promise<{
+    found: MoloniProduct[]
+    notFound: number[]
+    errors: { id: number; message: string }[]
+  }> {
+    const client = await this.clientPromise_
+    const found: MoloniProduct[] = []
+    const notFound: number[] = []
+    const errors: { id: number; message: string }[] = []
+    for (const id of ids) {
+      try {
+        const p = await client.products<MoloniProduct | unknown[]>("getOne", {
+          product_id: id,
+        })
+        if (p && !Array.isArray(p) && Number((p as MoloniProduct).product_id) === id) {
+          found.push(p as MoloniProduct)
+        } else {
+          notFound.push(id)
+        }
+      } catch (e: any) {
+        errors.push({ id, message: e?.message ?? String(e) })
+      }
+    }
+    this.logger_.info(
+      `[moloni] fetched ${found.length}/${ids.length} products by id (notFound=${notFound.length} errors=${errors.length})`
+    )
+    return { found, notFound, errors }
   }
 
   /** Customers modified since `since` (default epoch = all), paginated. */

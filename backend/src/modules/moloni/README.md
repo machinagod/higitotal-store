@@ -12,7 +12,7 @@ Cost" price list.
 | `src/modules/moloni/` | The Moloni module: API client + `MoloniModuleService` (paginated readers). Pure data source — no Medusa writes. |
 | `src/modules/moloni/client.ts` | **Swap point.** Self-contained Node port of the Moloni SDK. Replace `createMoloniClient()` with the published `moloni-client` package when available — same method surface. |
 | `src/workflows/moloni/` | `runMoloniSync()` orchestration + pure `mappers.ts`. Calls core-flows to upsert into Medusa. |
-| `src/jobs/sync-moloni.ts` | Scheduled job (daily 03:00). No-ops if the module isn't configured. |
+| `src/jobs/sync-moloni.ts` | Scheduled job (every 5 minutes, incremental). No-ops if the module isn't configured. |
 | `src/api/admin/moloni/sync/route.ts` | `POST /admin/moloni/sync` — manual, admin-authenticated trigger. |
 | `src/scripts/sync-moloni.ts` | `medusa exec` runner; **defaults to dry-run**. |
 
@@ -68,3 +68,32 @@ npx medusa exec ./src/scripts/sync-moloni.ts commit
 
 > ⚠️ The connected database in local dev points at **production**. The script
 > defaults to dry-run for that reason; `commit` writes for real.
+
+## Robustness (incremental runs must never wedge)
+
+Every run is incremental from the `products` cursor, so one failing product
+must not abort the run — otherwise the cursor never advances, every run
+re-syncs the whole catalog and floods the event bus.
+
+- **SKU moves** (`sku-plan.ts`, `sku-sync.ts`): Moloni references can move
+  between products, but Medusa variant/inventory-item skus are unique and a
+  variant's sku change is *not* propagated to its inventory item. Each run plans
+  all sku movements: colliding variant renames go through a temporary
+  `<sku>__tmp_<id>` sku, inventory items are renamed to their variant's (new)
+  sku — which also heals drift left by earlier runs — and a product whose sku
+  is genuinely taken (duplicate reference in Moloni, orphan inventory item) is
+  skipped with an error naming both Moloni ids.
+- **Failure isolation** (`batch.ts`): a failing create/update/price/stock batch
+  is replayed item by item; failures are logged
+  (`[moloni-sync] product <id> (<sku>) failed: …`) and counted in the report.
+- **Retry list** (`retry-state.ts`): the products cursor always advances; failed
+  Moloni ids are stored as JSON under the `products:retry` key of the cursor
+  table and fetched by id (`products/getOne`) on later runs until they succeed
+  (dropped after 3 consecutive "not found" replies; ≤100 fetched per run).
+- **Missing price sets** (`price-sets.ts`, `ensure-variant-price-sets.ts`):
+  existing variants with no price set get one (default EUR price) in the
+  products step; price-list prices / stock for variants still lacking a price
+  set / inventory item are skipped and retried instead of throwing.
+- **No pointless updates** (`product-update.ts`, `category-update.ts`): products
+  and categories are only updated when a field the sync owns changed, so
+  re-syncs don't emit `product.updated` / `product-category.updated` floods.

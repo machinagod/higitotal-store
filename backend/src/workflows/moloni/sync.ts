@@ -45,8 +45,31 @@ import {
   toCustomerAddress,
   toCustomerInput,
   totalStock,
-  vatPercent,
+  variantSku,
 } from "./mappers"
+import { errorMessage, runInBatchesWithFallback } from "./batch"
+import { CATEGORY_STATE_FIELDS, categoryChanges } from "./category-update"
+import {
+  PRODUCT_STATE_FIELDS,
+  existingStateFromRow,
+  productUpdateChanges,
+  toUpdateProductInput,
+  type ExistingProductState,
+  type ProductRef,
+  type ProductUpdateInput,
+} from "./product-update"
+import {
+  MAX_RETRY_FETCH,
+  PRODUCT_RETRY_STATE_KEY,
+  mergeRetryState,
+  parseRetryState,
+  retryIds,
+  serializeRetryState,
+} from "./retry-state"
+import { planProductSkuSync, type PlannedProduct } from "./sku-plan"
+import { applySkuPlan, loadSkuSnapshot } from "./sku-sync"
+import { loadVariantsWithoutPriceSet } from "./price-sets"
+import { ensureVariantPriceSetsWorkflow } from "./ensure-variant-price-sets"
 
 export type MoloniSyncEntity =
   | "categories"
@@ -72,10 +95,28 @@ export interface MoloniSyncOptions {
 
 export interface MoloniSyncReport {
   dryRun: boolean
-  categories: { created: number; updated: number }
-  products: { created: number; updated: number }
-  priceListPrices: { created: number; updated: number; priceLists: number }
-  stock: { created: number; updated: number }
+  categories: { created: number; updated: number; unchanged: number }
+  products: {
+    created: number
+    updated: number
+    /** Existing products skipped because nothing the sync owns changed. */
+    unchanged: number
+    /** Products that failed (or were skipped on a sku conflict); retried next run. */
+    failed: number
+    /** Size of the retry list (previously failed products) at the start of the run. */
+    retried: number
+    /** Existing variants that had no price set and got one. */
+    priceSetsCreated: number
+  }
+  /** Inventory items whose sku was brought in line with their variant. */
+  inventoryItems: { renamed: number; failed: number }
+  priceListPrices: {
+    created: number
+    updated: number
+    priceLists: number
+    failed: number
+  }
+  stock: { created: number; updated: number; failed: number }
   customers: {
     created: number
     updated: number
@@ -134,10 +175,11 @@ export async function runMoloniSync(
 
   const report: MoloniSyncReport = {
     dryRun,
-    categories: { created: 0, updated: 0 },
-    products: { created: 0, updated: 0 },
-    priceListPrices: { created: 0, updated: 0, priceLists: 0 },
-    stock: { created: 0, updated: 0 },
+    categories: { created: 0, updated: 0, unchanged: 0 },
+    products: { created: 0, updated: 0, unchanged: 0, failed: 0, retried: 0, priceSetsCreated: 0 },
+    inventoryItems: { renamed: 0, failed: 0 },
+    priceListPrices: { created: 0, updated: 0, priceLists: 0, failed: 0 },
+    stock: { created: 0, updated: 0, failed: 0 },
     customers: { created: 0, updated: 0, skipped: 0, emailConflicts: 0 },
   }
 
@@ -167,14 +209,18 @@ export async function runMoloniSync(
   // ── 1. Categories ──────────────────────────────────────────────────────
   // moloni category_id -> medusa category id
   const categoryMap = new Map<number, string>()
+  // medusa category id -> current row (for change detection)
+  const categoryRow = new Map<string, Record<string, unknown>>()
   {
-    const existing = await graphAll(query, "product_category", [
-      "id",
-      "metadata",
-    ])
+    const existing = await graphAll(
+      query,
+      "product_category",
+      CATEGORY_STATE_FIELDS
+    )
     for (const c of existing) {
       const mid = c.metadata?.moloni_category_id
       if (mid != null) categoryMap.set(Number(mid), c.id)
+      categoryRow.set(c.id, c)
     }
   }
 
@@ -207,6 +253,20 @@ export async function runMoloniSync(
 
     // Topologically create/update: a category is ready when its effective parent
     // is the root (0) or already mapped.
+    // Update an existing category only when a field the sync owns changed.
+    const updateCategory = async (id: string, update: Record<string, unknown>) => {
+      if (!categoryChanges(categoryRow.get(id), update).length) {
+        report.categories.unchanged++
+        return
+      }
+      if (!dryRun) {
+        await updateProductCategoriesWorkflow(container).run({
+          input: { selector: { id }, update },
+        })
+      }
+      report.categories.updated++
+    }
+
     let guard = pending.length + 1
     while (pending.length && guard-- > 0) {
       const ready = pending.filter((c) => {
@@ -224,14 +284,11 @@ export async function runMoloniSync(
         // Hidden grouping node: never browsable. Hide an existing one; never
         // create one. Children resolve past it via effParentMoloniId.
         if (HIDDEN_MOLONI_CATEGORY_IDS.has(c.category_id)) {
-          if (existingId && !dryRun) {
-            await updateProductCategoriesWorkflow(container).run({
-              input: {
-                selector: { id: existingId },
-                update: { is_active: false, is_internal: true },
-              },
+          if (existingId) {
+            await updateCategory(existingId, {
+              is_active: false,
+              is_internal: true,
             })
-            report.categories.updated++
           }
           continue
         }
@@ -239,18 +296,10 @@ export async function runMoloniSync(
         const ep = effParentMoloniId(c.parent_id)
         const parentId = ep === 0 ? undefined : categoryMap.get(ep)
         if (existingId) {
-          if (!dryRun) {
-            await updateProductCategoriesWorkflow(container).run({
-              input: {
-                selector: { id: existingId },
-                update: {
-                  name: c.name,
-                  parent_category_id: parentId ?? null,
-                },
-              },
-            })
-          }
-          report.categories.updated++
+          await updateCategory(existingId, {
+            name: c.name,
+            parent_category_id: parentId ?? null,
+          })
         } else {
           if (!dryRun) {
             const { result } = await createProductCategoriesWorkflow(
@@ -282,7 +331,7 @@ export async function runMoloniSync(
       }
     }
     logger.info(
-      `[moloni-sync] categories created=${report.categories.created} updated=${report.categories.updated}`
+      `[moloni-sync] categories created=${report.categories.created} updated=${report.categories.updated} unchanged=${report.categories.unchanged}`
     )
   }
 
@@ -297,42 +346,114 @@ export async function runMoloniSync(
     ? await moloni.listProducts({ since: productsSince, limit: options.limit })
     : []
 
+  // Products that failed on an earlier run are retried until they succeed —
+  // the cursor moved past them, so fetch the ones not already in this batch.
+  const retryState = entities.has("products")
+    ? parseRetryState(await moloni.getSyncState(PRODUCT_RETRY_STATE_KEY))
+    : {}
+  const retryNotFound: number[] = []
+  {
+    const pending = retryIds(retryState)
+    if (pending.length) {
+      const fetched = new Set(moloniProducts.map((p) => p.product_id))
+      const toFetch = pending.filter((id) => !fetched.has(id))
+      const batch = toFetch.slice(0, MAX_RETRY_FETCH)
+      logger.info(
+        `[moloni-sync] retry list: ${pending.length} product(s) (${
+          pending.length - toFetch.length
+        } already in this run, fetching ${batch.length} by id${
+          toFetch.length > batch.length
+            ? `, ${toFetch.length - batch.length} deferred`
+            : ""
+        })`
+      )
+      if (batch.length) {
+        const r = await moloni.getProductsByIds(batch)
+        moloniProducts.push(...r.found)
+        retryNotFound.push(...r.notFound)
+        for (const e of r.errors) {
+          logger.warn(
+            `[moloni-sync] could not fetch retry product ${e.id}: ${e.message} (kept for next run)`
+          )
+        }
+      }
+      report.products.retried = pending.length
+    }
+  }
+
+  // Failed Moloni product id -> error message (products, prices or stock);
+  // persisted as the retry list at the end of the run.
+  const failures = new Map<number, string>()
+  const productById = new Map(moloniProducts.map((p) => [p.product_id, p]))
+  const markForRetry = (moloniId: number, message: string) => {
+    const prev = failures.get(moloniId)
+    failures.set(moloniId, prev ? `${prev}; ${message}` : message)
+  }
+  const recordFailure = (p: MoloniProduct, error: unknown) => {
+    const message = errorMessage(error)
+    logger.error(
+      `[moloni-sync] product ${p.product_id} (${variantSku(p)}) failed: ${message}`
+    )
+    if (!failures.has(p.product_id)) report.products.failed++
+    markForRetry(p.product_id, message)
+  }
+  // Price/stock per-item failure: logged + retried, counted by the caller.
+  const recordItemFailure = (section: string) => (moloniId: number, error: unknown) => {
+    const message = `${section}: ${errorMessage(error)}`
+    const p = productById.get(moloniId)
+    logger.error(
+      `[moloni-sync] product ${moloniId} (${p ? variantSku(p) : "?"}) ${message}`
+    )
+    markForRetry(moloniId, message)
+  }
+
   // moloni product_id -> { productId, variantId }. Only look up the products
   // we actually fetched (keeps incremental runs cheap as the catalog grows).
-  const variantByMoloni = new Map<
-    number,
-    { productId: string; variantId: string; metadata: Record<string, any> }
-  >()
+  const variantByMoloni = new Map<number, ProductRef>()
+  const existingState = new Map<number, ExistingProductState>()
+  let changeDetection = true
   if (moloniProducts.length) {
     const externalIds = moloniProducts.map((p) => String(p.product_id))
-    const existing: any[] = []
-    for (const ids of chunk(externalIds, 200)) {
-      existing.push(
-        ...(await graphAll(
-          query,
-          "product",
-          ["id", "external_id", "metadata", "variants.id", "variants.sku"],
-          { external_id: ids }
-        ))
+    const baseFields = ["id", "external_id", "metadata", "variants.id", "variants.sku"]
+    const lookup = async (fields: string[]) => {
+      const rows: any[] = []
+      for (const ids of chunk(externalIds, 200)) {
+        rows.push(
+          ...(await graphAll(query, "product", fields, { external_id: ids }))
+        )
+      }
+      return rows
+    }
+    let existing: any[]
+    try {
+      existing = await lookup([...baseFields, ...PRODUCT_STATE_FIELDS])
+    } catch (e) {
+      // Never let the optional change-detection fields break the sync.
+      logger.warn(
+        `[moloni-sync] change-detection lookup failed (${errorMessage(e)}); updating every fetched product`
       )
+      changeDetection = false
+      existing = await lookup(baseFields)
     }
     for (const p of existing) {
       if (!p.external_id) continue
       const mid = Number(p.external_id)
       if (Number.isNaN(mid)) continue
       const variantId = p.variants?.[0]?.id
-      if (variantId)
+      if (variantId) {
         variantByMoloni.set(mid, {
           productId: p.id,
           variantId,
           metadata: p.metadata ?? {},
         })
+        if (changeDetection) existingState.set(mid, existingStateFromRow(p))
+      }
     }
   }
 
   if (entities.has("products")) {
-    const toCreate: MoloniProduct[] = []
-    const toUpdate: MoloniProduct[] = []
+    let toCreate: MoloniProduct[] = []
+    let toUpdate: MoloniProduct[] = []
     for (const p of moloniProducts) {
       const ref = variantByMoloni.get(p.product_id)
       if (!ref) {
@@ -344,84 +465,212 @@ export async function runMoloniSync(
       // are left untouched — the sync never re-publishes or overwrites them.
     }
 
-    // creates (batched)
-    for (const batch of chunk(toCreate)) {
-      const products = batch.map((p) =>
-        toCreateProductInput({
-          product: p,
-          status,
-          categoryId: categoryMap.get(p.category_id),
-          shippingProfileId: shippingProfile.id,
-          salesChannelId: defaultSalesChannel.id,
-        })
+    // Keep variant + inventory-item skus collision-free (Moloni references can
+    // move between products) and heal item skus that drifted from their
+    // variant. Products whose sku is genuinely taken are skipped, not fatal.
+    const planned: PlannedProduct[] = [
+      ...toCreate.map((p) => ({
+        moloniId: p.product_id,
+        sku: variantSku(p),
+        manageInventory: p.has_stock === 1,
+      })),
+      ...toUpdate.map((p) => ({
+        moloniId: p.product_id,
+        variantId: variantByMoloni.get(p.product_id)!.variantId,
+        sku: variantSku(p),
+        manageInventory: p.has_stock === 1,
+      })),
+    ]
+    try {
+      const snapshot = await loadSkuSnapshot(
+        (entity, fields, filters) => graphAll(query, entity, fields, filters),
+        planned
       )
-      if (!dryRun) {
+      const plan = planProductSkuSync({ ...snapshot, planned })
+      for (const [mid, s] of plan.skipped) {
+        recordFailure(
+          productById.get(mid)!,
+          `skipped: ${s.reason}${
+            s.otherMoloniIds.length
+              ? ` (duplicate reference? Moloni products ${[
+                  mid,
+                  ...s.otherMoloniIds,
+                ].join(" & ")})`
+              : ""
+          }`
+        )
+      }
+      toCreate = toCreate.filter((p) => !plan.skipped.has(p.product_id))
+      toUpdate = toUpdate.filter((p) => !plan.skipped.has(p.product_id))
+
+      if (dryRun) {
+        logger.info(
+          `[moloni-sync] (dry) sku plan: ${plan.variantTemp.length} variant temp move(s), ${plan.itemTemp.length} item temp move(s), ${plan.itemFinal.length} item rename(s), ${plan.skipped.size} skipped`
+        )
+      } else {
+        const nameByVariant = new Map<string, string>()
+        for (const p of toUpdate) {
+          nameByVariant.set(variantByMoloni.get(p.product_id)!.variantId, p.name)
+        }
+        const applied = await applySkuPlan(
+          container,
+          plan,
+          (variantId) => nameByVariant.get(variantId),
+          logger
+        )
+        report.inventoryItems.renamed += applied.itemsRenamed
+        report.inventoryItems.failed += applied.itemsFailed
+      }
+    } catch (e) {
+      // Planning is a safety net; without it the per-product isolation below
+      // still keeps a collision from aborting the run.
+      logger.error(
+        `[moloni-sync] sku planning failed (${errorMessage(e)}); continuing without it`
+      )
+    }
+
+    // creates (batched; a failing batch is replayed product by product)
+    const created = await runInBatchesWithFallback(
+      toCreate,
+      CHUNK,
+      async (batch) => {
+        const products = batch.map((p) =>
+          toCreateProductInput({
+            product: p,
+            status,
+            categoryId: categoryMap.get(p.category_id),
+            shippingProfileId: shippingProfile.id,
+            salesChannelId: defaultSalesChannel.id,
+          })
+        )
+        if (dryRun) return
         const { result } = await createProductsWorkflow(container).run({
           input: { products: products as any },
         })
-        for (const created of result) {
-          const mid = Number(created.external_id)
-          const variantId = created.variants?.[0]?.id
+        for (const c of result) {
+          const mid = Number(c.external_id)
+          const variantId = c.variants?.[0]?.id
           if (!Number.isNaN(mid) && variantId) {
-            variantByMoloni.set(mid, {
-              productId: created.id,
-              variantId,
-              metadata: {},
-            })
+            variantByMoloni.set(mid, { productId: c.id, variantId, metadata: {} })
           }
         }
+      },
+      (e, batch) =>
+        logger.warn(
+          `[moloni-sync] create batch of ${batch.length} failed (${errorMessage(e)}); retrying product by product`
+        )
+    )
+    report.products.created += created.succeeded.length
+    for (const f of created.failed) recordFailure(f.item, f.error)
+
+    // updates (preserve manual status / publishing); only what changed
+    const updates: { p: MoloniProduct; input: ProductUpdateInput }[] = []
+    for (const p of toUpdate) {
+      const input = toUpdateProductInput(
+        p,
+        variantByMoloni.get(p.product_id)!,
+        categoryMap.get(p.category_id)
+      )
+      const state = existingState.get(p.product_id)
+      if (changeDetection && state && !productUpdateChanges(input, state).length) {
+        report.products.unchanged++
+        continue
       }
-      report.products.created += batch.length
+      updates.push({ p, input })
+    }
+    const updated = await runInBatchesWithFallback(
+      updates,
+      CHUNK,
+      async (batch) => {
+        if (dryRun) return
+        await updateProductsWorkflow(container).run({
+          input: { products: batch.map((u) => u.input) as any },
+        })
+      },
+      (e, batch) =>
+        logger.warn(
+          `[moloni-sync] update batch of ${batch.length} failed (${errorMessage(e)}); retrying product by product`
+        )
+    )
+    report.products.updated += updated.succeeded.length
+    for (const f of updated.failed) recordFailure(f.item.p, f.error)
+
+    // Heal existing variants that have NO price set (early imports): Medusa
+    // ignores `variants[].prices` for them and every price-list write throws.
+    const failedNow = new Set(failures.keys())
+    const healCandidates = toUpdate.filter((p) => !failedNow.has(p.product_id))
+    if (healCandidates.length) {
+      try {
+        const missing = new Set(
+          await loadVariantsWithoutPriceSet(
+            (entity, fields, filters) => graphAll(query, entity, fields, filters),
+            healCandidates.map((p) => variantByMoloni.get(p.product_id)!.variantId)
+          )
+        )
+        const toHeal = healCandidates.filter((p) =>
+          missing.has(variantByMoloni.get(p.product_id)!.variantId)
+        )
+        if (toHeal.length) {
+          logger.warn(
+            `[moloni-sync] ${toHeal.length} variant(s) have no price set; creating one: ${toHeal
+              .map((p) => `${p.product_id} (${variantSku(p)})`)
+              .join(", ")}`
+          )
+          const healed = await runInBatchesWithFallback(toHeal, CHUNK, async (batch) => {
+            if (dryRun) return
+            await ensureVariantPriceSetsWorkflow(container).run({
+              input: {
+                variants: batch.map((p) => ({
+                  variant_id: variantByMoloni.get(p.product_id)!.variantId,
+                  prices: [{ amount: defaultEurPrice(p), currency_code: EUR }],
+                })),
+              },
+            })
+          })
+          report.products.priceSetsCreated += healed.succeeded.length
+          for (const f of healed.failed) {
+            recordFailure(f.item, `creating missing price set: ${errorMessage(f.error)}`)
+          }
+        }
+      } catch (e) {
+        logger.error(
+          `[moloni-sync] price-set check failed (${errorMessage(e)}); continuing`
+        )
+      }
     }
 
-    // updates (preserve manual status / publishing)
-    for (const batch of chunk(toUpdate)) {
-      const products = batch
-        .map((p) => {
-          const ref = variantByMoloni.get(p.product_id)!
-          const cost = supplierCost(p)
-          return {
-            id: ref.productId,
-            title: p.name,
-            // description & subtitle are Medusa-owned (SoT); the sync never touches them.
-            category_ids: categoryMap.get(p.category_id)
-              ? [categoryMap.get(p.category_id)!]
-              : undefined,
-            // Merge onto existing metadata so manually-set keys (e.g. `excluded`)
-            // and `moloni_vat_percent` survive re-syncs instead of being wiped.
-            metadata: {
-              ...ref.metadata,
-              moloni_product_id: p.product_id,
-              moloni_category_id: p.category_id,
-              moloni_vat_percent: vatPercent(p) ?? null,
-            },
-            variants: [
-              {
-                id: ref.variantId,
-                sku: p.reference || `MOLONI-${p.product_id}`,
-                barcode: p.ean || undefined,
-                manage_inventory: p.has_stock === 1,
-                prices: [{ amount: defaultEurPrice(p), currency_code: EUR }],
-                metadata: { moloni_product_id: p.product_id, ...cost },
-              },
-            ],
-          }
-        })
-      if (!dryRun) {
-        await updateProductsWorkflow(container).run({
-          input: { products: products as any },
-        })
-      }
-      report.products.updated += batch.length
-    }
     logger.info(
-      `[moloni-sync] products created=${report.products.created} updated=${report.products.updated}`
+      `[moloni-sync] products created=${report.products.created} updated=${report.products.updated} unchanged=${report.products.unchanged} failed=${report.products.failed} priceSetsCreated=${report.products.priceSetsCreated}`
     )
+  }
+
+  // Prices and stock are re-derived from the products fetched this run. They
+  // isolate failures per item; if a whole section still throws, every product
+  // of this run goes on the retry list (so it is re-derived next run) instead of
+  // aborting the run before the cursor is saved.
+  const retryWholeSection = (section: string, e: unknown) => {
+    const message = `${section} step failed: ${errorMessage(e)}`
+    logger.error(`[moloni-sync] ${message}; all ${variantByMoloni.size} products of this run will be retried`)
+    for (const p of moloniProducts) {
+      if (variantByMoloni.has(p.product_id)) markForRetry(p.product_id, message)
+    }
   }
 
   // ── 3. Price lists (price classes + Moloni Cost) ────────────────────────
   if (entities.has("prices") && !dryRun) {
-    await syncPriceLists(container, query, moloniProducts, variantByMoloni, report, logger)
+    try {
+      await syncPriceLists(
+        container,
+        query,
+        moloniProducts,
+        variantByMoloni,
+        report,
+        logger,
+        recordItemFailure("price lists")
+      )
+    } catch (e) {
+      retryWholeSection("price lists", e)
+    }
   } else if (entities.has("prices")) {
     const classes = collectPriceClasses(moloniProducts)
     logger.info(
@@ -431,22 +680,45 @@ export async function runMoloniSync(
 
   // ── 4. Stock ────────────────────────────────────────────────────────────
   if (entities.has("stock")) {
-    await syncStock(
-      container,
-      query,
-      moloniProducts,
-      variantByMoloni,
-      stockLocation.id,
-      dryRun,
-      report,
-      logger
-    )
+    try {
+      await syncStock(
+        container,
+        query,
+        moloniProducts,
+        variantByMoloni,
+        stockLocation.id,
+        dryRun,
+        report,
+        logger,
+        recordItemFailure("stock")
+      )
+    } catch (e) {
+      retryWholeSection("stock", e)
+    }
   }
 
   // Advance the products cursor once products (and their derived prices/stock)
-  // are synced. Use the run start time so anything modified during the run is
-  // re-checked next time.
+  // are synced — even when some failed: those are remembered in the retry list
+  // and fetched by id next run, so a poisoned product can no longer turn every
+  // run into a full re-sync. Use the run start time so anything modified during
+  // the run is re-checked next time.
   if (entities.has("products") && !dryRun) {
+    const nextRetry = mergeRetryState(retryState, {
+      processed: moloniProducts.map((p) => p.product_id),
+      failed: failures,
+      notFound: retryNotFound,
+      now: runStart,
+    })
+    const pendingRetry = Object.keys(nextRetry).length
+    if (pendingRetry || Object.keys(retryState).length) {
+      logger.info(
+        `[moloni-sync] retry list: ${pendingRetry} product(s) pending for next run`
+      )
+    }
+    await moloni.setSyncState(
+      PRODUCT_RETRY_STATE_KEY,
+      serializeRetryState(nextRetry)
+    )
     await moloni.setSyncCursor("products", runStart)
   }
 
@@ -536,13 +808,16 @@ export async function pruneInvisibleProducts(
 // ─────────────────────────────────────────────────────────────────────────
 // Price lists
 // ─────────────────────────────────────────────────────────────────────────
+type ItemFailureHandler = (moloniId: number, error: unknown) => void
+
 async function syncPriceLists(
   container: MedusaContainer,
   query: any,
   products: MoloniProduct[],
-  variantByMoloni: Map<number, { productId: string; variantId: string }>,
+  variantByMoloni: Map<number, ProductRef>,
   report: MoloniSyncReport,
-  logger: any
+  logger: any,
+  onItemFailure: ItemFailureHandler
 ) {
   const classes = collectPriceClasses(products) // price_class_id -> title
 
@@ -618,22 +893,47 @@ async function syncPriceLists(
     )
   }
 
-  // Build desired prices grouped by list, split into create vs update.
-  const toCreate = new Map<string, any[]>() // listId -> [{amount,currency_code,variant_id}]
-  const toUpdate = new Map<string, any[]>() // listId -> [{id,amount,currency_code,variant_id}]
+  // A price-list price needs the variant's price set; Medusa throws "No price
+  // set exist for variants" for the whole batch otherwise. Skip those (the
+  // products step normally creates the missing set first).
+  const runVariants = products
+    .map((p) => variantByMoloni.get(p.product_id)?.variantId)
+    .filter((v): v is string => !!v)
+  const withoutPriceSet = new Set(
+    await loadVariantsWithoutPriceSet(
+      (entity, fields, filters) => graphAll(query, entity, fields, filters),
+      runVariants
+    )
+  )
 
-  const push = (listId: string, variantId: string, amount: number) => {
+  // Build desired prices grouped by list, split into create vs update.
+  type Entry = { moloniId: number; data: any }
+  const toCreate = new Map<string, Entry[]>() // listId -> [{amount,currency_code,variant_id}]
+  const toUpdate = new Map<string, Entry[]>() // listId -> [{id,amount,currency_code,variant_id}]
+
+  const push = (
+    moloniId: number,
+    listId: string,
+    variantId: string,
+    amount: number
+  ) => {
     const key = `${listId}:${variantId}`
     const existing = existingPrices.get(key)
     if (existing) {
       if (Math.abs(existing.amount - amount) > 1e-9) {
         const arr = toUpdate.get(listId) ?? []
-        arr.push({ id: existing.id, amount, currency_code: EUR, variant_id: variantId })
+        arr.push({
+          moloniId,
+          data: { id: existing.id, amount, currency_code: EUR, variant_id: variantId },
+        })
         toUpdate.set(listId, arr)
       }
     } else {
       const arr = toCreate.get(listId) ?? []
-      arr.push({ amount, currency_code: EUR, variant_id: variantId })
+      arr.push({
+        moloniId,
+        data: { amount, currency_code: EUR, variant_id: variantId },
+      })
       toCreate.set(listId, arr)
     }
   }
@@ -641,35 +941,74 @@ async function syncPriceLists(
   for (const p of products) {
     const ref = variantByMoloni.get(p.product_id)
     if (!ref) continue
+    if (withoutPriceSet.has(ref.variantId)) {
+      if (ref.metadata?.excluded === true) {
+        logger.warn(
+          `[moloni-sync] excluded product ${p.product_id}: variant ${ref.variantId} has no price set; price-list prices skipped`
+        )
+      } else {
+        report.priceListPrices.failed++
+        onItemFailure(
+          p.product_id,
+          `variant ${ref.variantId} has no price set; price-list prices skipped`
+        )
+      }
+      continue
+    }
     for (const pc of p.price_classes ?? []) {
       const listId = listByClass.get(pc.price_class?.price_class_id)
-      if (listId) push(listId, ref.variantId, Number(pc.value) || 0)
+      if (listId) push(p.product_id, listId, ref.variantId, Number(pc.value) || 0)
     }
     const cost = supplierCost(p)
     const costAmount = cost.cost_price_discounted ?? cost.cost_price
     if (costListId && costAmount != null) {
-      push(costListId, ref.variantId, Number(costAmount) || 0)
+      push(p.product_id, costListId, ref.variantId, Number(costAmount) || 0)
     }
   }
 
-  for (const [listId, prices] of toCreate) {
-    for (const batch of chunk(prices, 200)) {
-      await createPriceListPricesWorkflow(container).run({
-        input: { data: [{ id: listId, prices: batch as any }] },
-      })
-      report.priceListPrices.created += batch.length
+  const write = async (
+    entriesByList: Map<string, Entry[]>,
+    run: (listId: string, prices: any[]) => Promise<unknown>,
+    verb: string
+  ) => {
+    let ok = 0
+    for (const [listId, entries] of entriesByList) {
+      const r = await runInBatchesWithFallback(
+        entries,
+        200,
+        (batch) => run(listId, batch.map((e) => e.data)),
+        (e, batch) =>
+          logger.warn(
+            `[moloni-sync] price-list ${verb} batch of ${batch.length} failed (${errorMessage(e)}); retrying price by price`
+          )
+      )
+      ok += r.succeeded.length
+      for (const f of r.failed) {
+        report.priceListPrices.failed++
+        onItemFailure(f.item.moloniId, `price-list ${verb} failed: ${errorMessage(f.error)}`)
+      }
     }
+    return ok
   }
-  for (const [listId, prices] of toUpdate) {
-    for (const batch of chunk(prices, 200)) {
-      await updatePriceListPricesWorkflow(container).run({
-        input: { data: [{ id: listId, prices: batch as any }] },
-      })
-      report.priceListPrices.updated += batch.length
-    }
-  }
+
+  report.priceListPrices.created += await write(
+    toCreate,
+    (listId, prices) =>
+      createPriceListPricesWorkflow(container).run({
+        input: { data: [{ id: listId, prices }] },
+      }),
+    "create"
+  )
+  report.priceListPrices.updated += await write(
+    toUpdate,
+    (listId, prices) =>
+      updatePriceListPricesWorkflow(container).run({
+        input: { data: [{ id: listId, prices }] },
+      }),
+    "update"
+  )
   logger.info(
-    `[moloni-sync] price-list prices created=${report.priceListPrices.created} updated=${report.priceListPrices.updated} lists=${report.priceListPrices.priceLists}`
+    `[moloni-sync] price-list prices created=${report.priceListPrices.created} updated=${report.priceListPrices.updated} failed=${report.priceListPrices.failed} lists=${report.priceListPrices.priceLists}`
   )
 }
 
@@ -680,11 +1019,12 @@ async function syncStock(
   container: MedusaContainer,
   query: any,
   products: MoloniProduct[],
-  variantByMoloni: Map<number, { productId: string; variantId: string }>,
+  variantByMoloni: Map<number, ProductRef>,
   locationId: string,
   dryRun: boolean,
   report: MoloniSyncReport,
-  logger: any
+  logger: any,
+  onItemFailure: ItemFailureHandler
 ) {
   // variant id -> inventory_item id
   const variantIds = [...variantByMoloni.values()].map((v) => v.variantId)
@@ -717,50 +1057,79 @@ async function syncStock(
     })
   }
 
-  const toCreate: any[] = []
-  const toUpdate: any[] = []
+  type Entry = { moloniId: number; data: any }
+  const toCreate: Entry[] = []
+  const toUpdate: Entry[] = []
   for (const p of products) {
     const ref = variantByMoloni.get(p.product_id)
     if (!ref || p.has_stock !== 1) continue
     const invId = invItemByVariant.get(ref.variantId)
-    if (!invId) continue
+    if (!invId) {
+      // Normally created by the products step (manage_inventory). Excluded
+      // products are never updated, so theirs may legitimately be missing.
+      if (ref.metadata?.excluded !== true) {
+        report.stock.failed++
+        onItemFailure(
+          p.product_id,
+          `variant ${ref.variantId} has no inventory item; stock skipped`
+        )
+      }
+      continue
+    }
     const stocked = Math.max(0, Math.round(totalStock(p)))
     const existing = levelByItem.get(invId)
+    const data = {
+      inventory_item_id: invId,
+      location_id: locationId,
+      stocked_quantity: stocked,
+    }
     if (existing) {
-      if (existing.stocked !== stocked) {
-        toUpdate.push({
-          inventory_item_id: invId,
-          location_id: locationId,
-          stocked_quantity: stocked,
-        })
-      }
+      if (existing.stocked !== stocked) toUpdate.push({ moloniId: p.product_id, data })
     } else {
-      toCreate.push({
-        inventory_item_id: invId,
-        location_id: locationId,
-        stocked_quantity: stocked,
-      })
+      toCreate.push({ moloniId: p.product_id, data })
     }
   }
 
-  if (!dryRun && toCreate.length) {
-    for (const batch of chunk(toCreate, 200)) {
-      await createInventoryLevelsWorkflow(container).run({
+  const write = async (
+    entries: Entry[],
+    run: (batch: any[]) => Promise<unknown>,
+    verb: string
+  ) => {
+    if (dryRun) return entries.length
+    const r = await runInBatchesWithFallback(
+      entries,
+      200,
+      (batch) => run(batch.map((e) => e.data)),
+      (e, batch) =>
+        logger.warn(
+          `[moloni-sync] stock ${verb} batch of ${batch.length} failed (${errorMessage(e)}); retrying item by item`
+        )
+    )
+    for (const f of r.failed) {
+      report.stock.failed++
+      onItemFailure(f.item.moloniId, `stock ${verb} failed: ${errorMessage(f.error)}`)
+    }
+    return r.succeeded.length
+  }
+
+  report.stock.created += await write(
+    toCreate,
+    (batch) =>
+      createInventoryLevelsWorkflow(container).run({
         input: { inventory_levels: batch },
-      })
-    }
-  }
-  if (!dryRun && toUpdate.length) {
-    for (const batch of chunk(toUpdate, 200)) {
-      await updateInventoryLevelsWorkflow(container).run({
+      }),
+    "create"
+  )
+  report.stock.updated += await write(
+    toUpdate,
+    (batch) =>
+      updateInventoryLevelsWorkflow(container).run({
         input: { updates: batch } as any,
-      })
-    }
-  }
-  report.stock.created += toCreate.length
-  report.stock.updated += toUpdate.length
+      }),
+    "update"
+  )
   logger.info(
-    `[moloni-sync] stock created=${report.stock.created} updated=${report.stock.updated}`
+    `[moloni-sync] stock created=${report.stock.created} updated=${report.stock.updated} failed=${report.stock.failed}`
   )
 }
 

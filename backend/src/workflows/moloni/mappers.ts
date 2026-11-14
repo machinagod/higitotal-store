@@ -23,6 +23,11 @@ export function productHandle(p: MoloniProduct): string {
   return `${slugify(p.reference || p.name) || "product"}-${p.product_id}`
 }
 
+/** The variant sku the sync owns: the Moloni reference, else a stable placeholder. */
+export function variantSku(p: MoloniProduct): string {
+  return p.reference || `MOLONI-${p.product_id}`
+}
+
 /** Category handle, kept globally unique by the Moloni category id
  * (Moloni allows duplicate category names; Medusa handles must be unique). */
 export function categoryHandle(name: string, categoryId: number): string {
@@ -120,7 +125,7 @@ export function toCreateProductInput(args: {
     variants: [
       {
         title: product.name,
-        sku: product.reference || `MOLONI-${product.product_id}`,
+        sku: variantSku(product),
         barcode: product.ean || undefined,
         manage_inventory: product.has_stock === 1,
         options: { [DEFAULT_OPTION_TITLE]: DEFAULT_OPTION_VALUE },
