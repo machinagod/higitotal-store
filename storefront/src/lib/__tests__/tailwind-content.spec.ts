@@ -35,8 +35,10 @@ function importedNames(): Set<string> {
         if (entry.name !== "__tests__") walk(p)
       } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
         const src = fs.readFileSync(p, "utf8")
-        for (const m of src.matchAll(
-          /import\s+(type\s+)?\{([^}]*)\}\s*from\s*["']@medusajs\/ui["']/g
+        for (const m of Array.from(
+          src.matchAll(
+            /import\s+(type\s+)?\{([^}]*)\}\s*from\s*["']@medusajs\/ui["']/g
+          )
         )) {
           if (m[1]) continue
           for (const spec of m[2].split(",")) {
@@ -62,7 +64,9 @@ function componentClosure(start: string[]): Set<string> {
     const abs = path.join(uiEsm, "components", dir)
     for (const f of fs.readdirSync(abs).filter((f) => f.endsWith(".js"))) {
       const src = fs.readFileSync(path.join(abs, f), "utf8")
-      for (const m of src.matchAll(/from\s*"\.\.\/([a-z-]+)(?:\/[^"]*)?"/g)) {
+      for (const m of Array.from(
+        src.matchAll(/from\s*"\.\.\/([a-z-]+)(?:\/[^"]*)?"/g)
+      )) {
         if (fs.existsSync(path.join(uiEsm, "components", m[1]))) queue.push(m[1])
       }
     }
@@ -75,19 +79,21 @@ describe("tailwind content: @medusajs/ui components", () => {
     // Exported name → component directory, from the esm barrel.
     const index = fs.readFileSync(path.join(uiEsm, "index.js"), "utf8")
     const dirOf = new Map<string, string>()
-    for (const m of index.matchAll(
-      /export\s*\{([^}]+)\}\s*from\s*"\.\/components\/([a-z-]+)"/g
+    for (const m of Array.from(
+      index.matchAll(
+        /export\s*\{([^}]+)\}\s*from\s*"\.\/components\/([a-z-]+)"/g
+      )
     )) {
       for (const n of m[1].split(",")) dirOf.set(n.trim(), m[2])
     }
 
-    const used = [...importedNames()]
+    const used = Array.from(importedNames())
       .map((n) => dirOf.get(n))
       .filter((d): d is string => !!d)
     expect(used.length).toBeGreaterThan(0)
 
     const scanned = new Set(scannedComponents())
-    const missing = [...componentClosure(used)].filter((d) => !scanned.has(d))
+    const missing = Array.from(componentClosure(used)).filter((d) => !scanned.has(d))
     expect(missing, "add these to MEDUSA_UI_COMPONENTS in tailwind.config.js").toEqual([])
   })
 
