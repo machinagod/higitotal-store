@@ -1,3 +1,4 @@
+import { BRANDS_PATH, brandBySlug, brandHref } from "./brands"
 import { LEGACY_CATEGORIES, LEGACY_PRODUCTS } from "./legacy-redirects-data"
 
 /**
@@ -20,6 +21,13 @@ const category = (id: number) =>
 // notice, terms, secure payment → the terms of use.
 const cms = (id: number) => (id === 4 ? at("/sobre-nos") : at("/content/terms-of-use"))
 
+// PrestaShop brand pages ({id}_{name}, suppliers {id}__{name}) → our page for
+// that brand, else the brand index.
+const brand = (slug: string) => {
+  const b = brandBySlug(slug.replace(/_/g, "-"))
+  return at(b ? brandHref(b) : BRANDS_PATH)
+}
+
 // Controller / friendly-URL names → new pages.
 const PAGES: Record<string, string> = {
   "": "",
@@ -40,8 +48,10 @@ const PAGES: Record<string, string> = {
   "mais-vendidos": "/store",
   "prices-drop": "/store",
   promocoes: "/store",
-  manufacturer: "/store",
-  supplier: "/store",
+  manufacturer: BRANDS_PATH,
+  fabricantes: BRANDS_PATH,
+  supplier: BRANDS_PATH,
+  fornecedores: BRANDS_PATH,
   order: "/store",
   "quick-order": "/store",
   cart: "/store",
@@ -68,6 +78,9 @@ export function legacyRedirect(pathname: string, search: URLSearchParams): strin
   if (qCms) return cms(qCms)
   const query = (search.get("search_query") || search.get("s") || "").trim()
   if (query) return at(`/results/${encodeURIComponent(query)}`)
+  if (Number(search.get("id_manufacturer")) || Number(search.get("id_supplier"))) {
+    return at(BRANDS_PATH)
+  }
   const controller = search.get("controller")
   if (controller && PAGES[controller] !== undefined) return at(PAGES[controller])
 
@@ -79,6 +92,8 @@ export function legacyRedirect(pathname: string, search: URLSearchParams): strin
   if (rest.startsWith("content/category")) return at("")
   // Old "Interessado neste produto?" / contact-form modules → contact page.
   if (rest.startsWith("module/productcontact") || rest.startsWith("module/contactform")) return at("/contact")
+  m = rest.match(/^\d+__?([^/]+)$/) // {id}_{manufacturer} / {id}__{supplier}
+  if (m) return brand(m[1])
   m = rest.match(/^(\d+)-[^/]*$/) // {id}-{category-slug}
   if (m) return category(Number(m[1]))
   if (PAGES[rest] !== undefined) return at(PAGES[rest])

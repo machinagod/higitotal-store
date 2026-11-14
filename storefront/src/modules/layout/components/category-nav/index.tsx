@@ -14,7 +14,12 @@ import { Popover, Transition } from "@headlessui/react"
 import { ArrowRight, ChevronDown } from "lucide-react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CategoryIcon from "@modules/common/icons/category-icon"
-import { logoOpticalStyle, logoRestStyle, type NavLink } from "@lib/brands"
+import {
+  BRANDS_PATH,
+  logoOpticalStyle,
+  logoRestStyle,
+  type NavLink,
+} from "@lib/brands"
 import { fallbackInlineClass, fallbackMoreClass, fitCount } from "./fit"
 
 // Gap between inline items (Tailwind gap-x-1) — keep in sync with the markup.
@@ -100,7 +105,10 @@ const CategoryNav = ({
     .map((_, i) => i)
     .filter((i) => (visible === null ? i >= 4 : i >= visible))
   const restActive = restIdx.some((i) => isActive(categories[i].href))
-  const brandActive = brands.some((b) => isActive(b.href))
+  // Any brand page or the /marcas index lights up the "Marcas" menu.
+  const brandActive =
+    pathname.split("/").includes(BRANDS_PATH.slice(1)) ||
+    brands.some((b) => isActive(b.href))
 
   // "Mais" trigger: measured → shown when something overflows; fallback →
   // per breakpoint, matching fallbackInlineClass.
@@ -263,6 +271,17 @@ const CategoryNav = ({
                       </li>
                     )
                   })}
+                  <li className="col-span-2">
+                    <LocalizedClientLink
+                      href={BRANDS_PATH}
+                      onClick={close}
+                      className="mt-1 flex items-center justify-between gap-x-2 rounded-[10px] border-t border-hairline px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-[0.04em] text-brand-cyan-ink hover:text-brand-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan/40"
+                      data-testid="nav-brands-all"
+                    >
+                      Ver todas as marcas
+                      <ArrowRight className="h-4 w-4" />
+                    </LocalizedClientLink>
+                  </li>
                 </ul>
               )}
             </Dropdown>

@@ -10,6 +10,7 @@ import {
   Wrench,
 } from "lucide-react"
 
+import { BRANDS_PATH } from "@lib/brands"
 import { getNavGroups } from "@lib/data/categories"
 import { COMPANY } from "@lib/company"
 import { isCatalogMode } from "@lib/util/catalog-mode"
@@ -212,7 +213,15 @@ export default async function Footer() {
 
           {brands.length > 0 && (
             <div>
-              <h2 className={`mb-4 ${headingClass}`}>Marcas</h2>
+              <h2 className={`mb-4 ${headingClass}`}>
+                <LocalizedClientLink
+                  href={BRANDS_PATH}
+                  className="transition-colors hover:text-brand-cyan-bright"
+                  data-testid="footer-brands-index"
+                >
+                  Marcas
+                </LocalizedClientLink>
+              </h2>
               <ExpandableLinkList
                 links={brands}
                 linkClass={linkClass}
@@ -249,7 +258,9 @@ export default async function Footer() {
             )}
             {brands.length > 0 && (
               <MobileSection title="Marcas">
-                <LinkList links={brands} />
+                <LinkList
+                  links={[...brands, { label: "Ver todas as marcas", href: BRANDS_PATH }]}
+                />
               </MobileSection>
             )}
             <MobileSection title="Assistência Técnica">

@@ -3,11 +3,17 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   BRANDS,
+  BRANDS_PATH,
+  brandBySlug,
+  brandCategories,
   brandForCategory,
   brandHref,
   brandKey,
+  brandListing,
+  brandSlug,
   splitNavRoots,
   stripBrands,
+  type Brand,
 } from "../brands"
 
 // Mirrors the live top-level categories (names, handles, metadata, whether
@@ -79,10 +85,7 @@ describe("brandKey / brandForCategory", () => {
 })
 
 describe("splitNavRoots", () => {
-  const { categories, brands } = splitNavRoots(ROOTS, {
-    collectionHandles: LIVE_COLLECTIONS,
-    descendants: DESCENDANTS,
-  })
+  const { categories, brands } = splitNavRoots(ROOTS)
 
   it("keeps only real product categories, in the given order", () => {
     expect(categories.map((c) => c.handle)).toEqual([
@@ -106,23 +109,16 @@ describe("splitNavRoots", () => {
     expect(labels).not.toContain("SCJohnson (DEB)")
   })
 
-  it("links each brand: category with sub-ranges, else collection, else category, else search", () => {
+  it("links every known brand to its own page", () => {
     const byLabel = Object.fromEntries(brands.map((b) => [b.label, b.href]))
-    // Diversey's category has sub-ranges (Lavandaria/Clax, Cozinha, Taski…)
-    // and more products than the flat collection.
-    expect(byLabel["Diversey"]).toBe("/categories/diversey")
-    expect(byLabel["SC Johnson (Deb)"]).toBe("/categories/scjohnson-(deb)")
-    // Childless brand categories: the (larger) collection wins.
-    expect(byLabel["Unilever"]).toBe("/collections/unilever")
-    expect(byLabel["Vileda"]).toBe("/collections/vileda")
-    // No collection → the category, even without sub-ranges (Taski is a range
-    // under Diversey).
-    expect(byLabel["Vileda Swep"]).toBe("/categories/vileda-swep")
-    expect(byLabel["Taski"]).toBe("/categories/taski-7584831")
-    // Neither → a catalogue search.
-    expect(byLabel["Fagor"]).toBe("/results/Fagor")
-    expect(byLabel["Viper"]).toBe("/results/Viper")
-    expect(byLabel["Celea"]).toBe("/results/Celea")
+    expect(byLabel["Diversey"]).toBe("/marcas/diversey")
+    expect(byLabel["SC Johnson (Deb)"]).toBe("/marcas/sc-johnson-deb")
+    expect(byLabel["Vileda Swep"]).toBe("/marcas/vileda-swep")
+    expect(byLabel["Fagor"]).toBe("/marcas/fagor")
+    // No search-results or category links left for known brands.
+    for (const b of brands.slice(0, BRANDS.length)) {
+      expect(b.href).toMatch(/^\/marcas\/[a-z0-9-]+$/)
+    }
   })
 
   it("carries logos/wordmarks for the Marcas menu", () => {
@@ -142,22 +138,6 @@ describe("splitNavRoots", () => {
     )
   })
 
-  it("falls back to the category when the collection no longer exists", () => {
-    const { brands } = splitNavRoots(ROOTS, { collectionHandles: new Set() })
-    const vileda = brands.find((b) => b.label === "Vileda")
-    expect(vileda?.href).toBe("/categories/vileda")
-  })
-
-  it("prefers the collection when the brand category's children are unknown", () => {
-    const { brands } = splitNavRoots(
-      [{ name: "Diversey", handle: "diversey", metadata: {} }],
-      { collectionHandles: LIVE_COLLECTIONS }
-    )
-    expect(brands.find((b) => b.label === "Diversey")?.href).toBe(
-      "/collections/diversey"
-    )
-  })
-
   it("treats metadata.is_brand roots as brands", () => {
     const { categories, brands } = splitNavRoots([
       { name: "Tork", handle: "tork", metadata: { is_brand: "true" } },
@@ -168,26 +148,18 @@ describe("splitNavRoots", () => {
   })
 })
 
-describe("stripBrands / brandHref", () => {
-  it("resolves each strip brand, with the correct casing", () => {
-    const strip = stripBrands({
-      roots: ROOTS,
-      descendants: DESCENDANTS,
-      collectionHandles: LIVE_COLLECTIONS,
-    })
+describe("stripBrands / logos", () => {
+  it("resolves each strip brand, with the correct casing and its page", () => {
+    const strip = stripBrands()
     const names = strip.map((b) => b.name)
     expect(names).toContain("Celea")
     expect(names).not.toContain("CELEA")
     expect(names).not.toContain("Vileda Swep")
-    expect(strip.find((b) => b.name === "Vileda")?.href).toBe("/collections/vileda")
+    expect(strip.find((b) => b.name === "Vileda")?.href).toBe("/marcas/vileda")
     expect(strip.find((b) => b.name === "SC Johnson (Deb)")?.href).toBe(
-      "/categories/scjohnson-(deb)"
+      "/marcas/sc-johnson-deb"
     )
-    expect(strip.find((b) => b.name === "Diversey")?.href).toBe("/categories/diversey")
-    expect(strip.find((b) => b.name === "Taski")?.href).toBe(
-      "/categories/taski-7584831"
-    )
-    expect(strip.find((b) => b.name === "Sammic")?.href).toBe("/results/Sammic")
+    expect(strip.find((b) => b.name === "Sammic")?.href).toBe("/marcas/sammic")
   })
 
   it("every logo has intrinsic dimensions", () => {
@@ -226,26 +198,114 @@ describe("stripBrands / brandHref", () => {
     }
   })
 
+})
+
+describe("brandSlug / brandBySlug / brandHref", () => {
+  it("makes lower-case, accent-free, hyphenated slugs", () => {
+    expect(brandSlug("Fagor")).toBe("fagor")
+    expect(brandSlug("Vileda Swep")).toBe("vileda-swep")
+    expect(brandSlug("SC Johnson (Deb)")).toBe("sc-johnson-deb")
+    expect(brandSlug("  Ação & Cª  ")).toBe("acao-c")
+    expect(brandSlug("")).toBe("")
+  })
+
+  it("gives every brand a unique, well-formed slug", () => {
+    const slugs = BRANDS.map((b) => brandSlug(b.name))
+    for (const s of slugs) expect(s).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+    expect(new Set(slugs).size).toBe(slugs.length)
+  })
+
+  it("finds the brand back from its slug (round trip)", () => {
+    for (const b of BRANDS) {
+      expect(brandBySlug(brandSlug(b.name))).toBe(b)
+      expect(brandHref(b)).toBe(`${BRANDS_PATH}/${brandSlug(b.name)}`)
+    }
+    expect(brandBySlug("SC-JOHNSON-DEB")?.name).toBe("SC Johnson (Deb)")
+    expect(brandBySlug("nao-existe")).toBeUndefined()
+    expect(brandBySlug("")).toBeUndefined()
+    expect(brandBySlug(undefined)).toBeUndefined()
+  })
+})
+
+describe("brandListing / brandCategories", () => {
+  // What the brand pages list, resolved like the live site does.
+  const byBrand = brandCategories(ROOTS, DESCENDANTS)
+  const listing = (name: string) => {
+    const b = BRANDS.find((x) => x.name === name) as Brand
+    return brandListing(b, {
+      category: byBrand.get(b),
+      collectionHandles: LIVE_COLLECTIONS,
+    })
+  }
+
+  it("lists each brand: category with sub-ranges, else collection, else category, else search", () => {
+    // Diversey's category has sub-ranges (Lavandaria/Clax, Cozinha, Taski…)
+    // and more products than the flat collection.
+    expect(listing("Diversey")).toEqual({
+      kind: "category",
+      handle: "diversey",
+      href: "/categories/diversey",
+    })
+    expect(listing("SC Johnson (Deb)").href).toBe("/categories/scjohnson-(deb)")
+    // Childless brand categories: the (larger) collection wins.
+    expect(listing("Unilever").href).toBe("/collections/unilever")
+    expect(listing("Vileda")).toMatchObject({ kind: "collection", handle: "vileda" })
+    // No collection → the category, even without sub-ranges (Taski is a range
+    // under Diversey).
+    expect(listing("Vileda Swep").href).toBe("/categories/vileda-swep")
+    expect(listing("Taski").href).toBe("/categories/taski-7584831")
+    // Neither → a catalogue search.
+    expect(listing("Fagor")).toEqual({
+      kind: "search",
+      query: "Fagor",
+      href: "/results/Fagor",
+    })
+    expect(listing("Viper").href).toBe("/results/Viper")
+    expect(listing("Celea").href).toBe("/results/Celea")
+  })
+
+  it("never maps internal groups or non-brand categories", () => {
+    const handles = Array.from(byBrand.values(), (c) => c.handle)
+    expect(handles).not.toContain("eq-maquinas")
+    expect(handles).not.toContain("papel-7584826")
+    expect(byBrand.get(BRANDS.find((b) => b.name === "Diversey")!)).toEqual({
+      handle: "diversey",
+      hasChildren: true,
+    })
+  })
+
+  it("falls back to the category when the collection no longer exists", () => {
+    const vileda = BRANDS.find((b) => b.name === "Vileda")!
+    expect(
+      brandListing(vileda, {
+        category: byBrand.get(vileda),
+        collectionHandles: new Set(),
+      }).href
+    ).toBe("/categories/vileda")
+  })
+
   it("trusts the static collection when no live list is given", () => {
-    expect(brandHref({ name: "X", collection: "x" })).toBe("/collections/x")
-    expect(brandHref({ name: "A B" })).toBe("/results/A%20B")
+    expect(brandListing({ name: "X", collection: "x" }).href).toBe("/collections/x")
+    expect(brandListing({ name: "A B" }).href).toBe("/results/A%20B")
   })
 
   it("orders category-with-children > collection > category > search", () => {
     const b = { name: "X", collection: "x" }
     expect(
-      brandHref(b, { category: { handle: "x-cat", hasChildren: true } })
+      brandListing(b, { category: { handle: "x-cat", hasChildren: true } }).href
     ).toBe("/categories/x-cat")
-    expect(brandHref(b, { category: { handle: "x-cat" } })).toBe("/collections/x")
+    expect(brandListing(b, { category: { handle: "x-cat" } }).href).toBe(
+      "/collections/x"
+    )
     expect(
-      brandHref(b, {
+      brandListing(b, {
         category: { handle: "x-cat" },
         collectionHandles: new Set(),
-      })
+      }).href
     ).toBe("/categories/x-cat")
-    expect(brandHref(b, { collectionHandles: new Set() })).toBe("/results/X")
-    // Legacy option still works.
-    expect(brandHref({ name: "Y" }, { categoryHandle: "y" })).toBe("/categories/y")
+    expect(brandListing(b, { collectionHandles: new Set() }).href).toBe(
+      "/results/X"
+    )
   })
 })
 

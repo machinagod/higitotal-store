@@ -4,6 +4,7 @@ import { Dialog, Transition } from "@headlessui/react"
 import { useToggleState } from "@medusajs/ui"
 import { Fragment, useId, useRef, useState, type ReactNode } from "react"
 import {
+  ArrowRight,
   Building2,
   ChevronRight,
   ClipboardList,
@@ -22,6 +23,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CategoryIcon from "@modules/common/icons/category-icon"
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
+import { BRANDS_PATH } from "@lib/brands"
 import { COMPANY } from "@lib/company"
 import { useQuoteList } from "@lib/quote-list/context"
 import { productCountLabel } from "@lib/quote-list/state"
@@ -203,6 +205,17 @@ const SideMenu = ({
                           </LocalizedClientLink>
                         </li>
                       ))}
+                      <li>
+                        <LocalizedClientLink
+                          href={BRANDS_PATH}
+                          onClick={close}
+                          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-pill px-4 py-2 text-[15px] font-bold text-brand-cyan-bright transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+                          data-testid="menu-brands-all"
+                        >
+                          Ver todas as marcas
+                          <ArrowRight className="h-4 w-4" aria-hidden />
+                        </LocalizedClientLink>
+                      </li>
                     </ul>
                   </nav>
                 )}

@@ -43,6 +43,20 @@ describe("legacyRedirect", () => {
     expect(r("/base/index.php?controller=contact")).toBe("/pt/contact")
     expect(r("/base/module/productcontact/interest")).toBe("/pt/contact")
   })
+  it("maps brand (manufacturer/supplier) pages to the brand pages", () => {
+    expect(r("/base/manufacturer")).toBe("/pt/marcas")
+    expect(r("/base/fabricantes")).toBe("/pt/marcas")
+    expect(r("/base/index.php?controller=manufacturer")).toBe("/pt/marcas")
+    expect(r("/base/index.php?id_manufacturer=3&controller=manufacturer")).toBe("/pt/marcas")
+    expect(r("/base/index.php?id_supplier=2&controller=supplier")).toBe("/pt/marcas")
+    expect(r("/base/2_fagor")).toBe("/pt/marcas/fagor")
+    expect(r("/base/7_vileda_swep")).toBe("/pt/marcas/vileda-swep")
+    expect(r("/base/1__diversey")).toBe("/pt/marcas/diversey")
+    // An unknown brand → the brand index, never the catalogue search.
+    expect(r("/base/9_tork")).toBe("/pt/marcas")
+    // Categories ({id}-{slug}) are unaffected.
+    expect(r("/base/3-detergentes")).toBe("/pt/categories/detergentes")
+  })
   it("maps searches and falls back to the catalogue", () => {
     expect(r("/base/search?search_query=luvas+nitrilo")).toBe("/pt/results/luvas%20nitrilo")
     expect(r("/base/something/odd")).toBe("/pt/store")

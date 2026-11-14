@@ -52,10 +52,11 @@ export function logoRestStyle(logo: BrandLogo): CSSProperties {
 }
 
 /**
- * Single source of truth for the brands we work with — shared by the header /
- * footer "Marcas" groups, the homepage brand strip, the search suggestions and
- * the Assistência Técnica equipment section, so the list and casing never
- * drift apart.
+ * Single source of truth for the brands we work with — shared by the brand
+ * pages (`/marcas`, `/marcas/{slug}`), the header / footer "Marcas" groups,
+ * the homepage brand strip, the search suggestions and the Assistência
+ * Técnica equipment section, so the list and casing never drift apart. Each
+ * brand's page copy lives in @lib/brand-pages.
  *
  * Some brands also exist as Medusa categories (the Moloni sync files products
  * under supplier groups such as "Diversey" or "SCJohnson (DEB)", and ranges
@@ -217,6 +218,7 @@ export type NavLink = {
   wordmark?: string
 }
 
+
 /** Where a brand lives in the category tree, as resolved from the live list. */
 export type BrandCategory = { handle: string; hasChildren?: boolean }
 
@@ -225,52 +227,98 @@ const truthy = (v: unknown) => v === true || v === "true" || v === 1 || v === "1
 const hasChildren = (c: RootCategoryLike) =>
   Array.isArray(c.category_children) && c.category_children.length > 0
 
+/** Index of every brand page (`/marcas`), without the country prefix. */
+export const BRANDS_PATH = "/marcas"
+
 /**
- * Landing page for a brand, best first:
+ * URL slug of a brand's page: lower-case, accent-free, words joined by "-"
+ * ("SC Johnson (Deb)" → "sc-johnson-deb", "Vileda Swep" → "vileda-swep").
+ */
+export function brandSlug(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+/** The brand whose page lives at `/marcas/{slug}`, if any. */
+export function brandBySlug(
+  slug: string | null | undefined,
+  brands: Brand[] = BRANDS
+): Brand | undefined {
+  const s = (slug ?? "").toLowerCase()
+  return s ? brands.find((b) => brandSlug(b.name) === s) : undefined
+}
+
+/**
+ * Every brand link (header / footer "Marcas", home strip, Sobre nós) leads to
+ * the brand's own page, `/marcas/{slug}`, which lists its products from the
+ * listing {@link brandListing} picks.
+ */
+export function brandHref(brand: Pick<Brand, "name">): string {
+  return `${BRANDS_PATH}/${brandSlug(brand.name)}`
+}
+
+/** Where a brand's products are listed in the catalogue. */
+export type BrandListing =
+  | { kind: "category"; handle: string; href: string }
+  | { kind: "collection"; handle: string; href: string }
+  | { kind: "search"; query: string; href: string }
+
+/**
+ * The catalogue listing of a brand's products, best first:
  *   1. its category when that category has sub-ranges (e.g. Diversey →
- *      Lavandaria/Clax, Cozinha, Taski… render as chips there, and the
- *      category holds more products than the flat collection);
+ *      Lavandaria/Clax, Cozinha, Taski… and the category holds more products
+ *      than the flat collection);
  *   2. its collection, when it (still) exists;
  *   3. its category, even without sub-ranges (e.g. Taski, Vileda Swep);
  *   4. a catalogue search for the brand name (Fagor, Sammic, Nilfisk…).
  * `collectionHandles` (the live list) guards against linking a deleted/empty
  * collection; omit it to trust the static config.
  */
-export function brandHref(
+export function brandListing(
   brand: Brand,
-  opts: {
-    category?: BrandCategory
-    /** @deprecated use `category` */
-    categoryHandle?: string
-    collectionHandles?: Set<string>
-  } = {}
-): string {
-  const { collectionHandles } = opts
-  const category =
-    opts.category ??
-    (opts.categoryHandle ? { handle: opts.categoryHandle } : undefined)
+  opts: { category?: BrandCategory; collectionHandles?: Set<string> } = {}
+): BrandListing {
+  const { category, collectionHandles } = opts
 
   if (category?.handle && category.hasChildren) {
-    return `/categories/${category.handle}`
+    return categoryListing(category.handle)
   }
   if (
     brand.collection &&
     (!collectionHandles || collectionHandles.has(brand.collection))
   ) {
-    return `/collections/${brand.collection}`
+    return {
+      kind: "collection",
+      handle: brand.collection,
+      href: `/collections/${brand.collection}`,
+    }
   }
-  if (category?.handle) return `/categories/${category.handle}`
-  return `/results/${encodeURIComponent(brand.name)}`
+  if (category?.handle) return categoryListing(category.handle)
+  return {
+    kind: "search",
+    query: brand.name,
+    href: `/results/${encodeURIComponent(brand.name)}`,
+  }
 }
+
+const categoryListing = (handle: string): BrandListing => ({
+  kind: "category",
+  handle,
+  href: `/categories/${handle}`,
+})
 
 /**
  * Map each known brand to its category: a matching root first, else (for
  * ranges such as Taski that sit under another brand) a matching descendant.
  */
-function brandCategories(
+export function brandCategories(
   roots: RootCategoryLike[],
-  descendants: RootCategoryLike[],
-  brands: Brand[]
+  descendants: RootCategoryLike[] = [],
+  brands: Brand[] = BRANDS
 ): Map<Brand, BrandCategory> {
   const out = new Map<Brand, BrandCategory>()
   for (const list of [roots, descendants]) {
@@ -285,14 +333,10 @@ function brandCategories(
   return out
 }
 
-function brandLink(
-  b: Brand,
-  category: BrandCategory | undefined,
-  collectionHandles?: Set<string>
-): NavLink {
+function brandLink(b: Brand): NavLink {
   return {
     label: b.name,
-    href: brandHref(b, { category, collectionHandles }),
+    href: brandHref(b),
     ...(b.logo ? { logo: b.logo } : {}),
     ...(b.wordmark ? { wordmark: b.wordmark } : {}),
   }
@@ -308,18 +352,13 @@ function brandLink(
  * - Everything else is a category, labelled with its display name, in the
  *   given (nav) order.
  *
- * The brand list follows {@link BRANDS} order (only `nav` brands), followed by
- * any unknown brand roots. Each brand links per {@link brandHref};
- * `descendants` (non-root categories) lets ranges like Taski link to their
- * own category.
+ * The brand list follows {@link BRANDS} order (only `nav` brands), each
+ * linking to its page ({@link brandHref}), followed by any unknown brand roots
+ * (which have no page, so they link to their category).
  */
 export function splitNavRoots<T extends RootCategoryLike>(
   roots: T[],
-  opts: {
-    collectionHandles?: Set<string>
-    brands?: Brand[]
-    descendants?: RootCategoryLike[]
-  } = {}
+  opts: { brands?: Brand[] } = {}
 ): { categories: T[]; brands: NavLink[] } {
   const brands = opts.brands ?? BRANDS
   const categories: T[] = []
@@ -340,39 +379,18 @@ export function splitNavRoots<T extends RootCategoryLike>(
     categories.push(root)
   }
 
-  const byBrand = brandCategories(roots, opts.descendants ?? [], brands)
   const brandLinks: NavLink[] = brands
     .filter((b) => b.nav !== false)
-    .map((b) => brandLink(b, byBrand.get(b), opts.collectionHandles))
+    .map(brandLink)
 
   return { categories, brands: [...brandLinks, ...unknownBrandRoots] }
 }
 
-/**
- * Brands shown in the homepage strip, each with its landing page (see
- * {@link brandHref}).
- */
+/** Brands shown in the homepage strip, each with its page ({@link brandHref}). */
 export function stripBrands(
-  opts: {
-    roots?: RootCategoryLike[]
-    descendants?: RootCategoryLike[]
-    collectionHandles?: Set<string>
-    brands?: Brand[]
-  } = {}
+  opts: { brands?: Brand[] } = {}
 ): (Brand & { href: string })[] {
-  const brands = opts.brands ?? BRANDS
-  const byBrand = brandCategories(
-    opts.roots ?? [],
-    opts.descendants ?? [],
-    brands
-  )
-  return brands
+  return (opts.brands ?? BRANDS)
     .filter((b) => b.strip !== false)
-    .map((b) => ({
-      ...b,
-      href: brandHref(b, {
-        category: byBrand.get(b),
-        collectionHandles: opts.collectionHandles,
-      }),
-    }))
+    .map((b) => ({ ...b, href: brandHref(b) }))
 }

@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next"
 
+import { brandSitemapEntries } from "@lib/brand-pages"
 import { serviceSitemapEntries } from "@lib/brand-service-pages"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
@@ -53,6 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: prefix("content/privacy-policy"), changeFrequency: "yearly", priority: 0.2 },
       { url: prefix("content/terms-of-use"), changeFrequency: "yearly", priority: 0.2 },
       { url: prefix("content/cookie-policy"), changeFrequency: "yearly", priority: 0.2 },
+      ...brandSitemapEntries(absoluteUrl(`/${countryCode}`)),
     ] satisfies MetadataRoute.Sitemap
   ).map((e) => ({ lastModified: now, ...e }))
 

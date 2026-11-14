@@ -1,7 +1,15 @@
 import { sdk } from "@lib/config"
 import { cache } from "react"
 import { getProductsList } from "./products"
-import { splitNavRoots, stripBrands, type NavLink } from "@lib/brands"
+import {
+  brandCategories,
+  brandListing,
+  splitNavRoots,
+  stripBrands,
+  type Brand,
+  type BrandListing,
+  type NavLink,
+} from "@lib/brands"
 import { displayCategoryName } from "@lib/util/category-display"
 
 /**
@@ -96,22 +104,14 @@ export const getCategoryById = cache(async function (categoryId: string) {
  * presented as Marcas, internal bookkeeping groups are dropped, and other roots
  * flagged `metadata.nav_hidden` stay reachable via their /categories pages but
  * drop out of the nav. Categories carry their customer-facing display name and
- * a Lucide-style icon name; brands link per `brandHref` (category with
- * sub-ranges → collection → category → search).
+ * a Lucide-style icon name; brands link to their page (`/marcas/{slug}`).
  */
 export const getNavGroups = cache(async function (): Promise<{
   categories: NavLink[]
   brands: NavLink[]
 }> {
-  const [roots, collectionHandles, descendants] = await Promise.all([
-    getRootCategories(),
-    getCollectionHandles(),
-    getDescendantCategories(),
-  ])
-  const { categories, brands } = splitNavRoots(roots || [], {
-    collectionHandles,
-    descendants,
-  })
+  const roots = await getRootCategories()
+  const { categories, brands } = splitNavRoots(roots || [])
   return {
     categories: categories.map((c: any) => ({
       label: displayCategoryName(c.name),
@@ -137,14 +137,27 @@ const getCollectionHandles = cache(async function (): Promise<
     .catch(() => undefined)
 })
 
-/** Homepage brand strip entries with their resolved landing pages. */
+/** Homepage brand strip entries, each linking to its brand page. */
 export const getStripBrands = cache(async function () {
+  return stripBrands()
+})
+
+/**
+ * Where a brand's products are listed, resolved against the live category
+ * tree and collections (see `brandListing` in @lib/brands): its category with
+ * sub-ranges, else its collection, else its category, else a search. Fails
+ * soft to the static config (collection, else search).
+ */
+export const getBrandListing = cache(async function (
+  brand: Brand
+): Promise<BrandListing> {
   const [roots, collectionHandles, descendants] = await Promise.all([
     getRootCategories(),
     getCollectionHandles(),
     getDescendantCategories(),
   ])
-  return stripBrands({ roots: roots || [], descendants, collectionHandles })
+  const category = brandCategories(roots || [], descendants).get(brand)
+  return brandListing(brand, { category, collectionHandles })
 })
 
 /** The Lucide icon id for a category: an explicit choice in `metadata.icon`

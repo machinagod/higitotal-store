@@ -40,8 +40,7 @@ const WORDMARK_DEFAULT = "font-extrabold tracking-tight text-[21px]"
  * in the same 112×30 box, in the same muted ink at rest (logos are
  * grey-scaled, wordmarks are set in the brand ink at the same opacity), and
  * takes its own colour (logos) or full ink (wordmarks) on hover/focus. Each
- * tile links to the brand's landing page (category with sub-ranges,
- * collection, or a catalogue search — see `brandHref`).
+ * tile links to the brand's page (`/marcas/{slug}` — see `brandHref`).
  */
 const Suppliers = async () => {
   const brands = await getStripBrands()
