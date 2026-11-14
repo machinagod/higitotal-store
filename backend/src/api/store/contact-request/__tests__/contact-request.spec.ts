@@ -54,6 +54,9 @@ describe("buildStaffSubject", () => {
       "Pedido de assistência técnica — Rui, Restaurante X"
     )
     expect(buildStaffSubject({ kind: "geral", name: "Rui" })).toBe("Pedido de contacto — Rui")
+    expect(buildStaffSubject({ kind: "plano", name: "Rui", empresa: "Restaurante X" })).toMatch(
+      /^Pedido de plano de higiene — /
+    )
   })
 
   it("prefixes [URGENTE] when the equipment is stopped", () => {
@@ -561,5 +564,18 @@ describe("sendContactRequest with a quote list", () => {
       { sku: "SU100", title: "Suma Bac D10", quantity: 12, note: "caixas" },
     ])
     expect(ack.data.items[0].url).toBeUndefined()
+  })
+})
+
+describe("hygiene plan requests", () => {
+  it("accepts kind 'plano' with a message and keeps it", () => {
+    const r = parseContactRequest({
+      kind: "plano",
+      name: "Ana",
+      email: "ana@example.com",
+      message: "Gostaria de pedir um plano de higiene para a minha instalação (restauração).",
+    })
+    expect(r.status).toBe("ok")
+    if (r.status === "ok") expect(r.request.kind).toBe("plano")
   })
 })

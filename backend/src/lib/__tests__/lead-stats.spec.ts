@@ -281,6 +281,7 @@ describe("aggregateLeads", () => {
       { kind: "produto", leads: 1 },
       { kind: "orcamento", leads: 2 },
       { kind: "assistencia", leads: 1 },
+      { kind: "plano", leads: 0 },
       { kind: "geral", leads: 1 },
     ])
   })

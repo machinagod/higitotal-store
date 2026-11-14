@@ -10,7 +10,7 @@ export type QuoteAnalyticsEvent =
   | { event: "add_to_quote"; item_id: string; quantity: number }
   | {
       event: "generate_lead"
-      lead_type: "quote" | "product" | "assistencia" | "geral"
+      lead_type: "quote" | "product" | "assistencia" | "hygiene_plan" | "geral"
       items: number
     }
 
@@ -49,6 +49,12 @@ export function quoteLeadEvent(lines: number): QuoteAnalyticsEvent {
  */
 export function formLeadEvent(kind: string): QuoteAnalyticsEvent {
   const lead_type =
-    kind === "produto" ? "product" : kind === "assistencia" ? "assistencia" : "geral"
+    kind === "produto"
+      ? "product"
+      : kind === "assistencia"
+        ? "assistencia"
+        : kind === "plano"
+          ? "hygiene_plan"
+          : "geral"
   return { event: "generate_lead", lead_type, items: lead_type === "product" ? 1 : 0 }
 }

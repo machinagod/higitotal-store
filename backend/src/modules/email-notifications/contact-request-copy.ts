@@ -5,9 +5,9 @@
  */
 
 /** What a request is about. */
-export type ContactRequestKind = 'produto' | 'assistencia' | 'geral'
+export type ContactRequestKind = 'produto' | 'assistencia' | 'plano' | 'geral'
 
-export const CONTACT_REQUEST_KINDS: readonly ContactRequestKind[] = ['produto', 'assistencia', 'geral']
+export const CONTACT_REQUEST_KINDS: readonly ContactRequestKind[] = ['produto', 'assistencia', 'plano', 'geral']
 
 /** Title the assistência form has always sent (kept for older storefronts). */
 export const ASSISTANCE_TITLE = 'Assistência Técnica'
@@ -49,12 +49,14 @@ export const staffQuoteHeading = (n: number) => `Novo pedido de orçamento — $
 export const STAFF_HEADINGS: Record<ContactRequestKind, string> = {
   produto: 'Novo pedido de orçamento',
   assistencia: 'Novo pedido de assistência técnica',
+  plano: 'Novo pedido de plano de higiene',
   geral: 'Novo pedido de contacto',
 }
 
 export const STAFF_INTROS: Record<ContactRequestKind, string> = {
   produto: 'Um cliente pediu um orçamento a partir do site Higitotal.',
   assistencia: 'Um cliente pediu assistência técnica a partir do site Higitotal.',
+  plano: 'Um cliente pediu um plano de higiene a partir do site Higitotal.',
   geral: 'Um cliente enviou um pedido de contacto a partir do site Higitotal.',
 }
 
@@ -131,6 +133,9 @@ export function buildStaffSubject(input: {
       break
     case 'assistencia':
       subject = `Pedido de assistência técnica — ${who}`
+      break
+    case 'plano':
+      subject = `Pedido de plano de higiene — ${who}`
       break
     default:
       subject = `Pedido de contacto — ${who}`

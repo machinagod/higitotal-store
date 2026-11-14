@@ -16,6 +16,7 @@ const KIND_LABELS: Record<LeadKind, string> = {
   produto: "Pedido de produto",
   orcamento: "Lista de orçamento",
   assistencia: "Assistência técnica",
+  plano: "Plano de higiene",
   geral: "Contacto geral",
 }
 

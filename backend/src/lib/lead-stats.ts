@@ -22,9 +22,9 @@ export const LEAD_TEMPLATE = 'contact-request'
 export const LEAD_TIMEZONE = 'Europe/Lisbon'
 
 /** "orcamento" = a quote list (items > 0); the others follow the handler's kind. */
-export type LeadKind = 'produto' | 'orcamento' | 'assistencia' | 'geral'
+export type LeadKind = 'produto' | 'orcamento' | 'assistencia' | 'plano' | 'geral'
 
-export const LEAD_KINDS: readonly LeadKind[] = ['produto', 'orcamento', 'assistencia', 'geral']
+export const LEAD_KINDS: readonly LeadKind[] = ['produto', 'orcamento', 'assistencia', 'plano', 'geral']
 
 /** What one lead contributes to the stats — nothing personal. */
 export type LeadSummary = {

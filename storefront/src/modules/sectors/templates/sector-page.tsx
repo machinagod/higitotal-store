@@ -12,6 +12,7 @@ import {
   type SectorCategoryLink,
 } from "@lib/sectors"
 import { isCatalogMode } from "@lib/util/catalog-mode"
+import { hygienePlanHref } from "@lib/util/hygiene-plan-request"
 import CompanyCta from "@modules/company/components/company-cta"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import FeaturedProducts from "@modules/home/components/featured-products"
@@ -453,7 +454,7 @@ export default function SectorTemplate({
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <LocalizedClientLink
-                href="/contact"
+                href={hygienePlanHref(sector.slug)}
                 className="inline-flex items-center gap-2 rounded-pill bg-brand-cyan-ink px-6 py-3 text-[13px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-brand-ink"
                 data-testid="sector-hygiene-plan-cta"
               >

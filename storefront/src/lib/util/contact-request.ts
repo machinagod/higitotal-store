@@ -7,7 +7,7 @@ import { COMPANY } from "@lib/company"
  */
 
 /** What the request is about — drives the staff email heading/subject. */
-export type ContactRequestKind = "produto" | "assistencia" | "geral"
+export type ContactRequestKind = "produto" | "assistencia" | "plano" | "geral"
 
 /** Query param that opens the enquiry form on a product page (`?pedido=1`). */
 export const ENQUIRY_PARAM = "pedido"

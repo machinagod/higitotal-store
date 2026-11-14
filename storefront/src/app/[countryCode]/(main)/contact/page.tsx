@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import { COMPANY, MAPS_URL as MAP_URL } from "@lib/company"
+import { hygienePlanRequest } from "@lib/util/hygiene-plan-request"
 import ContactRequestForm from "@modules/common/components/contact-request-form"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { pageMetadata } from "@lib/util/seo"
@@ -30,8 +31,15 @@ const iconTile =
 const rowLink =
   "group -mx-2 flex min-h-[44px] items-center gap-3 rounded-btn px-2 py-1 transition-colors hover:bg-[#f7f9fa] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-cyan/25"
 
-export default function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const { address, phone } = COMPANY
+  // "Pedir um plano de higiene" on the sector pages links here with
+  // ?pedido=plano-higiene&setor=<slug>: tag the request and pre-fill it.
+  const plan = hygienePlanRequest(await searchParams)
   return (
     <div className="content-container py-10 small:py-16">
       <div className="grid grid-cols-1 gap-10 small:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] small:gap-14">
@@ -174,7 +182,11 @@ export default function ContactPage() {
           <p className="mb-6 mt-1 text-sm text-grey-60">
             Os campos assinalados com * são obrigatórios.
           </p>
-          <ContactRequestForm kind="geral" idPrefix="contact" />
+          <ContactRequestForm
+            kind={plan ? "plano" : "geral"}
+            idPrefix="contact"
+            prefilledMessage={plan?.message}
+          />
         </section>
       </div>
     </div>
