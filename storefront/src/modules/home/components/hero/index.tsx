@@ -43,10 +43,13 @@ const Hero = ({
             aria-hidden
             className="pointer-events-none absolute -right-10 -top-4 z-[1] h-[230px] w-[230px] opacity-[0.28] [mask-image:radial-gradient(circle_at_70%_40%,#000_35%,transparent_72%)] small:hidden"
           >
+            {/* Not `priority`: the desktop panel below already preloads the
+                first shot. Same (default) `sizes` as that panel, so this
+                eager first image reuses the preloaded file — one download
+                per viewport, whichever layer is visible. */}
             <HeroRotator
               images={images}
-              sizes="230px"
-              priorityFirst={false}
+              priority={false}
               className="relative h-full w-full"
               imgClassName="object-contain"
             />
