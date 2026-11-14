@@ -1,13 +1,14 @@
-import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import FeaturedCarousel from "@modules/home/components/hero/featured-carousel"
+import HeroRotator from "@modules/home/components/hero/hero-rotator"
 import { COMPANY } from "@lib/company"
 
 const Hero = ({
-  image,
+  images = [],
   carouselImages,
 }: {
-  image?: string | null
+  /** Cut-out product shots for the media panel; the first is the LCP image. */
+  images?: string[]
   carouselImages?: Record<string, string | undefined>
 }) => {
   return (
@@ -69,26 +70,15 @@ const Hero = ({
         </div>
 
         {/* Media panel (desktop only) — a featured product shot on the glow */}
-        {image && (
+        {images.length > 0 && (
           <div className="relative z-[2] hidden small:flex small:flex-[1_1_36%] items-center justify-center self-stretch">
             <span
               aria-hidden
               className="pointer-events-none absolute h-72 w-72 rounded-full bg-white/20 blur-2xl"
             />
-            {/* Featured product shot — above-the-fold on desktop, so it is the
-                LCP candidate here: optimized + priority-loaded. Capped-height
-                contain box preserves the original auto-width look. */}
-            <div className="relative h-[320px] w-full max-w-[360px]">
-              <Image
-                src={image}
-                alt=""
-                aria-hidden
-                fill
-                priority
-                sizes="360px"
-                className="object-contain drop-shadow-2xl"
-              />
-            </div>
+            {/* Product shots (ovens, machines, chemicals…) cross-fading in a
+                capped-height contain box; the first is the LCP candidate. */}
+            <HeroRotator images={images} />
           </div>
         )}
       </div>

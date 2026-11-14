@@ -8,7 +8,7 @@ import CategoryCards from "@modules/home/components/category-cards"
 import AtFeature from "@modules/home/components/at-feature"
 import Suppliers from "@modules/home/components/suppliers"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { getProductsList } from "@lib/data/products"
+import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { getCollectionByHandle } from "@lib/data/collections"
 import {
   collectCategoryIds,
@@ -22,6 +22,18 @@ import { canonicalUrl, SITE_DESCRIPTION, SITE_NAME } from "@lib/util/seo"
 
 /** Collection whose first product photo anchors the hero. */
 const HERO_COLLECTION = "fornos-profissionais"
+/**
+ * Further hero shots, after the oven: one per line of business, chosen for
+ * clean cut-out photos that read on the blue hero (machines, Diversey,
+ * Unilever, dishwashing). Missing/unpublished handles are skipped.
+ */
+const HERO_ROTATION_HANDLES = [
+  "n9084701010-162699338", // Varredora Automática SW 750 B Nilfisk
+  "100833185-159975999", // Suma Auto Oven 2em1 DA9.10 (Diversey)
+  "n50000579-159981035", // Lavadora AS 4325B Full Viper
+  "100958290-159976088", // CIF PF Multiusos Maçã 5L (Unilever)
+  "7515206-159976839", // Sun Professional Tablets All in E-Tabs
+]
 /** Products in the "Produtos em destaque" rail (two rows of four). */
 const FEATURED_COUNT = 8
 
@@ -136,6 +148,16 @@ export default async function Home({
     await collectionProducts(HERO_COLLECTION, countryCode, 4)
   ).find((p) => p.thumbnail)
 
+  const rotation = await Promise.all(
+    HERO_ROTATION_HANDLES.map((h) =>
+      getProductByHandle(h, region.id).catch(() => undefined)
+    )
+  )
+  const heroImages = [
+    heroProduct?.thumbnail,
+    ...rotation.map((p) => p?.thumbnail),
+  ].filter((src, i, all): src is string => !!src && all.indexOf(src) === i)
+
   const featured = await featuredMix(countryCode, heroProduct?.id)
 
   // A representative product image per hero carousel range, so the carousel
@@ -157,7 +179,7 @@ export default async function Home({
   return (
     <div className="content-container flex flex-col gap-8 py-3 small:gap-16 small:py-10">
       <div className="flex flex-col gap-2.5 small:gap-5">
-        <Hero image={heroProduct?.thumbnail} carouselImages={carouselImages} />
+        <Hero images={heroImages} carouselImages={carouselImages} />
         <TrustBar />
       </div>
 
