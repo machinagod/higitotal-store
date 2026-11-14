@@ -4,7 +4,7 @@ Project-specific operating guide for AI agents. Read this before running anythin
 
 ## What this is
 
-A **Medusa 2.21.2** e-commerce monorepo (Railway boilerplate), two apps:
+A **Medusa 2.22.7** e-commerce monorepo (Railway boilerplate), two apps:
 
 - **`backend/`** — Medusa server + admin dashboard. Dev server on `:9000`, admin at `/app`.
 - **`storefront/`** — Next.js 15 storefront. Dev server on `:8000`. Needs the backend up.
