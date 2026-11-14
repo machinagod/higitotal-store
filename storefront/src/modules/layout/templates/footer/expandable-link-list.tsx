@@ -9,13 +9,13 @@ type FooterLink = { label: string; href: string }
 
 /**
  * Footer link column that grows with the catalogue (categories, brands):
- * shows the first `initial` links with the last ones fading into the footer,
+ * shows the first `initial` links, the last of them fading into the footer,
  * plus a "Ver todas (N)" toggle. The remaining links stay in the HTML (crawlable)
  * but are hidden — and out of the tab order — until expanded.
  */
 export default function ExpandableLinkList({
   links,
-  initial = 6,
+  initial = 5,
   linkClass,
   testId,
   itemTestId,
@@ -49,10 +49,10 @@ export default function ExpandableLinkList({
       <div className="relative">
         <ul className="m-0 flex list-none flex-col gap-[11px] p-0">{head.map(item)}</ul>
         {collapsible && !open && (
-          // Fade over the last visible links into the footer ground.
+          // Fade over the last visible link only, so the ones above stay crisp.
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-b from-transparent to-svc-ground"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-b from-transparent to-svc-ground"
           />
         )}
       </div>
